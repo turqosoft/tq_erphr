@@ -1,2 +1,7 @@
-# tq_erphr
-Turqosoft HR Customization for ERPNext
+## Tq Erphr
+
+Tqerphr
+
+#### License
+
+mit
