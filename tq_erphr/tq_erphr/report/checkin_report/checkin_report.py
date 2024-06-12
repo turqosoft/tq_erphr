@@ -54,7 +54,7 @@ def get_data_new( filters):
             SELECT
                 emp.name,emp.employee_name
             FROM
-                `tabEmployee` emp WHERE 1=1 {conditions}
+                `tabEmployee` emp WHERE emp.status = 'Active' {conditions}
             
             """.format(conditions=emp_conditions),
             as_dict=1,debug=1,
