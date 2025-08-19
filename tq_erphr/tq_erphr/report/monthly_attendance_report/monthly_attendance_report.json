@@ -1,0 +1,50 @@
+{
+ "add_total_row": 0,
+ "add_translate_data": 0,
+ "columns": [],
+ "creation": "2025-06-13 10:30:00.000000",
+ "disabled": 0,
+ "docstatus": 0,
+ "doctype": "Report",
+ "idx": 0,
+ "is_standard": "Yes",
+ "letterhead": null,
+ "filters":[
+    {
+        "fieldname": "from_date",
+        "label": "From Date",
+        "fieldtype": "Date",
+        "reqd": 1
+    },
+    {
+        "fieldname": "to_date",
+        "label": "To Date",
+        "fieldtype": "Date",
+        "reqd": 1
+    },
+    {
+        "fieldname": "branch",
+        "label": "Branch",
+        "fieldtype": "Link",
+        "options": "Branch",
+         "reqd": 1
+    },
+    {
+        "fieldname": "employment_type",
+        "label": "Employment Type",
+        "fieldtype": "Link",
+        "options": "Employment Type"
+    }
+],
+ "modified": "2025-06-13 10:30:00.000000",
+ "modified_by": "Administrator",
+ "module": "Tq Erphr",
+ "name": "Monthly Attendance Report",
+ "owner": "Administrator",
+ "prepared_report": 0,
+ "ref_doctype": "Attendance",
+ "report_name": "Monthly Attendance Report",
+ "report_type": "Script Report",
+ "roles": [],
+ "timeout": 0
+}

@@ -1,0 +1,31 @@
+[
+    {
+        "doctype": "Custom Field",
+        "dt": "HR Settings",
+        "module": "Turqosoft CCDS",
+        "name": "mapKey in Hrsettings",
+        "fieldname": "Map_key",
+        "fieldtype": "Data",
+        "label": "Google Map Key",
+        "insert_after": "allow_geolocation_tracking"
+    },
+    {
+        "doctype": "Custom Field",
+        "dt": "Employee Checkin",
+        "module": "Tq Erphr",
+        "name": "Google Map Pr",
+        "fieldname": "googlemap_section",
+        "fieldtype": "Section Break",
+        "insert_after": "shift_actual_end"
+    },
+    {
+        "doctype": "Custom Field",
+        "dt": "Employee Checkin",
+        "module": "Tq Erphr",
+        "name": "map in employeecheckin",
+        "fieldname": "google_map_html",
+        "fieldtype": "HTML",
+        "label": "Google Map",
+        "insert_after": "googlemap_section"
+    }
+]
