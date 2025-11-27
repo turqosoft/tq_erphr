@@ -2,7 +2,7 @@
     {
         "doctype": "Custom Field",
         "dt": "HR Settings",
-        "module": "Turqosoft CCDS",
+        "module": "Tq Erphr",
         "name": "mapKey in Hrsettings",
         "fieldname": "Map_key",
         "fieldtype": "Data",

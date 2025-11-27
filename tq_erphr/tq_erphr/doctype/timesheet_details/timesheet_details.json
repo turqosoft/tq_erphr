@@ -1,0 +1,148 @@
+{
+  "doctype": "DocType",
+  "name": "Timesheet Details",
+  "module": "Tq Erphr",
+  "autoname": "naming_series:",
+  "editable_grid": 1,
+  "engine": "InnoDB",
+  "is_submittable": 1,
+  "fields": [
+    {
+      "fieldname": "title",
+      "label": "Title",
+      "fieldtype": "Data",
+      "hidden": 1,
+      "default": "{employee_name}",
+      "allow_on_submit": 1,
+      "no_copy": 1,
+      "print_hide": 1
+    },
+    {
+      "fieldname": "section_1",
+      "fieldtype": "Section Break"
+    },
+    {
+      "fieldname": "naming_series",
+      "label": "Series",
+      "fieldtype": "Select",
+      "options": "TS-.YYYY.-",
+      "reqd": 1,
+      "set_only_once": 1
+    },
+    {
+      "fieldname": "company",
+      "label": "Company",
+      "fieldtype": "Link",
+      "options": "Company",
+      "remember_last_selected_value": 1,
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "project",
+      "label": "Project",
+      "fieldtype": "Link",
+      "options": "Project",
+      "remember_last_selected_value": 1,
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "activity_type",
+      "label": "Activity Type",
+      "fieldtype": "Link",
+      "options": "Activity Type"
+    },
+    {
+      "fieldname": "col_break_13",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "timesheet_date",
+      "label": "Timesheet Date",
+      "fieldtype": "Date",
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "from_time",
+      "label": "From Time",
+      "fieldtype": "Time"
+    },
+    {
+      "fieldname": "to_time",
+      "label": "To Time",
+      "fieldtype": "Time"
+    },
+    {
+      "fieldname": "total_working_hours",
+      "label": "Total Working Hours",
+      "fieldtype": "Float",
+      "read_only": 1
+    },
+    {
+      "fieldname": "col_break_24",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "item_group",
+      "label": "Product Category",
+      "fieldtype": "Link",
+      "options": "Item Group"
+    },
+    {
+      "fieldname": "item",
+      "label": "Item",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "quantity",
+      "label": "Quantity",
+      "fieldtype": "Float"
+    },
+    {
+      "fieldname": "uom",
+      "label": "UOM",
+      "fieldtype": "Link",
+      "options": "UOM"
+    },
+    {
+      "fieldname": "rate",
+      "label": "Rate",
+      "fieldtype": "Currency"
+    },
+    {
+      "fieldname": "section_2",
+      "fieldtype": "Section Break"
+    },
+    {
+      "fieldname": "employee_detail",
+      "label": "Employee Details",
+      "fieldtype": "Table",
+      "options": "Employee Details",
+      "in_place_edit": 1
+    },
+    {
+      "fieldname": "section_3",
+      "fieldtype": "Section Break"
+    },
+    {
+      "fieldname": "note",
+      "label": "Note",
+      "fieldtype": "Small Text"
+    },
+    {
+      "fieldname": "original_timesheet",
+      "label": "Original Timesheet",
+      "fieldtype": "Link",
+      "options": "Timesheet Details",
+      "hidden": 1
+    }
+  ],
+  "permissions": [
+    {
+      "role": "System Manager",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 1
+    }
+  ]
+}
