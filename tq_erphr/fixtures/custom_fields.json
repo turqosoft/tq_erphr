@@ -27,5 +27,15 @@
         "fieldtype": "HTML",
         "label": "Google Map",
         "insert_after": "googlemap_section"
+    },
+    {
+        "doctype": "Custom Field",
+        "dt": "Employee",
+        "module": "Tq Erphr",
+        "name": "Basic for EPF & ESI",
+        "fieldname": "basic_for_epf_esi",
+        "fieldtype": "Currency",
+        "label": "Basic for EPF & ESI",
+        "insert_after": "basic"
     }
 ]

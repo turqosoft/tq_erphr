@@ -1,0 +1,97 @@
+{
+    "actions": [],
+    "allow_rename": 1,
+    "autoname": "DFE-.YYYY.-.MM.-.####",
+    "creation": "2026-02-03 17:55:00.000000",
+    "doctype": "DocType",
+    "engine": "InnoDB",
+    "field_order": [
+        "company",
+        "date",
+        "column_break_3",
+        "branch",
+        "employment_type",
+        "default_extra_food_amount",
+        "section_break_3",
+        "extra_expenses",
+        "total_amount"
+    ],
+    "fields": [
+        {
+            "fieldname": "company",
+            "fieldtype": "Link",
+            "label": "Company",
+            "options": "Company",
+            "reqd": 1
+        },
+        {
+            "default": "Today",
+            "fieldname": "date",
+            "fieldtype": "Date",
+            "label": "Date",
+            "reqd": 1
+        },
+        {
+            "fieldname": "column_break_3",
+            "fieldtype": "Column Break"
+        },
+        {
+            "fieldname": "branch",
+            "fieldtype": "Link",
+            "label": "Branch",
+            "options": "Branch"
+        },
+        {
+            "fieldname": "employment_type",
+            "fieldtype": "Link",
+            "label": "Employment Type",
+            "options": "Employment Type"
+        },
+        {
+            "fieldname": "default_extra_food_amount",
+            "fieldtype": "Currency",
+            "label": "Default Extra Food Amount"
+        },
+        {
+            "fieldname": "section_break_3",
+            "fieldtype": "Section Break"
+        },
+        {
+            "fieldname": "extra_expenses",
+            "fieldtype": "Table",
+            "label": "Extra Expenses",
+            "options": "Daily Extra Food Expense Detail"
+        },
+        {
+            "fieldname": "total_amount",
+            "fieldtype": "Currency",
+            "label": "Total Amount",
+            "read_only": 1
+        }
+    ],
+    "index_web_pages_for_search": 1,
+    "modified": "2026-02-03 18:05:00.000000",
+    "modified_by": "Administrator",
+    "module": "Tq Erphr",
+    "name": "Daily Extra Food Expense",
+    "owner": "Administrator",
+    "permissions": [
+        {
+            "create": 1,
+            "delete": 1,
+            "email": 1,
+            "export": 1,
+            "print": 1,
+            "read": 1,
+            "report": 1,
+            "role": "System Manager",
+            "share": 1,
+            "submit": 1,
+            "write": 1
+        }
+    ],
+    "is_submittable": 1,
+    "sort_field": "modified",
+    "sort_order": "DESC",
+    "states": []
+}

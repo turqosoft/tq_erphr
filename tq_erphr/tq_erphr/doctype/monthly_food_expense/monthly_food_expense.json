@@ -1,0 +1,112 @@
+{
+    "doctype": "DocType",
+    "name": "Monthly Food Expense",
+    "module": "Tq Erphr",
+    "actions": [],
+    "allow_rename": 1,
+    "autoname": "MFE-.YYYY.-.MM.-.####",
+    "creation": "2025-03-12 09:31:51.979825",
+    "engine": "InnoDB",
+    "field_order": [
+        "company",
+        "start_date",
+        "end_date",
+        "column_break_1",
+        "branch",
+        "employment_type",
+        "food_expense_salary_component",
+        "salary_posting_date",
+        "default_per_day_amount",
+        "section_break_2",
+        "employee_food_details",
+        "total"
+    ],
+    "fields": [
+        {
+            "fieldname": "company",
+            "label": "Company",
+            "fieldtype": "Link",
+            "options": "Company"
+        },
+        {
+            "fieldname": "start_date",
+            "label": "Start Date",
+            "fieldtype": "Date"
+        },
+        {
+            "fieldname": "end_date",
+            "label": "End Date",
+            "fieldtype": "Date"
+        },
+        {
+            "fieldname": "column_break_1",
+            "fieldtype": "Column Break"
+        },
+        {
+            "fieldname": "branch",
+            "label": "Branch",
+            "fieldtype": "Link",
+            "options": "Branch"
+        },
+        {
+            "fieldname": "food_expense_salary_component",
+            "label": "Food Expense Salary Component",
+            "fieldtype": "Link",
+            "options": "Salary Component"
+        },
+        {
+            "fieldname": "employment_type",
+            "label": "Employment Type",
+            "fieldtype": "Link",
+            "options": "Employment Type"
+        },
+        {
+            "fieldname": "default_per_day_amount",
+            "label": "Default Per Day Amount",
+            "fieldtype": "Currency"
+        },
+        {
+            "fieldname": "salary_posting_date",
+            "label": "Salary Posting Date",
+            "fieldtype": "Date"
+        },
+        {
+            "fieldname": "section_break_2",
+            "fieldtype": "Section Break"
+        },
+        {
+            "fieldname": "employee_food_details",
+            "label": "Employee Food Details",
+            "fieldtype": "Table",
+            "options": "Employee Food Details"
+        },
+        {
+            "fieldname": "total",
+            "label": "Total",
+            "fieldtype": "Float",
+            "read_only": 1
+        }
+    ],
+    "owner": "Administrator",
+    "permissions": [
+        {
+            "create": 1,
+            "delete": 1,
+            "email": 1,
+            "export": 1,
+            "print": 1,
+            "read": 1,
+            "report": 1,
+            "role": "System Manager",
+            "share": 1,
+            "submit": 1,
+            "write": 1
+        }
+    ],
+    "modified": "2026-02-03 17:29:46.976872",
+    "modified_by": "Administrator",
+    "sort_field": "modified",
+    "sort_order": "DESC",
+    "is_submittable": 1,
+    "states": []
+}
