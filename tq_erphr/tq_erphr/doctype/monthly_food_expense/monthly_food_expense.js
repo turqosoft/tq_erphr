@@ -16,7 +16,18 @@ frappe.ui.form.on('Monthly Food Expense', {
     },
     default_per_day_amount: function (frm) {
         frm.doc.employee_food_details.forEach(row => {
-            row.food_expense_per_working_days = (frm.doc.default_per_day_amount || 0) * (row.working_days || 0);
+            let adjusted_days = Math.max(0, (row.working_days || 0) - (row.exempted_days || 0));
+            row.food_expense_per_working_days = (frm.doc.default_per_day_amount || 0) * adjusted_days;
+            row.total = row.food_expense_per_working_days + (row.extra_food_amount || 0);
+        });
+        frm.refresh_field('employee_food_details');
+        calculate_grand_total(frm);
+    },
+    exempted_days: function (frm) {
+        frm.doc.employee_food_details.forEach(row => {
+            row.exempted_days = frm.doc.exempted_days || 0;
+            let adjusted_days = Math.max(0, (row.working_days || 0) - (row.exempted_days || 0));
+            row.food_expense_per_working_days = (frm.doc.default_per_day_amount || 0) * adjusted_days;
             row.total = row.food_expense_per_working_days + (row.extra_food_amount || 0);
         });
         frm.refresh_field('employee_food_details');
@@ -27,6 +38,14 @@ frappe.ui.form.on('Monthly Food Expense', {
 frappe.ui.form.on('Employee Food Details', {
     extra_food_amount: function (frm, cdt, cdn) {
         let row = locals[cdt][cdn];
+        row.total = (row.food_expense_per_working_days || 0) + (row.extra_food_amount || 0);
+        frm.refresh_field('employee_food_details');
+        calculate_grand_total(frm);
+    },
+    exempted_days: function (frm, cdt, cdn) {
+        let row = locals[cdt][cdn];
+        let adjusted_days = Math.max(0, (row.working_days || 0) - (row.exempted_days || 0));
+        row.food_expense_per_working_days = (frm.doc.default_per_day_amount || 0) * adjusted_days;
         row.total = (row.food_expense_per_working_days || 0) + (row.extra_food_amount || 0);
         frm.refresh_field('employee_food_details');
         calculate_grand_total(frm);

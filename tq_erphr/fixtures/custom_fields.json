@@ -37,5 +37,57 @@
         "fieldtype": "Currency",
         "label": "Basic for EPF & ESI",
         "insert_after": "basic"
+    },
+    {
+        "doctype": "Custom Field",
+        "dt": "Salary Structure Assignment",
+        "module": "Tq Erphr",
+        "name": "Basic for EPF & ESI",
+        "fieldname": "tq_basic_for_epf_esi",
+        "fieldtype": "Currency",
+        "label": "Basic for EPF & ESI",
+        "insert_after": "variable"
+    },
+    {
+        "doctype": "Custom Field",
+        "dt": "Salary Structure Assignment",
+        "module": "Tq Erphr",
+        "name": "Fixed Working Days",
+        "fieldname": "tq_fixed_working_days",
+        "fieldtype": "Int",
+        "label": "Fixed Working Days",
+        "insert_after": "tq_basic_for_epf_esi"
+    },
+    {
+        "doctype": "Custom Field",
+        "dt": "Salary Structure Assignment",
+        "module": "Tq Erphr",
+        "name": "Salary Per Day",
+        "fieldname": "tq_salary_per_day",
+        "fieldtype": "Currency",
+        "label": "Salary Per Day",
+        "insert_after": "base"
+    },
+    {
+        "doctype": "Custom Field",
+        "dt": "Salary Structure Assignment",
+        "module": "Tq Erphr",
+        "name": "Monthly Allowed CL",
+        "fieldname": "tq_monthly_allowed_cl",
+        "fieldtype": "Int",
+        "label": "Monthly allowed CL",
+        "insert_after": "tq_salary_per_day"
+    },
+    {
+        "doctype": "Custom Field",
+        "dt": "Additional Salary",
+        "module": "Tq Erphr",
+        "name": "Additional Salary-monthly_food_expense",
+        "fieldname": "monthly_food_expense",
+        "fieldtype": "Link",
+        "label": "Monthly Food Expense",
+        "options": "Monthly Food Expense",
+        "insert_after": "ref_doctype",
+        "read_only": 1
     }
 ]

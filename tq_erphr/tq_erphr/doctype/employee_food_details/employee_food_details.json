@@ -8,6 +8,7 @@
         "employee",
         "employee_name",
         "working_days",
+        "exempted_days",
         "extra_food_amount",
         "food_expense_per_working_days",
         "total"
@@ -31,6 +32,12 @@
             "fieldname": "working_days",
             "fieldtype": "Int",
             "label": "Working Days",
+            "in_list_view": 1
+        },
+        {
+            "fieldname": "exempted_days",
+            "fieldtype": "Int",
+            "label": "Exempted Days",
             "in_list_view": 1
         },
         {

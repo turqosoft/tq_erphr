@@ -1,6 +1,8 @@
 import frappe
 from frappe.model.document import Document
 from frappe.utils import getdate
+from frappe.query_builder import DocType
+from frappe.query_builder.functions import Sum
 
 class MonthlyFoodExpense(Document):
     @frappe.whitelist()
@@ -16,6 +18,8 @@ class MonthlyFoodExpense(Document):
             filters["employment_type"] = self.employment_type
             
         employees = frappe.get_all("Employee", filters=filters, fields=["name", "employee_name"])
+        DailyExtraFoodExpense = DocType("Daily Extra Food Expense")
+        DailyExtraFoodExpenseDetail = DocType("Daily Extra Food Expense Detail")
         
         if not self.start_date or not self.end_date:
             frappe.throw("Please select Start Date and End Date")
@@ -38,21 +42,23 @@ class MonthlyFoodExpense(Document):
             })
             
             total_working_days = working_days + (half_days * 0.5)
+            exempted_days = self.exempted_days or 0
             
-            food_expense = (self.default_per_day_amount or 0) * total_working_days
+            # Adjusted days for food expense calculation
+            adjusted_days = max(0, total_working_days - exempted_days)
+            food_expense = (self.default_per_day_amount or 0) * adjusted_days
 
             # Fetch extra food expenses from Daily Extra Food Expense
-            extra_food_amount = frappe.db.get_value(
-                "Daily Extra Food Expense Detail",
-                filters={
-                    "employee": emp.name,
-                    "parent": ["in", frappe.get_all("Daily Extra Food Expense", filters={
-                        "date": ["between", [self.start_date, self.end_date]],
-                        "docstatus": 1
-                    }, pluck="name")]
-                },
-                fieldname="sum(amount)"
-            ) or 0
+            extra_food_amount = (
+                frappe.qb
+                .from_(DailyExtraFoodExpenseDetail)
+                .join(DailyExtraFoodExpense)
+                .on(DailyExtraFoodExpense.name == DailyExtraFoodExpenseDetail.parent)
+                .select(Sum(DailyExtraFoodExpenseDetail.amount))
+                .where(DailyExtraFoodExpenseDetail.employee == emp.name)
+                .where(DailyExtraFoodExpense.date.between(self.start_date, self.end_date))
+                .where(DailyExtraFoodExpense.docstatus == 1)
+            ).run()[0][0] or 0
             
             total_amount = food_expense + extra_food_amount
 
@@ -60,6 +66,7 @@ class MonthlyFoodExpense(Document):
                 "employee": emp.name,
                 "employee_name": emp.employee_name,
                 "working_days": total_working_days,
+                "exempted_days": exempted_days,
                 "food_expense_per_working_days": food_expense,
                 "extra_food_amount": extra_food_amount,
                 "total": total_amount
@@ -69,7 +76,11 @@ class MonthlyFoodExpense(Document):
 
     def calculate_totals(self):
         total = 0
+        per_day_amount = self.default_per_day_amount or 0
         for row in self.employee_food_details:
+            # Recalculate food expense per working days based on (working_days - exempted_days)
+            adjusted_days = max(0, (row.working_days or 0) - (row.exempted_days or 0))
+            row.food_expense_per_working_days = adjusted_days * per_day_amount
             row.total = (row.food_expense_per_working_days or 0) + (row.extra_food_amount or 0)
             total += row.total
         self.total = total
@@ -100,13 +111,13 @@ class MonthlyFoodExpense(Document):
                 additional_salary.company = self.company
                 additional_salary.ref_doctype = self.doctype
                 additional_salary.ref_dn = self.name
+                additional_salary.monthly_food_expense = self.name
                 additional_salary.insert()
                 additional_salary.submit()
 
     def delete_additional_salary(self):
         additional_salaries = frappe.get_all("Additional Salary", filters={
-            "ref_doctype": self.doctype,
-            "ref_dn": self.name
+            "monthly_food_expense": self.name
         })
 
         for ads in additional_salaries:
