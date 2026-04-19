@@ -31,7 +31,6 @@ app_license = "mit"
 # doctype_js = {"doctype" : "public/js/doctype.js"}
 
 doctype_js = {
-    "HR Settings": "public/js/hr_settings.js",
     "Employee Checkin": "public/js/employee_checkin.js"
 }
 

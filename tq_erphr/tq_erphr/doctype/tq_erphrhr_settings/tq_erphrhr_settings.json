@@ -1,0 +1,78 @@
+{
+    "actions": [],
+    "creation": "2026-04-18 10:37:35",
+    "doctype": "DocType",
+    "document_type": "Other",
+    "editable_grid": 1,
+    "engine": "InnoDB",
+    "field_order": [
+        "location_section",
+        "rate_per_km",
+        "travel_expense_type"
+    ],
+    "fields": [
+        {
+            "fieldname": "location_section",
+            "fieldtype": "Section Break",
+            "label": "Expense Manager Settings"
+        },
+        {
+            "fieldname": "rate_per_km",
+            "fieldtype": "Float",
+            "label": "Rate Per KM",
+            "precision": "2",
+            "default": 0,
+            "read_only": 0
+        },
+        {
+            "fieldname": "travel_expense_type",
+            "fieldtype": "Link",
+            "options": "Expense Claim Type",
+            "label": "Travel Expense Type"
+        }
+    ],
+    "icon": "fa fa-cog",
+    "idx": 1,
+    "issingle": 1,
+    "links": [],
+    "modified": "2026-04-18 10:37:35.977951",
+    "modified_by": "Administrator",
+    "module": "Tq Erphr",
+    "name": "TQ ERPHR Settings",
+    "owner": "Administrator",
+    "permissions": [
+        {
+            "create": 1,
+            "email": 1,
+            "print": 1,
+            "read": 1,
+            "role": "System Manager",
+            "share": 1,
+            "write": 1
+        },
+        {
+            "email": 1,
+            "print": 1,
+            "read": 1,
+            "role": "HR Manager",
+            "share": 1,
+            "write": 1
+        },
+        {
+            "email": 1,
+            "print": 1,
+            "read": 1,
+            "role": "HR User",
+            "share": 1
+        },
+        {
+            "read": 1,
+            "role": "Employee"
+        }
+    ],
+    "row_format": "Dynamic",
+    "sort_field": "creation",
+    "sort_order": "ASC",
+    "states": [],
+    "track_changes": 1
+}

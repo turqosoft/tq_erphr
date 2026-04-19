@@ -25,9 +25,9 @@ class ExecutiveExpenseManager(Document):
     
     def add_travel_expensetype_and_rate(self):
     
-            hr_settings = frappe.get_single("HR Settings")
-            self.travel_expense_type = hr_settings.tq_travel_expense_type
-            self.rate_per_km = hr_settings.tq_rate_per_km
+            hr_settings = frappe.get_single("TQ ERPHR Settings")
+            self.travel_expense_type = hr_settings.travel_expense_type
+            self.rate_per_km = hr_settings.rate_per_km
     
     
     
