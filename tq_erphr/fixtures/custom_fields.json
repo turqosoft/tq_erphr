@@ -3,7 +3,7 @@
         "doctype": "Custom Field",
         "dt": "HR Settings",
         "module": "Tq Erphr",
-        "name": "mapKey in Hrsettings",
+        "name": "TQ MapKey in Hrsettings",
         "fieldname": "map_key",
         "fieldtype": "Data",
         "label": "Google Map Key",
@@ -13,7 +13,7 @@
         "doctype": "Custom Field",
         "dt": "Employee Checkin",
         "module": "Tq Erphr",
-        "name": "Google Map Pr",
+        "name": "TQ Google Map Pr",
         "fieldname": "googlemap_section",
         "fieldtype": "Section Break",
         "insert_after": "shift_actual_end"
@@ -22,21 +22,11 @@
         "doctype": "Custom Field",
         "dt": "Employee Checkin",
         "module": "Tq Erphr",
-        "name": "map in employeecheckin",
+        "name": "TQ Google Map in Employee Checkin",
         "fieldname": "google_map_html",
         "fieldtype": "HTML",
         "label": "Google Map",
         "insert_after": "googlemap_section"
-    },
-    {
-        "doctype": "Custom Field",
-        "dt": "Employee",
-        "module": "Tq Erphr",
-        "name": "Basic for EPF & ESI",
-        "fieldname": "basic_for_epf_esi",
-        "fieldtype": "Currency",
-        "label": "Basic for EPF & ESI",
-        "insert_after": "basic"
     },
     {
         "doctype": "Custom Field",
@@ -46,7 +36,7 @@
         "fieldname": "tq_basic_for_epf_esi",
         "fieldtype": "Currency",
         "label": "Basic for EPF & ESI",
-        "insert_after": "variable"
+        "insert_after": "provident_fund_account"
     },
     {
         "doctype": "Custom Field",
@@ -94,7 +84,7 @@
         "doctype": "Custom Field",
         "dt": "HR Settings",
         "module": "Tq Erphr",
-        "name": "Executive Expense Manager Settings in HR Settings",
+        "name": "TQ Executive Expense Manager Settings in HR Settings",
         "fieldname": "location_section",
         "fieldtype": "Section Break",
         "label": "Executive Expense Manager Settings",
@@ -104,7 +94,7 @@
         "doctype": "Custom Field",
         "dt": "HR Settings",
         "module": "Tq Erphr",
-        "name": "Rate Per KM in HR Settings",
+        "name": "TQ Rate Per KM in HR Settings",
         "fieldname": "rate_per_km",
         "fieldtype": "Float",
         "label": "Rate Per KM",
@@ -117,7 +107,7 @@
         "doctype": "Custom Field",
         "dt": "HR Settings",
         "module": "Tq Erphr",
-        "name": "Travel Expense Type in HR Settings",
+        "name": "TQ Travel Expense Type in HR Settings",
         "fieldname": "travel_expense_type",
         "fieldtype": "Link",
         "options": "Expense Claim Type",
