@@ -1,0 +1,119 @@
+{
+    "actions": [],
+    "allow_rename": 1,
+    "creation": "2025-12-04 15:43:09.349790",
+    "doctype": "DocType",
+    "editable_grid": 1,
+    "engine": "InnoDB",
+    "field_order": [
+        "checkin_time",
+        "checkin_lat",
+        "checkin_long",
+        "checkout_time",
+        "checkout_lat",
+        "checkout_long",
+        "location_name",
+        "customer",
+        "site_lat",
+        "site_long",
+        "distance_travelled",
+        "actual_distance",
+        "remarks"
+    ],
+    "fields": [
+        {
+            "fieldname": "checkin_time",
+            "fieldtype": "Time",
+            "in_list_view": 1,
+            "label": "Check-In Time"
+        },
+        {
+            "fieldname": "checkin_lat",
+            "fieldtype": "Float",
+            "in_list_view": 1,
+            "label": "Check-In Latitude"
+        },
+        {
+            "fieldname": "checkin_long",
+            "fieldtype": "Float",
+            "in_list_view": 1,
+            "label": "Check-In Longitude"
+        },
+        {
+            "fieldname": "checkout_time",
+            "fieldtype": "Time",
+            "in_list_view": 1,
+            "label": "Check-Out Time"
+        },
+        {
+            "fieldname": "checkout_lat",
+            "fieldtype": "Float",
+            "in_list_view": 1,
+            "label": "Check-Out Latitude"
+        },
+        {
+            "fieldname": "checkout_long",
+            "fieldtype": "Float",
+            "in_list_view": 1,
+            "label": "Check-Out Longitude"
+        },
+        {
+            "fieldname": "site_lat",
+            "fieldtype": "Float",
+            "in_list_view": 1,
+            "label": "Site Latitude"
+        },
+        {
+            "fieldname": "site_long",
+            "fieldtype": "Float",
+            "in_list_view": 1,
+            "label": "Site Longitude"
+        },
+        {
+            "fieldname": "distance_travelled",
+            "fieldtype": "Float",
+            "in_list_view": 1,
+            "label": "Distance Travelled (Km)",
+            "read_only": 1
+        },
+        {
+            "fieldname": "remarks",
+            "fieldtype": "Data",
+            "in_list_view": 1,
+            "label": "Remarks"
+        },
+        {
+            "fieldname": "location_name",
+            "fieldtype": "Data",
+            "label": "Location Name"
+        },
+        {
+            "fieldname": "actual_distance",
+            "fieldtype": "Float",
+            "in_list_view": 1,
+            "label": "Actual Distance (Km)"
+        },
+        {
+            "fieldname": "customer",
+            "fieldtype": "Link",
+            "in_list_view": 1,
+            "label": "Customer",
+            "options": "Customer"
+        }
+    ],
+    "grid_page_length": 50,
+    "index_web_pages_for_search": 1,
+    "istable": 1,
+    "links": [],
+    "modified": "2025-12-04 15:48:55.734082",
+    "modified_by": "Administrator",
+    "module": "Tq Erphr",
+    "name": "Employee Site Tracking",
+    "owner": "Administrator",
+    "permissions": [],
+    "row_format": "Dynamic",
+    "rows_threshold_for_grid_search": 20,
+    "sort_field": "modified",
+    "sort_order": "DESC",
+    "states": []
+}

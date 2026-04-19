@@ -1,0 +1,133 @@
+{
+  "actions": [],
+  "allow_import": 1,
+  "autoname": "naming_series:",
+  "creation": "2026-01-21 15:54:42.860068",
+  "doctype": "DocType",
+  "engine": "InnoDB",
+  "field_order": [
+    "section_break_cmte",
+    "amended_from",
+    "naming_series",
+    "customer",
+    "site",
+    "column_break_sv",
+    "date",
+    "latitude",
+    "longitude",
+    "section_break_sv1",
+    "remarks",
+    "fetch_geolocation",
+    "geolocation"
+  ],
+  "fields": [
+    {
+      "fieldname": "section_break_cmte",
+      "fieldtype": "Section Break"
+    },
+    {
+      "fieldname": "amended_from",
+      "fieldtype": "Link",
+      "label": "Amended From",
+      "no_copy": 1,
+      "options": "Site Visit",
+      "print_hide": 1,
+      "read_only": 1,
+      "search_index": 1
+    },
+    {
+      "fieldname": "naming_series",
+      "label": "Naming Series",
+      "fieldtype": "Select",
+      "options": "SV-.YYYY.-",
+      "reqd": 1,
+      "default": "SV-.YYYY.-"
+    },
+    {
+      "fieldname": "customer",
+      "fieldtype": "Link",
+      "options": "Customer",
+      "in_list_view": 1,
+      "label": "Customer"
+    },
+    {
+      "fieldname": "time",
+      "fieldtype": "Datetime",
+      "label": "Time",
+      "reqd": 1,
+      "in_list_view": 1,
+      "default": "Now"
+    },
+    {
+      "fieldname": "latitude",
+      "fieldtype": "Float",
+      "label": "Latitude",
+      "read_only":1,
+      "precision": 7
+    },
+    {
+      "fieldname": "longitude",
+      "fieldtype": "Float",
+      "label": "Longitude",
+      "read_only":1,
+      "precision": 7
+    },
+    {
+      "fieldname": "site",
+      "fieldtype": "Data",
+      "label": "Site"
+    },
+    {
+      "fieldname": "column_break_sv",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "section_break_sv1",
+      "fieldtype": "Section Break"
+    },
+    {
+      "fieldname": "remarks",
+      "fieldtype": "Text Editor",
+      "label": "Remarks"
+    },
+    {
+      "fieldname": "fetch_geolocation",
+      "fieldtype": "Button",
+      "label": "Fetch Geolocation"
+    },
+    {
+      "fieldname": "geolocation",
+      "fieldtype": "Geolocation",
+      "label": "Geolocation",
+      "read_only":1
+    }
+  ],
+  "index_web_pages_for_search": 1,
+  "track_changes": 1,
+  "is_submittable": 1,
+  "links": [],
+  "modified": "2026-01-21 15:58:47.897007",
+  "modified_by": "Administrator",
+  "module": "Tq Erphr",
+  "name": "Site Visit",
+  "naming_rule": "By \"Naming Series\" field",
+  "owner": "Administrator",
+  "permissions": [
+    {
+      "create": 1,
+      "delete": 1,
+      "email": 1,
+      "export": 1,
+      "print": 1,
+      "read": 1,
+      "report": 1,
+      "role": "System Manager",
+      "share": 1,
+      "submit": 1,
+      "write": 1
+    }
+  ],
+  "sort_field": "modified",
+  "sort_order": "DESC",
+  "states": []
+}

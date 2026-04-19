@@ -1,0 +1,220 @@
+{
+    "actions": [],
+    "allow_import": 1,
+    "autoname": "MKT-CKIN-.MM.-.YYYY.-.######",
+    "creation": "2019-06-10 11:56:34.536413",
+    "doctype": "DocType",
+    "engine": "InnoDB",
+    "field_order": [
+        "employee",
+        "employee_name",
+        "customer",
+        "customer_name",
+        "checkin_time",
+        "checkout_time",
+        "latitude",
+        "longitude",
+        "checked_out",
+        "colatitude",
+        "colongitude",
+        "column_break_1",
+        "geolocation",
+        "fetch_geolocation",
+        "cogeolocation"
+    ],
+    "fields": [
+        {
+            "fieldname": "employee",
+            "fieldtype": "Link",
+            "in_standard_filter": 1,
+            "label": "Employee",
+            "options": "Employee",
+            "search_index": 1
+        },
+        {
+            "fetch_from": "employee.employee_name",
+            "fieldname": "employee_name",
+            "fieldtype": "Data",
+            "in_list_view": 1,
+            "label": "Employee Name",
+            "read_only": 1
+        },
+        {
+            "fieldname": "customer",
+            "fieldtype": "Link",
+            "in_standard_filter": 1,
+            "label": "Customer",
+            "options": "Customer",
+            "search_index": 1
+        },
+        {
+            "fetch_from": "customer.customer_name",
+            "fieldname": "customer_name",
+            "fieldtype": "Data",
+            "in_list_view": 1,
+            "label": "Customer Name",
+            "read_only": 1
+        },
+        {
+            "fieldname": "checkin_time",
+            "fieldtype": "Datetime",
+            "label": "Check-in Time",
+            "in_list_view": 1
+        },
+        {
+            "fieldname": "checkout_time",
+            "fieldtype": "Datetime",
+            "label": "Check-out Time",
+            "in_list_view": 1
+        },
+        {
+            "fieldname": "latitude",
+            "fieldtype": "Float",
+            "label": "Latitude",
+            "in_list_view": 1
+        },
+        {
+            "fieldname": "longitude",
+            "fieldtype": "Float",
+            "label": "Longitude",
+            "in_list_view": 1
+        },
+        {
+            "fieldname": "checked_out",
+            "fieldtype": "Check",
+            "label": "Checked Out"
+        },
+        {
+            "fieldname": "colatitude",
+            "fieldtype": "Float",
+            "label": "CO Latitude",
+            "in_list_view": 1
+        },
+        {
+            "fieldname": "colongitude",
+            "fieldtype": "Float",
+            "label": "CO Longitude",
+            "in_list_view": 1
+        },
+        {
+            "fieldname": "column_break_1",
+            "fieldtype": "Column Break"
+        },
+        {
+            "fieldname": "geolocation",
+            "fieldtype": "Geolocation",
+            "label": "Checkin Location"
+        },
+        {
+            "fieldname": "fetch_geolocation",
+            "fieldtype": "Button",
+            "label": "Fetch Geolocation"
+        },
+        {
+            "fieldname": "cogeolocation",
+            "fieldtype": "Geolocation",
+            "label": "Checkout Location"
+        }
+    ],
+    "links": [],
+    "modified": "2024-05-29 21:19:11.550766",
+    "modified_by": "Administrator",
+    "module": "Tq Erphr",
+    "name": "Marketing Checkin",
+    "naming_rule": "Expression (old style)",
+    "owner": "Administrator",
+    "permissions": [
+        {
+            "create": 1,
+            "delete": 1,
+            "email": 1,
+            "export": 1,
+            "import": 1,
+            "print": 1,
+            "read": 1,
+            "report": 1,
+            "role": "System Manager",
+            "share": 1,
+            "write": 1
+        },
+        {
+            "create": 1,
+            "delete": 1,
+            "email": 1,
+            "export": 1,
+            "import": 1,
+            "print": 1,
+            "read": 1,
+            "report": 1,
+            "role": "HR Manager",
+            "share": 1,
+            "write": 1
+        },
+        {
+            "create": 1,
+            "delete": 1,
+            "email": 1,
+            "export": 1,
+            "import": 1,
+            "print": 1,
+            "read": 1,
+            "report": 1,
+            "role": "HR User",
+            "share": 1,
+            "write": 1
+        },
+        {
+            "create": 1,
+            "delete": 1,
+            "read": 1,
+            "role": "Employee",
+            "write": 1
+        },
+        {
+            "delete": 1,
+            "email": 1,
+            "export": 1,
+            "permlevel": 1,
+            "print": 1,
+            "read": 1,
+            "report": 1,
+            "role": "System Manager",
+            "share": 1,
+            "write": 1
+        },
+        {
+            "delete": 1,
+            "email": 1,
+            "export": 1,
+            "permlevel": 1,
+            "print": 1,
+            "read": 1,
+            "report": 1,
+            "role": "HR Manager",
+            "share": 1,
+            "write": 1
+        },
+        {
+            "delete": 1,
+            "email": 1,
+            "export": 1,
+            "permlevel": 1,
+            "print": 1,
+            "read": 1,
+            "report": 1,
+            "role": "HR User",
+            "share": 1,
+            "write": 1
+        },
+        {
+            "permlevel": 1,
+            "read": 1,
+            "role": "Employee"
+        }
+    ],
+    "sort_field": "creation",
+    "sort_order": "ASC",
+    "states": [],
+    "title_field": "employee_name",
+    "track_changes": 1
+}

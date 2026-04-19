@@ -135,6 +135,26 @@ doctype_js = {
 # 		"on_trash": "method"
 # 	}
 # }
+doc_events = {
+    "Biometric Data": {
+        "after_insert": ["tq_erphr.biometric.biometric_data_after_insert"],
+    },
+    "Expense Claim": {
+        "after_save": [
+            "tq_erphr.tq_erphr.doctype.executive_expense_manager.executive_expense_manager.update_eem_on_draft_save"
+        ],
+        "on_submit": [
+            "tq_erphr.tq_erphr.doctype.executive_expense_manager.executive_expense_manager.update_eem_on_submit"
+        ],
+        "on_update": [
+            "tq_erphr.tq_erphr.doctype.executive_expense_manager.executive_expense_manager.update_eem_on_update"
+        ],
+        "on_cancel": [
+            "tq_erphr.tq_erphr.doctype.executive_expense_manager.executive_expense_manager.update_eem_on_cancel"
+        ],
+    }
+}
+
 
 # Scheduled Tasks
 # ---------------

@@ -4,7 +4,7 @@
         "dt": "HR Settings",
         "module": "Tq Erphr",
         "name": "mapKey in Hrsettings",
-        "fieldname": "Map_key",
+        "fieldname": "map_key",
         "fieldtype": "Data",
         "label": "Google Map Key",
         "insert_after": "allow_geolocation_tracking"
@@ -89,5 +89,130 @@
         "options": "Monthly Food Expense",
         "insert_after": "ref_doctype",
         "read_only": 1
+    },
+    {
+        "doctype": "Custom Field",
+        "dt": "HR Settings",
+        "module": "Tq Erphr",
+        "name": "Executive Expense Manager Settings in HR Settings",
+        "fieldname": "location_section",
+        "fieldtype": "Section Break",
+        "label": "Executive Expense Manager Settings",
+        "insert_after": "exit_questionnaire_notification_template"
+    },
+    {
+        "doctype": "Custom Field",
+        "dt": "HR Settings",
+        "module": "Tq Erphr",
+        "name": "Rate Per KM in HR Settings",
+        "fieldname": "rate_per_km",
+        "fieldtype": "Float",
+        "label": "Rate Per KM",
+        "precision": "2",
+        "default": 0,
+        "read_only": 0,
+        "insert_after": "location_section"
+    },
+    {
+        "doctype": "Custom Field",
+        "dt": "HR Settings",
+        "module": "Tq Erphr",
+        "name": "Travel Expense Type in HR Settings",
+        "fieldname": "travel_expense_type",
+        "fieldtype": "Link",
+        "options": "Expense Claim Type",
+        "label": "Travel Expense Type",
+        "insert_after": "rate_per_km"
+    },
+    {
+        "doctype": "Custom Field",
+        "dt": "Employee",
+        "module": "Tq Erphr",
+        "name": "Info Section",
+        "fieldname": "info_section",
+        "fieldtype": "Section Break",
+        "label": "Information",
+        "insert_after": "health_insurance_no"
+    },
+    {
+        "doctype": "Custom Field",
+        "dt": "Employee",
+        "module": "Tq Erphr",
+        "name": "Govt Designation",
+        "fieldname": "govt_designation",
+        "fieldtype": "Data",
+        "label": "Designation code or grade as in Government Order",
+        "insert_after": "info_section"
+    },
+    {
+        "doctype": "Custom Field",
+        "dt": "Employee",
+        "module": "Tq Erphr",
+        "name": "ESI No",
+        "fieldname": "esi_no",
+        "fieldtype": "Data",
+        "label": "ESI No",
+        "insert_after": "govt_designation"
+    },
+    {
+        "doctype": "Custom Field",
+        "dt": "Employee",
+        "module": "Tq Erphr",
+        "name": "Aadhar No",
+        "fieldname": "aadhar_no",
+        "fieldtype": "Data",
+        "label": "Aadhar No",
+        "insert_after": "esi_no"
+    },
+    {
+        "doctype": "Custom Field",
+        "dt": "Employee",
+        "module": "Tq Erphr",
+        "name": "Election ID",
+        "fieldname": "election_id_no",
+        "fieldtype": "Data",
+        "label": "Election ID",
+        "insert_after": "aadhar_no"
+    },
+    {
+        "doctype": "Custom Field",
+        "dt": "Employee",
+        "module": "Tq Erphr",
+        "name": "Father or Husband",
+        "fieldname": "name_of_father_or_husband",
+        "fieldtype": "Data",
+        "label": "Name of Father or Husband",
+        "insert_after": "health_details"
+    },
+    {
+        "doctype": "Custom Field",
+        "dt": "Leave Policy Detail",
+        "module": "Tq Erphr",
+        "name": "Maximum Leave in a Month",
+        "fieldname": "maximum_leave_in_a_month",
+        "fieldtype": "Float",
+        "label": "Maximum Leave in a Month",
+        "insert_after": "annual_allocation"
+    },
+    {
+        "doctype": "Custom Field",
+        "dt": "Employee Checkin",
+        "module": "Tq Erphr",
+        "name": "Customer in Employee Checkin",
+        "fieldname": "customer",
+        "fieldtype": "Link",
+        "label": "Customer",
+        "options": "Customer",
+        "insert_after": "log_type"
+    },
+    {
+        "doctype": "Custom Field",
+        "dt": "Employee Checkin",
+        "module": "Tq Erphr",
+        "name": "Remarks in Employee Checkin",
+        "fieldname": "remarks",
+        "fieldtype": "Data",
+        "label": "Remarks",
+        "insert_after": "customer"
     }
 ]
