@@ -8,5 +8,5 @@ from frappe.model.document import Document
 from frappe.utils import format_date
 
 
-class TQERPHRSettings(Document):
+class TQERPHRHRSettings(Document):
 	pass

@@ -2,7 +2,7 @@
 // For license information, please see license.txt
 
 
-frappe.ui.form.on("TQ ERPHR Settings", {
+frappe.ui.form.on("TQ ERPHRHR Settings", {
     refresh: function(frm) {
         toggle_map_key(frm);
     }

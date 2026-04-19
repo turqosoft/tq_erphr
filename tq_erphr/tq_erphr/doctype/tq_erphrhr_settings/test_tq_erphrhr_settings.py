@@ -4,5 +4,5 @@
 from frappe.tests.utils import FrappeTestCase
 
 
-class TestTQERPHRSettings(FrappeTestCase):
+class TestTQERPHRHRSettings(FrappeTestCase):
 	pass
