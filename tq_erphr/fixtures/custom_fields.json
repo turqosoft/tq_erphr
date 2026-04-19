@@ -4,7 +4,7 @@
         "dt": "HR Settings",
         "module": "Tq Erphr",
         "name": "TQ HR Executive Expense Manager Settings Section in HR Settings",
-        "fieldname": "location_section",
+        "fieldname": "tq_location_section",
         "fieldtype": "Section Break",
         "label": "Expense Manager Settings",
         "insert_after": "unlink_payment_on_cancellation_of_employee_advance"
@@ -14,34 +14,34 @@
         "dt": "HR Settings",
         "module": "Tq Erphr",
         "name": "TQ Travel Expense Rate Per KM in HR Settings",
-        "fieldname": "rate_per_km",
+        "fieldname": "tq_rate_per_km",
         "fieldtype": "Float",
         "label": "Rate Per KM",
         "precision": "2",
         "default": 0,
         "read_only": 0,
-        "insert_after": "location_section"
+        "insert_after": "tq_location_section"
     },
     {
         "doctype": "Custom Field",
         "dt": "HR Settings",
         "module": "Tq Erphr",
         "name": "TQ Executive Travel Expense Type in HR Settings",
-        "fieldname": "travel_expense_type",
+        "fieldname": "tq_travel_expense_type",
         "fieldtype": "Link",
         "options": "Expense Claim Type",
         "label": "Travel Expense Type",
-        "insert_after": "rate_per_km"
+        "insert_after": "tq_rate_per_km"
     },
     {
         "doctype": "Custom Field",
         "dt": "HR Settings",
         "module": "Tq Erphr",
         "name": "TQ Google Map Key in HR Settings",
-        "fieldname": "map_key",
+        "fieldname": "tq_map_key",
         "fieldtype": "Data",
         "label": "Google Map Key",
-        "insert_after": "travel_expense_type"
+        "insert_after": "tq_travel_expense_type"
     },
     {
         "doctype": "Custom Field",
