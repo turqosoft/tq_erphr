@@ -3,7 +3,7 @@
         "doctype": "Custom Field",
         "dt": "HR Settings",
         "module": "Tq Erphr",
-        "name": "TQ MapKey in Hrsettings",
+        "name": "TQ Google Map Key in HR Settings",
         "fieldname": "map_key",
         "fieldtype": "Data",
         "label": "Google Map Key",
@@ -11,9 +11,43 @@
     },
     {
         "doctype": "Custom Field",
+        "dt": "HR Settings",
+        "module": "Tq Erphr",
+        "name": "TQ HR Executive Expense Manager Settings Section in HR Settings",
+        "fieldname": "location_section",
+        "fieldtype": "Section Break",
+        "label": "Expense Manager Settings",
+        "insert_after": "exit_questionnaire_notification_template"
+    },
+    {
+        "doctype": "Custom Field",
+        "dt": "HR Settings",
+        "module": "Tq Erphr",
+        "name": "TQ Travel Expense Rate Per KM in HR Settings",
+        "fieldname": "rate_per_km",
+        "fieldtype": "Float",
+        "label": "Rate Per KM",
+        "precision": "2",
+        "default": 0,
+        "read_only": 0,
+        "insert_after": "location_section"
+    },
+    {
+        "doctype": "Custom Field",
+        "dt": "HR Settings",
+        "module": "Tq Erphr",
+        "name": "TQ Executive Travel Expense Type in HR Settings",
+        "fieldname": "travel_expense_type",
+        "fieldtype": "Link",
+        "options": "Expense Claim Type",
+        "label": "Travel Expense Type",
+        "insert_after": "rate_per_km"
+    },
+    {
+        "doctype": "Custom Field",
         "dt": "Employee Checkin",
         "module": "Tq Erphr",
-        "name": "TQ Google Map Pr",
+        "name": "TQ Google Map Section in Employee Checkin",
         "fieldname": "googlemap_section",
         "fieldtype": "Section Break",
         "insert_after": "shift_actual_end"
@@ -22,7 +56,7 @@
         "doctype": "Custom Field",
         "dt": "Employee Checkin",
         "module": "Tq Erphr",
-        "name": "TQ Google Map in Employee Checkin",
+        "name": "TQ Google Map info in Employee Checkin",
         "fieldname": "google_map_html",
         "fieldtype": "HTML",
         "label": "Google Map",
@@ -79,40 +113,6 @@
         "options": "Monthly Food Expense",
         "insert_after": "ref_doctype",
         "read_only": 1
-    },
-    {
-        "doctype": "Custom Field",
-        "dt": "HR Settings",
-        "module": "Tq Erphr",
-        "name": "TQ Executive Expense Manager Settings in HR Settings",
-        "fieldname": "location_section",
-        "fieldtype": "Section Break",
-        "label": "Executive Expense Manager Settings",
-        "insert_after": "exit_questionnaire_notification_template"
-    },
-    {
-        "doctype": "Custom Field",
-        "dt": "HR Settings",
-        "module": "Tq Erphr",
-        "name": "TQ Rate Per KM in HR Settings",
-        "fieldname": "rate_per_km",
-        "fieldtype": "Float",
-        "label": "Rate Per KM",
-        "precision": "2",
-        "default": 0,
-        "read_only": 0,
-        "insert_after": "location_section"
-    },
-    {
-        "doctype": "Custom Field",
-        "dt": "HR Settings",
-        "module": "Tq Erphr",
-        "name": "TQ Travel Expense Type in HR Settings",
-        "fieldname": "travel_expense_type",
-        "fieldtype": "Link",
-        "options": "Expense Claim Type",
-        "label": "Travel Expense Type",
-        "insert_after": "rate_per_km"
     },
     {
         "doctype": "Custom Field",
@@ -180,6 +180,7 @@
         "module": "Tq Erphr",
         "name": "Maximum Leave in a Month",
         "fieldname": "maximum_leave_in_a_month",
+        "in_list_view": 1,
         "fieldtype": "Float",
         "label": "Maximum Leave in a Month",
         "insert_after": "annual_allocation"
