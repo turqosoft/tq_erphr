@@ -8,7 +8,9 @@
     "field_order": [
         "location_section",
         "rate_per_km",
-        "travel_expense_type"
+        "travel_expense_type",
+        "google_map_settings_section",
+        "map_key"
     ],
     "fields": [
         {
