@@ -6,11 +6,11 @@
     "editable_grid": 1,
     "engine": "InnoDB",
     "field_order": [
+        "google_map_settings_section",
+        "map_key",
         "location_section",
         "rate_per_km",
-        "travel_expense_type",
-        "google_map_settings_section",
-        "map_key"
+        "travel_expense_type"
     ],
     "fields": [
         {
@@ -40,7 +40,8 @@
         {
             "fieldname": "map_key",
             "fieldtype": "Data",
-            "label": "Google Map Key"
+            "label": "Google Map Key",
+            "description": "Setup this in Google and copy over the Key here"
         }
     ],
     "icon": "fa fa-cog",
