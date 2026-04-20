@@ -8,6 +8,7 @@ frappe.ui.form.on("TQ ERPHRHR Settings", {
     }
 });
 
+// Tooggle the key based on the allow_geolocation_tracking in HR Settings
 function toggle_map_key(frm) {
     frappe.db.get_value("HR Settings", null, "allow_geolocation_tracking")
         .then(r => {
