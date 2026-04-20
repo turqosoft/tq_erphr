@@ -33,13 +33,11 @@
             "label": "Travel Expense Type"
         },
         {
-            "doctype": "Custom Field",
             "fieldname": "google_map_settings_section",
             "fieldtype": "Section Break",
             "label": "Google Map Settings"
         },
         {
-            "doctype": "Custom Field",
             "fieldname": "map_key",
             "fieldtype": "Data",
             "label": "Google Map Key"
