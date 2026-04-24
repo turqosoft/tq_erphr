@@ -1,0 +1,140 @@
+<div style="text-align: center; line-height: 1.5;">
+
+    <h2 style="font-weight: bold; margin-bottom: 5px;">
+        Sales Man Summary Report
+    </h2>
+
+    <h4>
+        Sales Person: <b>{%= filters.salesperson || "-" %}</b>
+    </h4>
+
+    <h5>
+        {%= frappe.datetime.str_to_user(filters.from_date) %}
+        to
+        {%= frappe.datetime.str_to_user(filters.to_date) %}
+    </h5>
+
+</div>
+
+<!-- <hr> -->
+
+<!-- ✅ Wrapper for left/right spacing -->
+<div style="margin: 0 60px;">
+
+    {% var is_visit_section = false; %}
+
+    <!-- ================= NORMAL SECTIONS TABLE ================= -->
+    <table class="table table-bordered" 
+           style="width: 100%; border-collapse: collapse; font-size: 12px; border:1px solid black;">
+    
+        <thead>
+            <tr style="background-color: #f2f2f2;">
+                <th style="padding:6px; border:1px solid black;">Section</th>
+                <th style="padding:6px; border:1px solid black;">Customer</th>
+                <th style="padding:6px; border:1px solid black;">Count</th>
+                <th style="padding:6px; border:1px solid black;">Amount</th>
+            </tr>
+        </thead>
+    
+        <tbody>
+    
+        {% for(var i=0, l=data.length; i<l; i++) { %}
+            {% var row = data[i]; %}
+    
+            <!--  SWITCH TO SITE VISIT -->
+            {% if(!is_visit_section && row.section && row.section.toLowerCase().includes("site visit")) { %}
+                
+                {% is_visit_section = true; %}
+    
+                </tbody>
+                </table>
+    
+                <!-- PROPER SPACING -->
+                <!-- <div style="height:20px;"></div> -->
+    
+                <!-- ================= VISIT TABLE ================= -->
+                <table class="table table-bordered" 
+                       style="width: 100%; border-collapse: collapse; font-size: 12px; border:1px solid black;">
+    
+                    <thead>
+                        <tr style="background-color: #f2f2f2;">
+                            <th style="padding:6px; border:1px solid black;">Section</th>
+                            <th style="padding:6px; border:1px solid black;">Customer</th>
+                            <th style="padding:6px; border:1px solid black;">Site</th>
+                            <th style="padding:6px; border:1px solid black;">Remarks</th>
+                        </tr>
+                    </thead>
+    
+                    <tbody>
+    
+                    <!-- SITE VISIT HEADER -->
+                    <tr style="font-weight:bold;">
+                        <td colspan="4" style="padding:8px; font-size:14px; background:#f2f2f2; border:1px solid black;">
+                            {%= row.section %}
+                        </td>
+                    </tr>
+    
+            {% } else if(!is_visit_section) { %}
+    
+                <!-- NORMAL SECTION HEADER -->
+                {% if(row.section && !row.customer && row.section.indexOf("Total") === -1) { %}
+                    <tr style="font-weight:bold;">
+                        <td colspan="4" style="padding:8px; font-size:14px; background:#f2f2f2; border:1px solid black;">
+                            {%= row.section %}
+                        </td>
+                    </tr>
+                {% } %}
+    
+                <!-- NORMAL ROW -->
+                {% if(row.customer && !row.section) { %}
+                    <tr>
+                        <td style="border:1px solid black;"></td>
+                        <td style="border:1px solid black; padding:5px;">{%= row.customer %}</td>
+                        <td style="border:1px solid black; text-align:right;">{%= row.count %}</td>
+                        <td style="border:1px solid black; text-align:right;">{%= row.amount %}</td>
+                    </tr>
+                {% } %}
+    
+                <!-- TOTAL ROW -->
+                {% if(row.section && row.section.indexOf("Total") !== -1) { %}
+                    <tr style="font-weight:bold;">
+                        <td style="border:1px solid black; background:#f2f2f2;">{%= row.section %}</td>
+                        <td style="border:1px solid black; background:#f2f2f2;"></td>
+                        <td style="border:1px solid black; background:#f2f2f2; text-align:right;">{%= row.count %}</td>
+                        <td style="border:1px solid black; background:#f2f2f2; text-align:right;">{%= row.amount %}</td>
+                    </tr>
+    
+                    <!-- spacing -->
+                    <tr><td colspan="4" style="height:10px; border:none;"></td></tr>
+                {% } %}
+    
+            {% } else { %}
+    
+                <!-- SITE VISIT ROW -->
+                {% if(row.customer) { %}
+                    <tr>
+                        <td style="border:1px solid black;"></td>
+                        <td style="border:1px solid black; padding:5px;">{%= row.customer %}</td>
+                        <td style="border:1px solid black; padding:5px;">{%= row.site %}</td>
+                        <td style="border:1px solid black; padding:5px;">{%= row.remarks %}</td>
+                    </tr>
+                {% } %}
+    
+            {% } %}
+    
+        {% } %}
+    
+        </tbody>
+    </table>
+</div>
+
+<br>
+
+<!-- <hr>
+
+<p style="text-align:right; font-size:11px; color:#777; margin-right:30px;">
+    Printed on:
+    {%= frappe.datetime.str_to_user(
+        frappe.datetime.get_datetime_as_string()
+    ) %}
+</p> -->

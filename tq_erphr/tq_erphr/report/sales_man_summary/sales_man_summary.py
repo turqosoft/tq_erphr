@@ -1,4 +1,6 @@
 import frappe
+from datetime import datetime
+from dateutil.relativedelta import relativedelta
 
 # ✅ Import existing APIs
 from tqerp_bd.api import (
@@ -34,7 +36,18 @@ def get_data(filters):
     to_date = filters.get("to_date")
     salesperson = filters.get("salesperson")
 
+     # ✅ VALIDATION: Max 2 months range
+    if from_date and to_date:
+        from_dt = datetime.strptime(from_date, "%Y-%m-%d")
+        to_dt = datetime.strptime(to_date, "%Y-%m-%d")
+
+        max_to_date = from_dt + relativedelta(months=2)
+
+        if to_dt > max_to_date:
+            frappe.throw("Date range should not exceed 2 months")
+
     data = []
+   
 
     # Helper: spacing
     def add_space():
