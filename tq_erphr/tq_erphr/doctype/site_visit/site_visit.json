@@ -9,6 +9,7 @@
     "section_break_cmte",
     "amended_from",
     "naming_series",
+    "user",
     "customer",
     "site",
     "column_break_sv",
@@ -44,6 +45,13 @@
       "default": "SV-.YYYY.-"
     },
     {
+      "fieldname": "user",
+      "fieldtype": "Link",
+      "options": "User",
+      "in_list_view": 1,
+      "label": "User"
+    },
+    {
       "fieldname": "customer",
       "fieldtype": "Link",
       "options": "Customer",
@@ -62,14 +70,14 @@
       "fieldname": "latitude",
       "fieldtype": "Float",
       "label": "Latitude",
-      "read_only":1,
+      "read_only": 1,
       "precision": 7
     },
     {
       "fieldname": "longitude",
       "fieldtype": "Float",
       "label": "Longitude",
-      "read_only":1,
+      "read_only": 1,
       "precision": 7
     },
     {
@@ -99,7 +107,7 @@
       "fieldname": "geolocation",
       "fieldtype": "Geolocation",
       "label": "Geolocation",
-      "read_only":1
+      "read_only": 1
     }
   ],
   "index_web_pages_for_search": 1,
@@ -122,6 +130,19 @@
       "read": 1,
       "report": 1,
       "role": "System Manager",
+      "share": 1,
+      "submit": 1,
+      "write": 1
+    },
+    {
+      "create": 1,
+      "delete": 0,
+      "email": 1,
+      "export": 1,
+      "print": 1,
+      "read": 1,
+      "report": 1,
+      "role": "Sales User",
       "share": 1,
       "submit": 1,
       "write": 1
