@@ -30,6 +30,7 @@
         "rate_per_km",
         "travel_expense_type",
         "total_distance",
+        "odometer_distance",
         "refresh_map",
         "section_break_cyzg",
         "employee_route",
@@ -179,6 +180,13 @@
             "fieldtype": "Table",
             "label": "Employee Expense Tracking",
             "options": "Employee Expense Tracking"
+        },
+        {
+            "fieldname": "odometer_distance",
+            "fieldtype": "Float",
+            "label": "Odometer Distance (KM)",
+            "default": 0,
+            "read_only": 1
         },
         {
             "fieldname": "total_travel_expense",

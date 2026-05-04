@@ -2,15 +2,23 @@
 # For license information, please see license.txt
 
 import frappe
+import math
 from frappe.model.document import Document
 from tq_erphr.geo import street_distance, reverse_geocode
 
 class ExecutiveExpenseManager(Document):
     def validate(self):
         self.calculate_site_distances()        
+        self.calculate_odometer_distance()
         self.calculate_totals()
         self.build_route_polyline()
         self.fill_location_names()
+
+    def before_insert(self):
+        self.validate_employee_has_checkin()
+
+    def before_submit(self):
+        self.validate_employee_has_checkout()
     
     def before_save(self):
         
@@ -19,9 +27,43 @@ class ExecutiveExpenseManager(Document):
         if self.end_lat and self.end_long:
             self.fetch_site_location()
             self.calculate_site_distances()        
+            self.calculate_odometer_distance()
             self.calculate_totals()
             self.build_route_polyline()
             self.fill_location_names()
+
+    def validate_employee_has_checkin(self):
+        if not (self.employee and self.date):
+            return
+
+        if not self.has_employee_checkin(("IN", "CHECKIN")):
+            frappe.throw(
+                f"Executive Expense Manager can be created only if employee {self.employee} "
+                f"has checked in on {self.date}."
+            )
+
+    def validate_employee_has_checkout(self):
+        if not (self.employee and self.date):
+            return
+
+        if not self.has_employee_checkin(("OUT", "CHECKOUT")):
+            frappe.throw(
+                f"Executive Expense Manager can be submitted only if employee {self.employee} "
+                f"has checked out on {self.date}."
+            )
+
+    def has_employee_checkin(self, log_types):
+        start_datetime = f"{self.date} 00:00:00"
+        end_datetime = f"{self.date} 23:59:59"
+
+        return frappe.db.exists(
+            "Employee Checkin",
+            {
+                "employee": self.employee,
+                "log_type": ["in", log_types],
+                "time": ["between", [start_datetime, end_datetime]]
+            }
+        )
     
     def add_travel_expensetype_and_rate(self):
     
@@ -144,6 +186,16 @@ class ExecutiveExpenseManager(Document):
                 f"Expense Claim <b>{expense_claim.name}</b> created successfully."
             )
             
+    def calculate_odometer_distance(self):
+        start_odometer = self.start_odometerkm or 0
+        end_odometer = self.end_odometerkm or 0
+
+        if not (start_odometer and end_odometer):
+            self.odometer_distance = 0
+            return
+
+        self.odometer_distance = round(end_odometer - start_odometer, 3)
+
   
     def calculate_totals(self):
         # 1. Total distance from Employee Site Tracking
@@ -175,26 +227,26 @@ class ExecutiveExpenseManager(Document):
             prev_lat = self.start_lat
             prev_long = self.start_long
 
-            for idx, row in enumerate(self.employee_site_tracking):
+            for row in self.employee_site_tracking:
 
-                # If check-in is missing → no distance
-                if not (row.checkin_lat and row.checkin_long):
+                # If site location is missing, there is no site distance to calculate.
+                if not (row.site_lat and row.site_long):
                     row.distance_travelled = 0
                     
                     continue
-                
-                if row.distance_travelled:
-                    # Use existing distance if already calculated
-                    prev_lat = row.checkin_lat
-                    prev_long = row.checkin_long
+
+                if not (prev_lat and prev_long):
+                    row.distance_travelled = 0
+                    prev_lat = row.site_lat
+                    prev_long = row.site_long
                     continue
 
-                # Calculate distance between previous → current check-in
+                # Calculate distance between previous location and current site.
                 distance = street_distance(
                     prev_lat,
                     prev_long,
-                    row.checkin_lat,
-                    row.checkin_long
+                    row.site_lat,
+                    row.site_long
                 )
 
                 # Save distance
@@ -202,17 +254,17 @@ class ExecutiveExpenseManager(Document):
                 if not row.actual_distance:
                     row.actual_distance = round(distance, 3)
 
-                # Update previous coordinates to current check-in (NOT checkout)
-                prev_lat = row.checkin_lat
-                prev_long = row.checkin_long
+                # Update previous coordinates to current site.
+                prev_lat = row.site_lat
+                prev_long = row.site_long
 
-            # ---------- Last leg: last check-in → end point ----------
+            # ---------- Last leg: last site -> end point ----------
             if self.end_lat and self.end_long and self.employee_site_tracking:
                 last = self.employee_site_tracking[-1]
-                if last.checkin_lat and last.checkin_long:
+                if last.site_lat and last.site_long:
                     last_leg = street_distance(
-                        last.checkin_lat,
-                        last.checkin_long,
+                        last.site_lat,
+                        last.site_long,
                         self.end_lat,
                         self.end_long
                     )
@@ -224,9 +276,9 @@ class ExecutiveExpenseManager(Document):
         
     def fill_location_names(self):
         for row in self.employee_site_tracking:
-            if row.checkin_lat and row.checkin_long:
+            if row.site_lat and row.site_long:
                 if not row.location_name:
-                    row.location_name = reverse_geocode(row.checkin_lat, row.checkin_long)
+                    row.location_name = reverse_geocode(row.site_lat, row.site_long)
                 
                 
                     
@@ -251,6 +303,56 @@ class ExecutiveExpenseManager(Document):
                     }
                 })
 
+        def add_direction_marker(start_coord, end_coord):
+            start_lon, start_lat = start_coord
+            end_lon, end_lat = end_coord
+
+            dx = end_lon - start_lon
+            dy = end_lat - start_lat
+            length = math.hypot(dx, dy)
+            if not length:
+                return
+
+            unit_x = dx / length
+            unit_y = dy / length
+            perp_x = -unit_y
+            perp_y = unit_x
+
+            arrow_lon = start_lon + dx * 0.6
+            arrow_lat = start_lat + dy * 0.6
+            arrow_size = min(max(length * 0.18, 0.00025), length * 0.45, 0.001)
+            arrow_width = arrow_size * 0.6
+
+            base_lon = arrow_lon - unit_x * arrow_size
+            base_lat = arrow_lat - unit_y * arrow_size
+
+            left = [
+                base_lon + perp_x * arrow_width,
+                base_lat + perp_y * arrow_width
+            ]
+            right = [
+                base_lon - perp_x * arrow_width,
+                base_lat - perp_y * arrow_width
+            ]
+            tip = [arrow_lon, arrow_lat]
+
+            features.append({
+                "type": "Feature",
+                "geometry": {
+                    "type": "Polygon",
+                    "coordinates": [
+                        [tip, left, right, tip]
+                    ]
+                },
+                "properties": {
+                    "name": "Direction",
+                    "stroke": "#333333",
+                    "stroke-width": 2,
+                    "fill": "#333333",
+                    "fill-opacity": 1
+                }
+            })
+
         frappe.log_error(
             title="Build Route Polyline", 
             message="Building route polyline for Executive Expense Manager."
@@ -268,22 +370,20 @@ class ExecutiveExpenseManager(Document):
 
         segment_distances = []
 
-        # ---------------- CHECK-IN MARKERS ONLY ----------------
-        prev_lat = self.start_lat
-        prev_long = self.start_long
+        # ---------------- SITE MARKERS ONLY ----------------
 
         for idx, row in enumerate(self.employee_site_tracking, start=1):
 
-            if not (row.checkin_lat and row.checkin_long):
+            if not (row.site_lat and row.site_long):
                 continue
 
-            coords.append([row.checkin_long, row.checkin_lat])
+            coords.append([row.site_long, row.site_lat])
 
             # Marker
             add_marker(
-                row.checkin_lat,
-                row.checkin_long,
-                f"Check-in {idx}: {row.location_name or ''}",
+                row.site_lat,
+                row.site_long,
+                f"Site {idx}: {row.location_name or ''}",
                 "#0066ff"    # blue
             )
 
@@ -292,10 +392,6 @@ class ExecutiveExpenseManager(Document):
                 segment_distances.append(row.distance_travelled)
             else:
                 segment_distances.append(0)
-
-            # Move pointer forward
-            prev_lat = row.checkin_lat
-            prev_long = row.checkin_long
 
         # ---------------- END POINT ----------------
         if self.end_lat and self.end_long:
@@ -325,6 +421,9 @@ class ExecutiveExpenseManager(Document):
                 }
             }
             features.append(route_feature)
+
+            for start_coord, end_coord in zip(coords, coords[1:]):
+                add_direction_marker(start_coord, end_coord)
 
         # ---------------- FINAL GEOJSON ----------------
         geojson = {
