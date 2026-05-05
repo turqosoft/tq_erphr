@@ -16,6 +16,7 @@
         "customer",
         "site_lat",
         "site_long",
+        "site",
         "distance_travelled",
         "actual_distance",
         "remarks"
@@ -68,6 +69,12 @@
             "fieldtype": "Float",
             "in_list_view": 1,
             "label": "Site Longitude"
+        },
+        {
+            "fieldname": "site",
+            "fieldtype": "Data",
+            "in_list_view": 1,
+            "label": "Site"
         },
         {
             "fieldname": "distance_travelled",

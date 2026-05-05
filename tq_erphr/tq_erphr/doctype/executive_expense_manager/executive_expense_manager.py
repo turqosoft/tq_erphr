@@ -346,9 +346,9 @@ class ExecutiveExpenseManager(Document):
                 },
                 "properties": {
                     "name": "Direction",
-                    "stroke": "#333333",
+                    "stroke": "#0f766e",
                     "stroke-width": 2,
-                    "fill": "#333333",
+                    "fill": "#0f766e",
                     "fill-opacity": 1
                 }
             })
@@ -380,10 +380,11 @@ class ExecutiveExpenseManager(Document):
             coords.append([row.site_long, row.site_lat])
 
             # Marker
+            site_label = row.site or row.location_name or ""
             add_marker(
                 row.site_lat,
                 row.site_long,
-                f"Site {idx}: {row.location_name or ''}",
+                f"Site {idx}: {site_label}",
                 "#0066ff"    # blue
             )
 
@@ -413,8 +414,8 @@ class ExecutiveExpenseManager(Document):
                 },
                 "properties": {
                     "name": "Travel Route",
-                    "stroke": "#333333",
-                    "stroke-width": 3,
+                    "stroke": "#2563eb",
+                    "stroke-width": 4,
 
                     # JS will use this to draw distance labels
                     "segment_distances": segment_distances

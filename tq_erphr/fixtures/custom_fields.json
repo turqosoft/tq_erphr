@@ -161,5 +161,17 @@
         "fieldtype": "Data",
         "label": "Remarks",
         "insert_after": "customer"
+    },
+    {
+        "doctype": "Custom Field",
+        "dt": "Expense Claim Detail",
+        "module": "Tq Erphr",
+        "name": "executive_expense_manager",
+        "fieldname": "executive_expense_manager",
+        "fieldtype": "Link",
+        "options": "Executive Expense Manager",
+        "label": "Executive Expense Manager",        
+        "insert_after": "sanctioned_amount",
+        "read_only": 1
     }
 ]
