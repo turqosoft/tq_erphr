@@ -7,19 +7,19 @@
     "engine": "InnoDB",
     "field_order": [
         "checkin_time",
-        "checkin_lat",
+        "site_lat",
+        "site_long",
+        "customer",
+        "site",
+        "remarks",
+        "actual_distance",
+        "distance_travelled",
         "checkin_long",
+        "checkin_lat",
         "checkout_time",
         "checkout_lat",
         "checkout_long",
-        "location_name",
-        "customer",
-        "site_lat",
-        "site_long",
-        "site",
-        "distance_travelled",
-        "actual_distance",
-        "remarks"
+        "location_name"
     ],
     "fields": [
         {
@@ -31,31 +31,26 @@
         {
             "fieldname": "checkin_lat",
             "fieldtype": "Float",
-            "in_list_view": 1,
             "label": "Check-In Latitude"
         },
         {
             "fieldname": "checkin_long",
             "fieldtype": "Float",
-            "in_list_view": 1,
             "label": "Check-In Longitude"
         },
         {
             "fieldname": "checkout_time",
             "fieldtype": "Time",
-            "in_list_view": 1,
             "label": "Check-Out Time"
         },
         {
             "fieldname": "checkout_lat",
             "fieldtype": "Float",
-            "in_list_view": 1,
             "label": "Check-Out Latitude"
         },
         {
             "fieldname": "checkout_long",
             "fieldtype": "Float",
-            "in_list_view": 1,
             "label": "Check-Out Longitude"
         },
         {
@@ -91,6 +86,7 @@
         },
         {
             "fieldname": "location_name",
+            "in_list_view": 1,
             "fieldtype": "Data",
             "label": "Location Name"
         },
