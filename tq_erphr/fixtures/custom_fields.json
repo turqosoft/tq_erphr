@@ -1,25 +1,6 @@
 [
     {
         "doctype": "Custom Field",
-        "dt": "Employee Checkin",
-        "module": "Tq Erphr",
-        "name": "TQ Google Map Section in Employee Checkin",
-        "fieldname": "googlemap_section",
-        "fieldtype": "Section Break",
-        "insert_after": "shift_actual_end"
-    },
-    {
-        "doctype": "Custom Field",
-        "dt": "Employee Checkin",
-        "module": "Tq Erphr",
-        "name": "TQ Google Map info in Employee Checkin",
-        "fieldname": "google_map_html",
-        "fieldtype": "HTML",
-        "label": "Google Map",
-        "insert_after": "googlemap_section"
-    },
-    {
-        "doctype": "Custom Field",
         "dt": "Salary Structure Assignment",
         "module": "Tq Erphr",
         "name": "Basic for EPF & ESI",
