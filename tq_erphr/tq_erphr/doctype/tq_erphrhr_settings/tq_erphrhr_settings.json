@@ -9,7 +9,9 @@
         "google_map_settings_section",
         "map_key",
         "location_section",
-        "rate_per_km",
+        "two_wheeler_rate_per_km",
+        "four_wheeler_rate_per_km",
+        "other_rate_per_km",
         "travel_expense_type"
     ],
     "fields": [
@@ -17,14 +19,6 @@
             "fieldname": "location_section",
             "fieldtype": "Section Break",
             "label": "Expense Manager Settings"
-        },
-        {
-            "fieldname": "rate_per_km",
-            "fieldtype": "Float",
-            "label": "Rate Per KM",
-            "precision": "2",
-            "default": 0,
-            "read_only": 0
         },
         {
             "fieldname": "travel_expense_type",
@@ -42,6 +36,27 @@
             "fieldtype": "Data",
             "label": "Google Map Key",
             "description": "Setup this in Google and copy over the Key here"
+        },
+        {
+            "fieldname": "two_wheeler_rate_per_km",
+            "fieldtype": "Float",
+            "label": "Two Wheeler Rate Per KM",
+            "precision": "2",
+            "default": 0
+        },
+        {
+            "fieldname": "four_wheeler_rate_per_km",
+            "fieldtype": "Float",
+            "label": "Four Wheeler Rate Per KM",
+            "precision": "2",
+            "default": 0
+        },
+        {
+            "fieldname": "other_rate_per_km",
+            "fieldtype": "Float",
+            "label": "Other Rate Per KM",
+            "precision": "2",
+            "default": 0
         }
     ],
     "icon": "fa fa-cog",

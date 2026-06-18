@@ -1,10 +1,7 @@
 frappe.listview_settings["Executive Expense Manager"] = {
-
-
     add_fields: ["expense_claim_status"],
 
     get_indicator(doc) {
-
         if (doc.expense_claim_status === "Not Created") {
             return ["Not Created", "gray", "expense_claim_status,=,Not Created"];
         }
@@ -21,8 +18,12 @@ frappe.listview_settings["Executive Expense Manager"] = {
             return ["Approved", "green", "expense_claim_status,=,Approved"];
         }
 
+        if (doc.expense_claim_status === "Unpaid") {
+            return ["Unpaid", "orange", "expense_claim_status,=,Unpaid"];
+        }
+
         if (doc.expense_claim_status === "Paid") {
-            return ["Paid", "darkgreen", "expense_claim_status,=,Paid"];
+            return ["Paid", "green", "expense_claim_status,=,Paid"];
         }
 
         if (doc.expense_claim_status === "Rejected") {
@@ -35,39 +36,59 @@ frappe.listview_settings["Executive Expense Manager"] = {
     },
 
     onload(listview) {
+        listview.page.add_inner_button(__("Employee Expense Claim"), () => {
+            const dialog = new frappe.ui.Dialog({
+                title: __("Employee Expense Claim"),
+                fields: [
+                    {
+                        fieldname: "employee",
+                        fieldtype: "Link",
+                        label: __("Employee"),
+                        options: "Employee",
+                        reqd: 1,
+                        get_query: () => {
+                            return {
+                                query: "tq_erphr.tq_erphr.doctype.executive_expense_manager.executive_expense_manager.get_eem_employees"
+                            };
+                        }
+                    },
+                    {
+                        fieldname: "start_date",
+                        fieldtype: "Date",
+                        label: __("Start Date"),
+                        reqd: 1,
+                    },
+                    {
+                        fieldname: "end_date",
+                        fieldtype: "Date",
+                        label: __("End Date"),
+                        reqd: 1,
+                    },
+                ],
+                primary_action_label: __("Create"),
+                primary_action(values) {
+                    if (values.start_date > values.end_date) {
+                        frappe.msgprint(__("Start Date cannot be after End Date."));
+                        return;
+                    }
 
-        listview.page.add_actions_menu_item(
-            __("Create Expense Claim"),
-            function () {
-
-                const selected = listview.get_checked_items();
-
-                if (!selected.length) {
-                    frappe.msgprint("Please select at least one record.");
-                    return;
-                }
-
-                const names = selected.map(d => d.name);
-
-                frappe.confirm(
-                    `Create Expense Claim for ${names.length} record(s)?`,
-                    () => {
-                        frappe.call({
-                            method: "tq_erphr.tq_erphr.doctype.executive_expense_manager.executive_expense_manager.bulk_create_expense_claim",
-                            args: {
-                                executive_expense_managers: names
-                            },
-                            freeze: true,
-                            callback(r) {
-                                if (!r.exc) {
-                                    frappe.msgprint(r.message || "Expense Claims created successfully.");
-                                    listview.refresh();
-                                }
+                    frappe.call({
+                        method: "tq_erphr.tq_erphr.doctype.executive_expense_manager.executive_expense_manager.create_employee_expense_claim",
+                        args: values,
+                        freeze: true,
+                        freeze_message: __("Creating Expense Claim..."),
+                        callback(r) {
+                            if (!r.exc) {
+                                dialog.hide();
+                                frappe.msgprint(r.message || __("Expense Claim created successfully."));
+                                listview.refresh();
                             }
-                        });
-                    }, false, __("Create")
-                );
-            }
-        );
-    }
+                        },
+                    });
+                },
+            });
+
+            dialog.show();
+        });
+    },
 };

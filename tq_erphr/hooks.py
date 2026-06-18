@@ -151,6 +151,17 @@ doc_events = {
         "on_cancel": [
             "tq_erphr.tq_erphr.doctype.executive_expense_manager.executive_expense_manager.update_eem_on_cancel"
         ],
+        "on_trash": [
+            "tq_erphr.tq_erphr.doctype.executive_expense_manager.executive_expense_manager.update_eem_on_draft_delete"
+        ],
+    },
+    "Payment Entry": {
+        "on_submit": [
+            "tq_erphr.tq_erphr.doctype.executive_expense_manager.executive_expense_manager.update_eem_on_payment_submit"
+        ],
+        "on_cancel": [
+            "tq_erphr.tq_erphr.doctype.executive_expense_manager.executive_expense_manager.update_eem_on_payment_cancel"
+        ],
     }
 }
 

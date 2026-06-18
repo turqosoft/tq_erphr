@@ -13,6 +13,7 @@
         "expense_claim_status",
         "amended_from",
         "start_details_section",
+        "vehicle_type",
         "start_time",
         "start_odometerkm",
         "column_break_viht",
@@ -88,6 +89,12 @@
             "fieldtype": "Float",
             "label": "End Latitude",
             "precision": "7"
+        },
+        {
+            "fieldname": "vehicle_type",
+            "fieldtype": "Select",
+            "label": "Vehicle Type",
+            "options": "Two Wheeler\nFour Wheeler\nOther"
         },
         {
             "fieldname": "end_long",
@@ -245,7 +252,7 @@
             "fieldname": "expense_claim_status",
             "fieldtype": "Select",
             "label": "Expense Claim Status",
-            "options": "Not Created\nProcessing\nSubmitted\nApproved\nPaid\nRejected\nCancelled"
+            "options": "Not Created\nProcessing\nSubmitted\nApproved\nUnpaid\nPaid\nRejected\nCancelled"
         },
         {
             "fieldname": "start_odometerkm",

@@ -69,7 +69,12 @@ class ExecutiveExpenseManager(Document):
     
             hr_settings = frappe.get_single("TQ ERPHRHR Settings")
             self.travel_expense_type = hr_settings.travel_expense_type
-            self.rate_per_km = hr_settings.rate_per_km
+            if self.vehicle_type == "Two Wheeler":
+                self.rate_per_km = hr_settings.two_wheeler_rate_per_km
+            elif self.vehicle_type == "Four Wheeler":
+                self.rate_per_km = hr_settings.four_wheeler_rate_per_km
+            elif self.vehicle_type == "Other":
+                self.rate_per_km = hr_settings.other_rate_per_km
     
     
     
@@ -159,6 +164,7 @@ class ExecutiveExpenseManager(Document):
                     "expense_type": self.travel_expense_type,
                     "expense_date": self.date,
                     "amount": self.total_travel_expense,
+                    "sanctioned_amount" : self.total_travel_expense,
                     # Link back to Executive Expense Manager
                     "executive_expense_manager": self.name,
                     "description": (
@@ -176,6 +182,7 @@ class ExecutiveExpenseManager(Document):
                         # Link back to Executive Expense Manager
                         "executive_expense_manager": self.name,
                         "amount": row.amount,
+                        "sanctioned_amount": row.amount,
                         "description": row.description 
                     })
 
@@ -483,6 +490,7 @@ def bulk_create_expense_claim(executive_expense_managers):
                     "expense_type": eem.travel_expense_type,
                     "expense_date": eem.date,
                     "amount": eem.total_travel_expense,
+                    "sanctioned_amount": eem.total_travel_expense,
                     "executive_expense_manager": eem.name,
                     "description": (
                         f"Travel: {eem.total_distance} km "
@@ -497,6 +505,7 @@ def bulk_create_expense_claim(executive_expense_managers):
                         "expense_type": row.expense_type,
                         "expense_date": eem.date,
                         "amount": row.amount,
+                        "sanctioned_amount": row.amount,
                         "executive_expense_manager": eem.name,
                         "description": row.description or ""
                     })
@@ -514,6 +523,49 @@ def bulk_create_expense_claim(executive_expense_managers):
     )
 
 
+@frappe.whitelist()
+def create_employee_expense_claim(employee, start_date, end_date):
+    if not employee:
+        frappe.throw("Employee is required.")
+    if not start_date or not end_date:
+        frappe.throw("Start Date and End Date are required.")
+    if frappe.utils.getdate(start_date) > frappe.utils.getdate(end_date):
+        frappe.throw("Start Date cannot be after End Date.")
+
+    eems = frappe.get_all(
+        "Executive Expense Manager",
+        filters={
+            "employee": employee,
+            "date": ["between", [start_date, end_date]],
+            "expense_claim_status": "Not Created",
+        },
+        fields=["name"],
+        order_by="date asc, name asc",
+    )
+
+    if not eems:
+        frappe.throw("No Not Created Executive Expense Manager records found for the selected employee and date range.")
+
+    return bulk_create_expense_claim([row.name for row in eems])
+
+
+@frappe.whitelist()
+def get_eem_employees(doctype, txt, searchfield, start, page_length, filters):
+    """Return list of employees who have Executive Expense Manager records with employee name"""
+    employees = frappe.get_all(
+        "Executive Expense Manager",
+        fields=["DISTINCT employee"],
+        filters={"employee": ["like", f"%{txt}%"]} if txt else {},
+        limit_page_length=page_length,
+        limit_start=start,
+    )
+    
+    result = []
+    for emp in employees:
+        emp_doc = frappe.get_doc("Employee", emp.employee)
+        result.append([emp.employee, f"{emp.employee} - {emp_doc.employee_name}"])
+    
+    return result
 
 
 # ----------------------------
@@ -534,9 +586,42 @@ def get_eem_names_from_expense_claim(doc):
     return eem_names
 
 
-def update_eem_status(doc, status):
-    """Update EEM status safely without triggering unnecessary hooks"""
+def get_eem_status_from_expense_claim(doc):
+    """Map Expense Claim state to EEM status."""
+    if doc.docstatus == 2:
+        return "Cancelled"
+
+    if doc.docstatus == 0:
+        return "Processing"
+
+    status = doc.status
+    if hasattr(doc, "set_status"):
+        doc.set_status()
+        status = doc.status
+
+    if status == "Paid":
+        return "Paid"
+
+    if doc.approval_status == "Rejected" or status == "Rejected":
+        return "Rejected"
+
+    if status == "Unpaid":
+        return "Unpaid"
+
+    if doc.approval_status == "Approved" or status == "Approved":
+        return "Approved"
+
+    return "Submitted"
+
+
+def update_eem_status(doc, status=None):
+    """Update linked EEM status safely without triggering unnecessary hooks."""
     eem_names = get_eem_names_from_expense_claim(doc)
+
+    if not eem_names:
+        return
+
+    status = status or get_eem_status_from_expense_claim(doc)
 
     for eem_name in eem_names:
         if not frappe.db.exists("Executive Expense Manager", eem_name):
@@ -565,52 +650,55 @@ def update_eem_status(doc, status):
 def update_eem_on_draft_save(doc, method=None):
     """
     Triggered on after_save.
-    Only update status when Expense Claim is in Draft.
+    Draft Expense Claims keep linked EEMs in Processing.
     """
     if doc.docstatus != 0:
         return
 
-    update_eem_status(doc, "Draft")
+    update_eem_status(doc)
 
 
 def update_eem_on_submit(doc, method=None):
     """
     Triggered on on_submit.
     """
-    if doc.is_paid or doc.status == "Paid":
-        update_eem_status(doc, "Paid")
-    else:
-        update_eem_status(doc, "Submitted")
+    update_eem_status(doc)
 
 
 def update_eem_on_update(doc, method=None):
     """
     Triggered on on_update.
-    Used only to detect Paid state.
+    Keep EEM status aligned with Expense Claim status.
     """
-    if doc.docstatus != 1:
-        return
-
-    if doc.is_paid or doc.status == "Paid":
-        update_eem_status(doc, "Paid")
+    update_eem_status(doc)
 
 
 def update_eem_on_cancel(doc, method=None):
     """
     Triggered on on_cancel.
     """
-    update_eem_status(doc, "Cancelled")
+    update_eem_status(doc, "Not Created")
+
+
+def update_eem_on_draft_delete(doc, method=None):
+    """
+    Triggered when a draft Expense Claim is deleted.
+    Revert linked EEMs to their initial claim state.
+    """
+    if doc.docstatus != 0:
+        return
+
+    update_eem_status(doc, "Not Created")
     
 
 def update_eem_on_payment_submit(doc, method=None):
     """
     Triggered on Payment Entry submit.
-    Update linked EEMs to Paid if applicable.
+    Update linked EEMs from linked Expense Claim status.
     """
     if doc.docstatus != 1:
         return
 
-    # Check if Payment Entry is linked to Expense Claims
     if not doc.references:
         return
 
@@ -619,22 +707,19 @@ def update_eem_on_payment_submit(doc, method=None):
         if ref.reference_doctype == "Expense Claim"
     ]
 
-    if not linked_expense_claims:
-        return
-
     for expense_claim_name in linked_expense_claims:
         expense_claim = frappe.get_doc("Expense Claim", expense_claim_name)
-        update_eem_status(expense_claim, "Paid")
+        update_eem_status(expense_claim)
         
+
 def update_eem_on_payment_cancel(doc, method=None):
     """
     Triggered on Payment Entry cancel.
-    Revert linked EEMs from Paid to Submitted if applicable.
+    Revert linked EEMs from the linked Expense Claim status.
     """
     if doc.docstatus != 2:
         return
 
-    # Check if Payment Entry is linked to Expense Claims
     if not doc.references:
         return
 
@@ -643,9 +728,6 @@ def update_eem_on_payment_cancel(doc, method=None):
         if ref.reference_doctype == "Expense Claim"
     ]
 
-    if not linked_expense_claims:
-        return
-
     for expense_claim_name in linked_expense_claims:
         expense_claim = frappe.get_doc("Expense Claim", expense_claim_name)
-        update_eem_status(expense_claim, "Submitted")        
+        update_eem_status(expense_claim)
