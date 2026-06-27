@@ -40,3 +40,14 @@ mit
 
 #### Bug Fixes
 - 
+
+### v1.0.11 (2026-06-27)
+
+#### New Features
+- Expense summary report
+
+#### Improvements
+- Executive expense manager enhancements
+
+#### Bug Fixes
+- 

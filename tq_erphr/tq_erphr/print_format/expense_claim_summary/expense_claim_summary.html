@@ -1,0 +1,646 @@
+{% set company = frappe.get_doc("Company", doc.company) %}
+{% set currency = company.default_currency %}
+{% set employee_doc = frappe.get_doc("Employee", doc.employee) if doc.employee else None %}
+{% set designation = employee_doc.designation if employee_doc else "" %}
+
+<style>
+    @media print {
+        .print-format {
+            padding: 0 !important;
+            margin: 0 !important;
+        }
+
+        @page {
+            size: landscape A4;
+            margin: 5mm 8mm;
+        }
+
+        .green-banner,
+        .green-banner * {
+            color: #fff !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+    }
+
+    body {
+        margin: 0;
+        padding: 0;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    .expense-statement {
+        font-family: Arial, sans-serif;
+        font-size: 10px;
+        color: #000;
+        width: 100%;
+        margin: 0 auto;
+        box-sizing: border-box;
+    }
+
+    /* Header Card Styling */
+    .header-card {
+        border: 1.5px solid #000;
+        border-radius: 12px;
+        display: flex;
+        height: 76px;
+        overflow: hidden;
+        margin-bottom: 8px;
+        position: relative;
+        background-color: #fff;
+    }
+
+    .header-left {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        background-color: #fff;
+    }
+
+    .green-banner-wrapper {
+        position: relative;
+        display: flex;
+        height: 46px;
+        background-color: #fff;
+    }
+
+    .green-banner {
+        background-color: #0b4d2e;
+        color: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 40px 0 20px;
+        height: 100%;
+        width: 78%;
+        clip-path: polygon(0 0, 100% 0, 93% 100%, 0 100%);
+        z-index: 2;
+    }
+
+    .gray-slant {
+        position: absolute;
+        top: 0;
+        left: 0;
+        height: 100%;
+        width: 82%;
+        background-color: #d1d5db;
+        clip-path: polygon(0 0, 100% 0, 94% 100%, 0 100%);
+        z-index: 1;
+    }
+
+    .logo-name-group {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .company-logo {
+        max-height: 32px;
+        max-width: 120px;
+        object-fit: contain;
+    }
+
+    .default-logo-placeholder {
+        width: 24px;
+        height: 24px;
+        background: linear-gradient(135deg, #0b4d2e, #1e7e4a);
+        border-radius: 4px;
+    }
+
+    .company-name {
+        font-size: 13px;
+        font-weight: bold;
+        letter-spacing: 0.5px;
+    }
+
+    .statement-title {
+        font-size: 15px;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+    }
+
+    .employee-info-row {
+        display: flex;
+        padding: 4px 20px;
+        gap: 40px;
+        background-color: #fff;
+        height: 30px;
+        align-items: center;
+    }
+
+    .info-field {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .name-field {
+        width: 45%;
+    }
+
+    .des-field {
+        width: 45%;
+    }
+
+    .info-label {
+        font-weight: bold;
+        font-size: 10px;
+    }
+
+    .info-value-line {
+        flex: 1;
+        border-bottom: 1px solid #000;
+        padding: 0 5px;
+        font-style: italic;
+        font-weight: 600;
+        font-size: 11px;
+    }
+
+    .header-right {
+        width: 220px;
+        border-left: 1.5px solid #000;
+        padding: 8px 12px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        background-color: #fff;
+    }
+
+    .approval-line {
+        display: flex;
+        align-items: flex-end;
+        font-size: 9px;
+    }
+
+    .app-label {
+        font-weight: bold;
+        white-space: nowrap;
+    }
+
+    .app-dots {
+        flex: 1;
+        border-bottom: 1px dotted #000;
+        margin-left: 4px;
+        margin-bottom: 2px;
+    }
+
+    /* Table Grid Styling */
+    .statement-table {
+        width: 100%;
+        border-collapse: collapse;
+        table-layout: fixed;
+        border: 1.5px solid #000;
+    }
+
+    .statement-table th, 
+    .statement-table td {
+        border: 1px solid #000;
+        padding: 3px 4px;
+        font-size: 9px;
+        vertical-align: middle;
+        box-sizing: border-box;
+    }
+
+    .days-header-row th {
+        background-color: #fff;
+        font-weight: bold;
+        font-size: 9px;
+        text-align: center;
+        height: 20px;
+        border-bottom: 1.5px solid #000;
+    }
+
+    .day-date-span {
+        font-weight: normal;
+        font-size: 8.5px;
+    }
+
+    .sub-header-row th {
+        background-color: #fff;
+        font-weight: bold;
+        font-size: 8px;
+        text-align: center;
+        height: 18px;
+        border-bottom: 1.5px solid #000;
+    }
+
+    .data-row {
+        height: 18px;
+    }
+
+    .cell-detail {
+        text-align: left;
+        white-space: normal;
+        word-break: break-word;
+        font-size: 7.5px;
+        line-height: 1.1;
+    }
+
+    .cell-amount {
+        text-align: right;
+        font-weight: 500;
+    }
+
+    .total-row {
+        background-color: #fff;
+        height: 20px;
+    }
+
+    .cell-total-label {
+        font-weight: bold;
+        text-align: left;
+        font-size: 9px;
+    }
+
+    .cell-total-value {
+        font-weight: bold;
+        text-align: right;
+        font-size: 9.5px;
+    }
+
+    .report-row {
+        height: 20px;
+        background-color: #fff;
+    }
+
+    .report-cell {
+        font-weight: bold;
+        font-size: 8.5px;
+        padding-left: 6px;
+        border-top: 1.5px solid #000;
+    }
+
+    /* Bottom Signature & Totals Block */
+    .bottom-card {
+        display: flex;
+        border: 1.5px solid #000;
+        border-radius: 8px;
+        margin-top: 8px;
+        height: 80px;
+        box-sizing: border-box;
+        background-color: #fff;
+    }
+
+    .card-left {
+        width: 25%;
+        border-right: 1.5px solid #000;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+    }
+
+    .remarks-box {
+        padding: 4px 8px;
+        flex: 1;
+        border-bottom: 1px solid #000;
+    }
+
+    .remarks-title {
+        font-weight: bold;
+        font-size: 9px;
+    }
+
+    .remarks-content {
+        font-size: 8px;
+        margin-top: 2px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .totals-table {
+        padding: 4px 8px;
+    }
+
+    .total-line {
+        display: flex;
+        justify-content: space-between;
+        font-size: 9px;
+        margin-bottom: 2px;
+    }
+
+    .total-line.grand-total-line {
+        font-weight: bold;
+        border-top: 1px solid #000;
+        padding-top: 2px;
+        font-size: 10px;
+        margin-bottom: 0;
+    }
+
+    .tot-label {
+        font-weight: bold;
+    }
+
+    .card-right {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-start;
+        padding-top: 6px;
+    }
+
+    .sig-header-row {
+        display: flex;
+        justify-content: space-around;
+        font-weight: bold;
+        font-size: 9px;
+        width: 100%;
+    }
+
+    .sig-col {
+        flex: 1;
+        text-align: left;
+        padding-left: 6px;
+    }
+
+    .sig-col.font-head {
+        font-size: 8.5px;
+    }
+
+    /* Footer / Policy Block */
+    .footer-section {
+        display: flex;
+        align-items: center;
+        margin-top: 6px;
+        gap: 15px;
+    }
+
+    .submission-date-box {
+        border: 1.5px solid #000;
+        border-radius: 6px;
+        width: 100px;
+        height: 38px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        background-color: #fff;
+        box-sizing: border-box;
+    }
+
+    .sub-date-label {
+        font-size: 8px;
+        font-weight: bold;
+        text-align: center;
+        line-height: 1;
+    }
+
+    .sub-date-value {
+        font-size: 10px;
+        font-weight: bold;
+        margin-top: 4px;
+    }
+
+    .policy-text {
+        flex: 1;
+        font-size: 8.5px;
+        line-height: 1.3;
+        text-align: justify;
+    }
+</style>
+
+{# Data Preparation #}
+{% set eem_map = {} %}
+{% set dates_list = [] %}
+{% for d in doc.expenses %}
+    {% if d.executive_expense_manager %}
+        {% set eem = frappe.get_doc("Executive Expense Manager", d.executive_expense_manager) %}
+        {% set _ = eem_map.update({eem.date|string: eem}) %}
+        {% if eem.date not in dates_list %}
+            {% set _ = dates_list.append(eem.date) %}
+        {% endif %}
+    {% endif %}
+{% endfor %}
+
+{# Logic for Start of Week (Monday) #}
+{% if dates_list %}
+    {% set first_date = frappe.utils.getdate(dates_list|sort|first) %}
+    {% set day_of_week = first_date.weekday() %} {# 0=Mon, 6=Sun #}
+    {% set monday = frappe.utils.add_days(first_date, -day_of_week) %}
+{% else %}
+    {% set reference_date = frappe.utils.getdate(doc.posting_date) %}
+    {% set day_of_week = reference_date.weekday() %}
+    {% set monday = frappe.utils.add_days(reference_date, -day_of_week) %}
+{% endif %}
+
+{# Compute week-wide totals #}
+{% set total_travel = namespace(val=0) %}
+{% set total_other = namespace(val=0) %}
+{% for cur_date_str, eem in eem_map.items() %}
+    {% set total_travel.val = total_travel.val + (eem.total_travel_expense or 0) %}
+    {% set total_other.val = total_other.val + (eem.total_other_expenses or 0) %}
+{% endfor %}
+
+{# Prepare daily data arrays to map into rows #}
+{% set week_data = [] %}
+{% for i in range(6) %}
+    {% set cur_date_str = frappe.utils.add_days(monday, i).strftime('%Y-%m-%d') %}
+    {% set eem = eem_map.get(cur_date_str) %}
+    {% set day_items = [] %}
+    {% if eem %}
+        {% if eem.total_travel_expense and eem.total_travel_expense > 0 %}
+            {% set travel_rows = [] %}
+            {% for track in eem.employee_expense_tracking %}
+                {% if track.expense_type == eem.travel_expense_type and track.amount and track.amount > 0 %}
+                    {% set _ = travel_rows.append(track) %}
+                {% endif %}
+            {% endfor %}
+            
+            {# 1. Travel segment rows #}
+            {% for track in travel_rows %}
+                {% set segment_info = track.description.split("Travel to ")[1].replace(" per km", "") if "Travel to " in track.description else "site" %}
+                {% set desc = "Travel to " ~ segment_info %}
+                {% set _ = day_items.append({"detail": desc, "amount": track.amount}) %}
+            {% endfor %}
+            
+            {# 2. Total travel info row #}
+            {% set vehicle_label = eem.vehicle_type if eem.vehicle_type else "Vehicle" %}
+            {% set total_desc = "Total Travel (" ~ vehicle_label ~ "): " ~ eem.total_distance ~ " km" %}
+            {% if eem.rate_per_km %}
+                {% set total_desc = total_desc ~ " @ " ~ eem.rate_per_km %}
+            {% endif %}
+            {% set _ = day_items.append({"detail": total_desc, "amount": eem.total_travel_expense}) %}
+        {% endif %}
+
+        {# 3. Other daily expenses next #}
+        {% for track in eem.employee_expense_tracking %}
+            {% if track.expense_type != eem.travel_expense_type and track.amount and track.amount > 0 %}
+                {% set desc = track.expense_type %}
+                {% if track.description %}
+                    {% set desc = desc ~ " - " ~ track.description %}
+                {% endif %}
+                {% set _ = day_items.append({"detail": desc, "amount": track.amount}) %}
+            {% endif %}
+        {% endfor %}
+    {% endif %}
+    {% set _ = week_data.append(day_items) %}
+{% endfor %}
+
+<div class="expense-statement">
+    <!-- Header Card -->
+    <div class="header-card">
+        <div class="header-left">
+            <div class="green-banner-wrapper">
+                <div class="green-banner">
+                    <div class="logo-name-group">
+                        {% if company.company_logo %}
+                            <img src="{{ company.company_logo }}" class="company-logo" alt="Logo" />
+                        {% else %}
+                            <div class="default-logo-placeholder"></div>
+                        {% endif %}
+                        <span class="company-name">{{ doc.company | upper }}</span>
+                    </div>
+                    <span class="statement-title">Travelling Expense Statement</span>
+                </div>
+                <div class="gray-slant"></div>
+            </div>
+            <div class="employee-info-row">
+                <div class="info-field name-field">
+                    <span class="info-label">Name</span>
+                    <span class="info-value-line">{{ doc.employee_name }}</span>
+                </div>
+                <div class="info-field des-field">
+                    <span class="info-label">Designation</span>
+                    <span class="info-value-line">{{ designation or "" }}</span>
+                </div>
+            </div>
+        </div>
+        <div class="header-right">
+            <div class="approval-line">
+                <span class="app-label">Received On</span>
+                <span class="app-dots"></span>
+            </div>
+            <div class="approval-line">
+                <span class="app-label">Approved by GM</span>
+                <span class="app-dots"></span>
+            </div>
+            <div class="approval-line">
+                <span class="app-label">Approved by SH</span>
+                <span class="app-dots"></span>
+            </div>
+            <div class="approval-line">
+                <span class="app-label">Approved by BDM</span>
+                <span class="app-dots"></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Table Grid -->
+    <table class="statement-table">
+        <colgroup>
+            {% for i in range(6) %}
+                <col style="width: 11.66%;" />
+                <col style="width: 5.0%;" />
+            {% endfor %}
+        </colgroup>
+        <thead>
+            <tr class="days-header-row">
+                {% for i in range(6) %}
+                    {% set cur_date = frappe.utils.add_days(monday, i) %}
+                    <th colspan="2">
+                        {{ cur_date.strftime('%a').upper() }} &nbsp;&nbsp; {{ cur_date.strftime('%d / %m / %y') }}
+                    </th>
+                {% endfor %}
+            </tr>
+            <tr class="sub-header-row">
+                {% for i in range(6) %}
+                    <th>Detail</th>
+                    <th>Expense Kms.</th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {# genau 12 Data Rows #}
+            {% for row_idx in range(12) %}
+                <tr class="data-row">
+                    {% for i in range(6) %}
+                        {% set item = week_data[i][row_idx] if week_data[i]|length > row_idx else None %}
+                        {% if item %}
+                            <td class="cell-detail">{{ item.detail }}</td>
+                            <td class="cell-amount">{{ "{:,.2f}".format(item.amount) if (item.amount is not none and item.amount != "") else "" }}</td>
+                        {% else %}
+                            <td class="cell-detail"></td>
+                            <td class="cell-amount"></td>
+                        {% endif %}
+                    {% endfor %}
+                </tr>
+            {% endfor %}
+
+            <!-- Total Row -->
+            <tr class="total-row">
+                {% for i in range(6) %}
+                    {% set cur_date_str = frappe.utils.add_days(monday, i).strftime('%Y-%m-%d') %}
+                    {% set eem = eem_map.get(cur_date_str) %}
+                    <td class="cell-total-label">Total</td>
+                    <td class="cell-total-value">
+                        {% if eem and eem.total_expense %}
+                            {{ "{:,.2f}".format(eem.total_expense) }}
+                        {% endif %}
+                    </td>
+                {% endfor %}
+            </tr>
+
+            <!-- Reports Status Row -->
+            <tr class="report-row">
+                <td colspan="4" class="report-cell">Daily Activity Report: (Y/N)</td>
+                <td colspan="4" class="report-cell">Payment Collection Report (Y/N)</td>
+                <td colspan="4" class="report-cell">Priority Product &mdash; D &amp; W: (Y/N)</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <!-- Bottom Signature and Totals Box -->
+    <div class="bottom-card">
+        <div class="card-left">
+            <div class="remarks-box">
+                <span class="remarks-title">Remarks</span>
+                <div class="remarks-content">
+                    {{ doc.remarks or "" }}
+                </div>
+            </div>
+            <div class="totals-table">
+                <div class="total-line">
+                    <span class="tot-label">Total Expense</span>
+                    <span class="tot-value">{{ frappe.utils.fmt_money(total_travel.val, None, currency) }}</span>
+                </div>
+                <div class="total-line">
+                    <span class="tot-label">Other Expense:</span>
+                    <span class="tot-value">{{ frappe.utils.fmt_money(total_other.val, None, currency) }}</span>
+                </div>
+                <div class="total-line grand-total-line">
+                    <span class="tot-label">Total</span>
+                    <span class="tot-value">{{ frappe.utils.fmt_money(doc.total_claimed_amount or (total_travel.val + total_other.val), None, currency) }}</span>
+                </div>
+            </div>
+        </div>
+        <div class="card-right">
+            <div class="sig-header-row">
+                <div class="sig-col">Staff:</div>
+                <div class="sig-col">Acct. (CLT):</div>
+                <div class="sig-col">Acct. (HO):</div>
+                <div class="sig-col">BDM:</div>
+                <div class="sig-col">SH:</div>
+                <div class="sig-col">GM:</div>
+                <div class="sig-col font-head">Acct. Head:</div>
+                <div class="sig-col">MD:</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Submission Date & Policy -->
+    <div class="footer-section">
+        <div class="submission-date-box">
+            <span class="sub-date-label">Date of Submission</span>
+            <span class="sub-date-value">
+                {% if doc.posting_date %}
+                    {{ frappe.utils.formatdate(doc.posting_date) }}
+                {% endif %}
+            </span>
+        </div>
+        <div class="policy-text">
+            <strong>Travel Expense Submission Policy - Cut - off Dates:</strong> Sales Officers &mdash; Monday, BDMs &mdash; Tuesday, SH/GM &mdash; Wednesday. The report must include all relevant bills and travel tickets along with the expense form. Delayed submissions or incomplete may not be considered/or reimbursement or shall attract penalties.
+        </div>
+    </div>
+</div>
