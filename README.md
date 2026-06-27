@@ -30,3 +30,13 @@ mit
 
 #### Bug Fixes
 - 
+
+### v1.0.10 (2026-06-27)
+
+#### New Features
+
+#### Improvements
+- Unclub Checkin and Site visit
+
+#### Bug Fixes
+- 

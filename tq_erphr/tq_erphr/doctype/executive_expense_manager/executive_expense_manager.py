@@ -14,11 +14,11 @@ class ExecutiveExpenseManager(Document):
         self.build_route_polyline()
         self.fill_location_names()
 
-    def before_insert(self):
-        self.validate_employee_has_checkin()
+    # def before_insert(self):
+    #     self.validate_employee_has_checkin()
 
-    def before_submit(self):
-        self.validate_employee_has_checkout()
+    # def before_submit(self):
+    #     self.validate_employee_has_checkout()
     
     def before_save(self):
         
@@ -210,6 +210,7 @@ class ExecutiveExpenseManager(Document):
         for row in self.employee_site_tracking:
             total_distance += (row.actual_distance or 0)
 
+        total_distance += (self.actual_end_distance or 0)
         self.total_distance = total_distance
 
         # 2. Travel expense = total distance × rate_per_km
@@ -266,21 +267,29 @@ class ExecutiveExpenseManager(Document):
                 prev_long = row.site_long
 
             # ---------- Last leg: last site -> end point ----------
+            self.end_distance_travelled = 0
             if self.end_lat and self.end_long and self.employee_site_tracking:
-                last = self.employee_site_tracking[-1]
-                if last.site_lat and last.site_long:
+                last = next(
+                    (
+                        row for row in reversed(self.employee_site_tracking)
+                        if row.site_lat and row.site_long
+                    ),
+                    None,
+                )
+                if last:
                     last_leg = street_distance(
                         last.site_lat,
                         last.site_long,
                         self.end_lat,
                         self.end_long
                     )
-                
+                    self.end_distance_travelled = round(last_leg, 3)
+                    if not self.actual_end_distance:
+                        self.actual_end_distance = self.end_distance_travelled
 
 
-   
 
-        
+
     def fill_location_names(self):
         for row in self.employee_site_tracking:
             if row.site_lat and row.site_long:
@@ -309,6 +318,27 @@ class ExecutiveExpenseManager(Document):
                         "marker-size": "medium"
                     }
                 })
+
+        def add_distance_label(start_coord, end_coord, distance):
+            if not distance:
+                return
+
+            start_lon, start_lat = start_coord
+            end_lon, end_lat = end_coord
+            features.append({
+                "type": "Feature",
+                "geometry": {
+                    "type": "Point",
+                    "coordinates": [
+                        (start_lon + end_lon) / 2,
+                        (start_lat + end_lat) / 2,
+                    ],
+                },
+                "properties": {
+                    "name": "Distance Label",
+                    "distance_label": f"{round(distance, 3)} km",
+                },
+            })
 
         def add_direction_marker(start_coord, end_coord):
             start_lon, start_lat = start_coord
@@ -387,7 +417,7 @@ class ExecutiveExpenseManager(Document):
             coords.append([row.site_long, row.site_lat])
 
             # Marker
-            site_label = row.site or row.location_name or ""
+            site_label = row.customer or row.location_name or ""
             add_marker(
                 row.site_lat,
                 row.site_long,
@@ -395,9 +425,9 @@ class ExecutiveExpenseManager(Document):
                 "#0066ff"    # blue
             )
 
-            # Store segment distance (already calculated in row)
-            if row.distance_travelled:
-                segment_distances.append(row.distance_travelled)
+            # Store actual segment distance for map labels.
+            if row.actual_distance:
+                segment_distances.append(row.actual_distance)
             else:
                 segment_distances.append(0)
 
@@ -410,6 +440,8 @@ class ExecutiveExpenseManager(Document):
                 "End Location",
                 "#ff3333"     # red
             )
+            if len(coords) >= 2:
+                segment_distances.append(self.actual_end_distance or self.end_distance_travelled or 0)
 
         # ---------------- LINESTRING ROUTE ----------------
         if len(coords) >= 2:
@@ -430,8 +462,10 @@ class ExecutiveExpenseManager(Document):
             }
             features.append(route_feature)
 
-            for start_coord, end_coord in zip(coords, coords[1:]):
+            for idx, (start_coord, end_coord) in enumerate(zip(coords, coords[1:])):
                 add_direction_marker(start_coord, end_coord)
+                distance = segment_distances[idx] if idx < len(segment_distances) else 0
+                add_distance_label(start_coord, end_coord, distance)
 
         # ---------------- FINAL GEOJSON ----------------
         geojson = {
@@ -493,6 +527,7 @@ def bulk_create_expense_claim(executive_expense_managers):
                     "sanctioned_amount": eem.total_travel_expense,
                     "executive_expense_manager": eem.name,
                     "description": (
+                        f"Vehicle Type: {eem.vehicle_type}, "
                         f"Travel: {eem.total_distance} km "
                         f"@ {eem.rate_per_km} per km"
                     )

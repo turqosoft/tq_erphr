@@ -8,6 +8,15 @@ function apply_route_map_styles(frm) {
     const marker_offsets = {};
     const offset_step = 0.00005;
 
+    function make_distance_label_icon(label) {
+        return L.divIcon({
+            className: "eem-route-distance-label",
+            html: `<div style="background: rgba(255, 255, 255, 0.92); border: 1px solid #2563eb; border-radius: 4px; color: #1f2937; font-size: 11px; font-weight: 700; line-height: 1; padding: 3px 5px; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.22); white-space: nowrap;">${label}</div>`,
+            iconSize: null,
+            iconAnchor: [18, 8]
+        });
+    }
+
     function make_route_icon(label, color, shape) {
         const is_diamond = shape === "diamond";
         const wrapper_style = [
@@ -53,6 +62,12 @@ function apply_route_map_styles(frm) {
                 latlng.lat + offset_step * offset_count,
                 latlng.lng + offset_step * offset_count
             );
+        }
+
+        if (name === "Distance Label") {
+            return L.marker(latlng, {
+                icon: make_distance_label_icon(properties.distance_label || "")
+            });
         }
 
         if (name === "Start Location") {
@@ -102,7 +117,15 @@ function apply_route_map_styles(frm) {
     };
 
     route_field.on_each_feature = function(feature, layer) {
-        if (feature.properties && feature.properties.name) {
+        if (!feature.properties) {
+            return;
+        }
+
+        if (feature.properties.name === "Distance Label") {
+            return;
+        }
+
+        if (feature.properties.name) {
             layer.bindTooltip(feature.properties.name);
         }
     };

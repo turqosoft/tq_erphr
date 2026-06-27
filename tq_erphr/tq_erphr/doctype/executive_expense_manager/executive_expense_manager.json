@@ -22,9 +22,12 @@
         "end_details_section",
         "end_time",
         "end_odometerkm",
+        "actual_end_distance",
         "column_break_wois",
         "end_lat",
         "end_long",
+        "end_distance_travelled",
+        "end_narration",
         "employee_site_tracking_tab",
         "section_break_ebtm",
         "employee_site_tracking",
@@ -143,7 +146,6 @@
         {
             "fetch_from": "employee.employee_name",
             "fieldname": "employee_name",
-            "in_list_view": 1,
             "fieldtype": "Data",
             "label": "Employee Name"
         },
@@ -265,6 +267,25 @@
             "fieldtype": "Float",
             "label": "End Odometer(KM)",
             "default": 0
+        },
+        {
+            "fieldname": "actual_end_distance",
+            "fieldtype": "Float",
+            "label": "Actual End Distance (KM)",
+            "default": 0,
+            "description": "the distance travelled from last site visit to home or office"
+        },
+        {
+            "fieldname": "end_distance_travelled",
+            "fieldtype": "Float",
+            "label": "End Distance Travelled (KM)",
+            "default": 0,
+            "read_only": 1
+        },
+        {
+            "fieldname": "end_narration",
+            "fieldtype": "Small Text",
+            "label": "End Narration"
         }
     ],
     "grid_page_length": 50,
