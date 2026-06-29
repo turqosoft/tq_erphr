@@ -51,3 +51,14 @@ mit
 
 #### Bug Fixes
 - 
+
+### v1.0.12 (2026-06-29)
+
+#### New Features
+- Expense summary report
+
+#### Improvements
+- Change field type of location to long text from Data in employee site tracking
+
+#### Bug Fixes
+- 
