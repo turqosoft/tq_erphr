@@ -10,7 +10,6 @@ class ExecutiveExpenseManager(Document):
     def validate(self):
         self.calculate_site_distances()        
         self.calculate_odometer_distance()
-        self.add_travel_expenses_to_tracking()
         self.calculate_totals()
         self.build_route_polyline()
         self.fill_location_names()
@@ -29,7 +28,6 @@ class ExecutiveExpenseManager(Document):
             self.fetch_site_location()
             self.calculate_site_distances()        
             self.calculate_odometer_distance()
-            self.add_travel_expenses_to_tracking()
             self.calculate_totals()
             self.build_route_polyline()
             self.fill_location_names()
@@ -77,51 +75,6 @@ class ExecutiveExpenseManager(Document):
                 self.rate_per_km = hr_settings.four_wheeler_rate_per_km
             elif self.vehicle_type == "Other":
                 self.rate_per_km = hr_settings.other_rate_per_km
-
-    def add_travel_expenses_to_tracking(self):
-        if not self.travel_expense_type:
-            return
-
-        # Clear existing travel expense rows from employee_expense_tracking
-        self.employee_expense_tracking = [
-            row for row in self.employee_expense_tracking
-            if row.expense_type != self.travel_expense_type
-        ]
-
-        rate = self.rate_per_km or 0
-
-        # 1. Travel for each site tracked
-        for idx, row in enumerate(self.employee_site_tracking, start=1):
-            distance = row.actual_distance or 0
-            if distance <= 0:
-                continue
-
-            amount = distance * rate
-            segment_label = row.customer or row.site or row.location_name or f"Site {idx}"
-            self.append("employee_expense_tracking", {
-                "expense_type": self.travel_expense_type,
-                "amount": amount,
-                "description": (
-                    f"Vehicle Type: {self.vehicle_type}, "
-                    f"Travel to {segment_label}: {distance} km "
-                    f"@ {rate} per km"
-                )
-            })
-
-        # 2. Last leg: last site -> end location
-        end_distance = self.actual_end_distance or 0
-        if end_distance > 0:
-            amount = end_distance * rate
-            end_label = self.end_narration or "End location"
-            self.append("employee_expense_tracking", {
-                "expense_type": self.travel_expense_type,
-                "amount": amount,
-                "description": (
-                    f"Vehicle Type: {self.vehicle_type}, "
-                    f"Travel to {end_label}: {end_distance} km "
-                    f"@ {rate} per km"
-                )
-            })
 
     def fetch_site_location(self):
             """Fetch employee check-in/out entries and populate Employee Site Tracking child table."""
@@ -203,30 +156,53 @@ class ExecutiveExpenseManager(Document):
           
 
             # ---------------- Expenses ----------------
-            # 1. Travel expenses first
-            for row in self.employee_expense_tracking:
-                if row.expense_type == self.travel_expense_type and row.amount and row.amount > 0:
-                    expense_claim.append("expenses", {
-                        "expense_type": row.expense_type,
-                        "expense_date": self.date,
-                        # Link back to Executive Expense Manager
-                        "executive_expense_manager": self.name,
-                        "amount": row.amount,
-                        "sanctioned_amount": row.amount,
-                        "description": row.description 
-                    })
+            # 1. Travel expenses first — generated from site tracking
+            rate = self.rate_per_km or 0
+            for idx, site in enumerate(self.employee_site_tracking, start=1):
+                distance = site.actual_distance or 0
+                if distance <= 0:
+                    continue
+                segment_label = site.customer or site.site or site.location_name or f"Site {idx}"
+                expense_claim.append("expenses", {
+                    "expense_type": self.travel_expense_type,
+                    "expense_date": self.date,
+                    "executive_expense_manager": self.name,
+                    "amount": distance * rate,
+                    "sanctioned_amount": distance * rate,
+                    "description": (
+                        f"Vehicle Type: {self.vehicle_type}, "
+                        f"Travel to {segment_label}: {distance} km "
+                        f"@ {rate} per km"
+                    )
+                })
 
-            # 2. Other expenses next
+            # End leg
+            end_distance = self.actual_end_distance or 0
+            if end_distance > 0:
+                end_label = self.end_narration or "End location"
+                expense_claim.append("expenses", {
+                    "expense_type": self.travel_expense_type,
+                    "expense_date": self.date,
+                    "executive_expense_manager": self.name,
+                    "amount": end_distance * rate,
+                    "sanctioned_amount": end_distance * rate,
+                    "description": (
+                        f"Vehicle Type: {self.vehicle_type}, "
+                        f"Travel to {end_label}: {end_distance} km "
+                        f"@ {rate} per km"
+                    )
+                })
+
+            # 2. Other expenses from child table
             for row in self.employee_expense_tracking:
-                if row.expense_type != self.travel_expense_type and row.amount and row.amount > 0:
+                if row.amount and row.amount > 0:
                     expense_claim.append("expenses", {
                         "expense_type": row.expense_type,
                         "expense_date": self.date,
-                        # Link back to Executive Expense Manager
                         "executive_expense_manager": self.name,
                         "amount": row.amount,
                         "sanctioned_amount": row.amount,
-                        "description": row.description 
+                        "description": row.description
                     })
 
             expense_claim.insert(ignore_permissions=True)
@@ -263,8 +239,7 @@ class ExecutiveExpenseManager(Document):
         # 3. Total other expenses from Employee Expense Tracking
         total_other = 0
         for row in self.employee_expense_tracking:
-            if row.expense_type != self.travel_expense_type:
-                total_other += (row.amount or 0)
+            total_other += (row.amount or 0)
 
         self.total_other_expenses = total_other
 
@@ -607,21 +582,46 @@ def bulk_create_expense_claim(executive_expense_managers):
         for eem_name in eem_names:
             eem = frappe.get_doc("Executive Expense Manager", eem_name)
 
-            # ---- Travel Expenses First ----
-            for row in eem.employee_expense_tracking:
-                if row.expense_type == eem.travel_expense_type and row.amount and row.amount > 0:
-                    expense_claim.append("expenses", {
-                        "expense_type": row.expense_type,
-                        "expense_date": eem.date,
-                        "amount": row.amount,
-                        "sanctioned_amount": row.amount,
-                        "executive_expense_manager": eem.name,
-                        "description": row.description or ""
-                    })
+            # ---- Travel Expenses First — generated from site tracking ----
+            rate = eem.rate_per_km or 0
+            for idx, site in enumerate(eem.employee_site_tracking, start=1):
+                distance = site.actual_distance or 0
+                if distance <= 0:
+                    continue
+                segment_label = site.customer or site.site or site.location_name or f"Site {idx}"
+                expense_claim.append("expenses", {
+                    "expense_type": eem.travel_expense_type,
+                    "expense_date": eem.date,
+                    "executive_expense_manager": eem.name,
+                    "amount": distance * rate,
+                    "sanctioned_amount": distance * rate,
+                    "description": (
+                        f"Vehicle Type: {eem.vehicle_type}, "
+                        f"Travel to {segment_label}: {distance} km "
+                        f"@ {rate} per km"
+                    )
+                })
 
-            # ---- Other Expenses Next ----
+            # End leg
+            end_distance = eem.actual_end_distance or 0
+            if end_distance > 0:
+                end_label = eem.end_narration or "End location"
+                expense_claim.append("expenses", {
+                    "expense_type": eem.travel_expense_type,
+                    "expense_date": eem.date,
+                    "executive_expense_manager": eem.name,
+                    "amount": end_distance * rate,
+                    "sanctioned_amount": end_distance * rate,
+                    "description": (
+                        f"Vehicle Type: {eem.vehicle_type}, "
+                        f"Travel to {end_label}: {end_distance} km "
+                        f"@ {rate} per km"
+                    )
+                })
+
+            # ---- Other Expenses ----
             for row in eem.employee_expense_tracking:
-                if row.expense_type != eem.travel_expense_type and row.amount and row.amount > 0:
+                if row.amount and row.amount > 0:
                     expense_claim.append("expenses", {
                         "expense_type": row.expense_type,
                         "expense_date": eem.date,

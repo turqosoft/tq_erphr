@@ -62,3 +62,14 @@ mit
 
 #### Bug Fixes
 - 
+
+### v1.0.13 (2026-06-30)
+
+#### New Features
+- 
+
+#### Improvements
+- Update the expense summary reporting.
+
+#### Bug Fixes
+- 

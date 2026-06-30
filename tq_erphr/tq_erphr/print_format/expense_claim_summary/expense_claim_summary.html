@@ -243,6 +243,12 @@
         font-weight: 500;
     }
 
+    .cell-travel-total {
+        font-weight: bold;
+        font-style: italic;
+        background-color: #f0f7f2;
+    }
+
     .total-row {
         background-color: #fff;
         height: 20px;
@@ -440,33 +446,37 @@
     {% set eem = eem_map.get(cur_date_str) %}
     {% set day_items = [] %}
     {% if eem %}
-        {% if eem.total_travel_expense and eem.total_travel_expense > 0 %}
-            {% set travel_rows = [] %}
-            {% for track in eem.employee_expense_tracking %}
-                {% if track.expense_type == eem.travel_expense_type and track.amount and track.amount > 0 %}
-                    {% set _ = travel_rows.append(track) %}
+        {% set rate = eem.rate_per_km or 0 %}
+        {% set has_travel = (eem.total_travel_expense and eem.total_travel_expense > 0) %}
+
+        {% if has_travel %}
+            {# 1. Travel segment rows — built directly from site tracking #}
+            {% for site in eem.employee_site_tracking %}
+                {% set distance = site.actual_distance or 0 %}
+                {% if distance > 0 %}
+                    {% set segment_label = site.customer or site.site or site.location_name or "Site" %}
+                    {% set desc = "Travel to " ~ segment_label ~ ": " ~ distance ~ " km @ " ~ rate %}
+                    {% set _ = day_items.append({"detail": desc, "amount": distance * rate}) %}
                 {% endif %}
             {% endfor %}
-            
-            {# 1. Travel segment rows #}
-            {% for track in travel_rows %}
-                {% set segment_info = track.description.split("Travel to ")[1].replace(" per km", "") if "Travel to " in track.description else "site" %}
-                {% set desc = "Travel to " ~ segment_info %}
-                {% set _ = day_items.append({"detail": desc, "amount": track.amount}) %}
-            {% endfor %}
-            
-            {# 2. Total travel info row #}
-            {% set vehicle_label = eem.vehicle_type if eem.vehicle_type else "Vehicle" %}
-            {% set total_desc = "Total Travel (" ~ vehicle_label ~ "): " ~ eem.total_distance ~ " km" %}
-            {% if eem.rate_per_km %}
-                {% set total_desc = total_desc ~ " @ " ~ eem.rate_per_km %}
+
+            {# End leg #}
+            {% set end_distance = eem.actual_end_distance or 0 %}
+            {% if end_distance > 0 %}
+                {% set end_label = eem.end_narration or "End location" %}
+                {% set desc = "Travel to " ~ end_label ~ ": " ~ end_distance ~ " km @ " ~ rate %}
+                {% set _ = day_items.append({"detail": desc, "amount": end_distance * rate}) %}
             {% endif %}
-            {% set _ = day_items.append({"detail": total_desc, "amount": eem.total_travel_expense}) %}
+
+            {# 2. Total travel summary row #}
+            {% set vehicle_label = eem.vehicle_type if eem.vehicle_type else "Vehicle" %}
+            {% set total_desc = "Total Travel (" ~ vehicle_label ~ "): " ~ eem.total_distance ~ " km @ " ~ rate %}
+            {% set _ = day_items.append({"detail": total_desc, "amount": eem.total_travel_expense, "is_total": true}) %}
         {% endif %}
 
-        {# 3. Other daily expenses next #}
+        {# 3. Other daily expenses from child table #}
         {% for track in eem.employee_expense_tracking %}
-            {% if track.expense_type != eem.travel_expense_type and track.amount and track.amount > 0 %}
+            {% if track.amount and track.amount > 0 %}
                 {% set desc = track.expense_type %}
                 {% if track.description %}
                     {% set desc = desc ~ " - " ~ track.description %}
@@ -558,8 +568,13 @@
                     {% for i in range(6) %}
                         {% set item = week_data[i][row_idx] if week_data[i]|length > row_idx else None %}
                         {% if item %}
-                            <td class="cell-detail">{{ item.detail }}</td>
-                            <td class="cell-amount">{{ "{:,.2f}".format(item.amount) if (item.amount is not none and item.amount != "") else "" }}</td>
+                            {% if item.get('is_total') %}
+                                <td class="cell-detail cell-travel-total">{{ item.detail }}</td>
+                                <td class="cell-amount cell-travel-total">{{ "{:,.2f}".format(item.amount) if (item.amount is not none and item.amount != "") else "" }}</td>
+                            {% else %}
+                                <td class="cell-detail">{{ item.detail }}</td>
+                                <td class="cell-amount">{{ "{:,.2f}".format(item.amount) if (item.amount is not none and item.amount != "") else "" }}</td>
+                            {% endif %}
                         {% else %}
                             <td class="cell-detail"></td>
                             <td class="cell-amount"></td>
