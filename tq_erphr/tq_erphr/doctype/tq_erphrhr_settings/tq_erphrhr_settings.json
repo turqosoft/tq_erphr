@@ -6,6 +6,11 @@
     "editable_grid": 1,
     "engine": "InnoDB",
     "field_order": [
+        "routing_settings_section",
+        "routing_provider",
+        "routing_status_html",
+        "ors_settings_section",
+        "ors_api_key",
         "google_map_settings_section",
         "map_key",
         "location_section",
@@ -16,26 +21,53 @@
     ],
     "fields": [
         {
-            "fieldname": "location_section",
+            "fieldname": "routing_settings_section",
             "fieldtype": "Section Break",
-            "label": "Expense Manager Settings"
+            "label": "Distance & Routing Settings"
         },
         {
-            "fieldname": "travel_expense_type",
-            "fieldtype": "Link",
-            "options": "Expense Claim Type",
-            "label": "Travel Expense Type"
+            "fieldname": "routing_provider",
+            "fieldtype": "Select",
+            "label": "Primary Distance Provider",
+            "options": "OpenRouteService\nGoogle Maps\nOSRM (OpenStreetMap)",
+            "default": "OpenRouteService",
+            "description": "Select the primary service to calculate driving distances. Other configured services and OSRM/Haversine will serve as automatic fallbacks."
+        },
+        {
+            "fieldname": "routing_status_html",
+            "fieldtype": "HTML",
+            "label": "All Services Connection Status"
+        },
+        {
+            "fieldname": "ors_settings_section",
+            "fieldtype": "Section Break",
+            "label": "OpenRouteService (ORS) Settings",
+            "depends_on": "eval:doc.routing_provider == 'OpenRouteService'"
+        },
+        {
+            "fieldname": "ors_api_key",
+            "fieldtype": "Data",
+            "label": "OpenRouteService API Key",
+            "description": "API Key for OpenRouteService driving distance calculation. If empty or quota is exhausted, system automatically falls back to secondary/OSRM.",
+            "depends_on": "eval:doc.routing_provider == 'OpenRouteService'"
         },
         {
             "fieldname": "google_map_settings_section",
             "fieldtype": "Section Break",
-            "label": "Google Map Settings"
+            "label": "Google Map Settings",
+            "depends_on": "eval:doc.routing_provider == 'Google Maps'"
         },
         {
             "fieldname": "map_key",
             "fieldtype": "Data",
             "label": "Google Map Key",
-            "description": "Setup this in Google and copy over the Key here"
+            "description": "API key for Google Maps Distance Matrix / Directions API",
+            "depends_on": "eval:doc.routing_provider == 'Google Maps'"
+        },
+        {
+            "fieldname": "location_section",
+            "fieldtype": "Section Break",
+            "label": "Expense Manager Settings"
         },
         {
             "fieldname": "two_wheeler_rate_per_km",
@@ -57,6 +89,12 @@
             "label": "Other Rate Per KM",
             "precision": "2",
             "default": 0
+        },
+        {
+            "fieldname": "travel_expense_type",
+            "fieldtype": "Link",
+            "options": "Expense Claim Type",
+            "label": "Travel Expense Type"
         }
     ],
     "icon": "fa fa-cog",

@@ -73,3 +73,15 @@ mit
 
 #### Bug Fixes
 - 
+
+### v1.0.14 (2026-06-30)
+
+#### New Features
+- Google Map based route distance
+- Settings to chose Openstreet map or Google Map
+
+#### Improvements
+- 
+
+#### Bug Fixes
+- 
