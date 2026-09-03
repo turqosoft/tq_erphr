@@ -81,7 +81,7 @@ mit
 - Settings to chose Openstreet map or Google Map
 
 #### Improvements
-- 
+- Separate section for DA in expense claims summary report
 
 #### Bug Fixes
 - 

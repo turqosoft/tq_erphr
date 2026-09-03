@@ -284,7 +284,7 @@
         border: 1.5px solid #000;
         border-radius: 8px;
         margin-top: 8px;
-        height: 80px;
+        height: 88px;
         box-sizing: border-box;
         background-color: #fff;
     }
@@ -298,7 +298,7 @@
     }
 
     .remarks-box {
-        padding: 4px 8px;
+        padding: 3px 8px;
         flex: 1;
         border-bottom: 1px solid #000;
     }
@@ -317,7 +317,7 @@
     }
 
     .totals-table {
-        padding: 4px 8px;
+        padding: 3px 8px;
     }
 
     .total-line {
@@ -433,10 +433,19 @@
 
 {# Compute week-wide totals #}
 {% set total_travel = namespace(val=0) %}
+{% set total_da = namespace(val=0) %}
 {% set total_other = namespace(val=0) %}
 {% for cur_date_str, eem in eem_map.items() %}
     {% set total_travel.val = total_travel.val + (eem.total_travel_expense or 0) %}
-    {% set total_other.val = total_other.val + (eem.total_other_expenses or 0) %}
+    {% for track in eem.employee_expense_tracking %}
+        {% if track.amount and track.amount > 0 %}
+            {% if (track.expense_type or "").strip().upper() == "DA" %}
+                {% set total_da.val = total_da.val + track.amount %}
+            {% else %}
+                {% set total_other.val = total_other.val + track.amount %}
+            {% endif %}
+        {% endif %}
+    {% endfor %}
 {% endfor %}
 
 {# Prepare daily data arrays to map into rows #}
@@ -621,12 +630,16 @@
                     <span class="tot-value">{{ frappe.utils.fmt_money(total_travel.val, None, currency) }}</span>
                 </div>
                 <div class="total-line">
+                    <span class="tot-label">DA Expense:</span>
+                    <span class="tot-value">{{ frappe.utils.fmt_money(total_da.val, None, currency) }}</span>
+                </div>
+                <div class="total-line">
                     <span class="tot-label">Other Expense:</span>
                     <span class="tot-value">{{ frappe.utils.fmt_money(total_other.val, None, currency) }}</span>
                 </div>
                 <div class="total-line grand-total-line">
                     <span class="tot-label">Total</span>
-                    <span class="tot-value">{{ frappe.utils.fmt_money(doc.total_claimed_amount or (total_travel.val + total_other.val), None, currency) }}</span>
+                    <span class="tot-value">{{ frappe.utils.fmt_money(doc.total_claimed_amount or (total_travel.val + total_da.val + total_other.val), None, currency) }}</span>
                 </div>
             </div>
         </div>
