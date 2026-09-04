@@ -550,14 +550,40 @@ def bulk_create_expense_claim(executive_expense_managers):
     if isinstance(executive_expense_managers, str):
         executive_expense_managers = frappe.parse_json(executive_expense_managers)
 
+    # Check for any draft EEMs among the selected records — block if found
+    draft_eems = frappe.get_all(
+        "Executive Expense Manager",
+        filters={
+            "name": ["in", executive_expense_managers],
+            "docstatus": 0,
+        },
+        fields=["name", "date", "employee"],
+        order_by="date asc",
+    )
+
+    if draft_eems:
+        draft_list = "<br>".join(
+            f"&bull; <b>{frappe.utils.formatdate(d.date)}</b> &nbsp;({d.name})"
+            for d in draft_eems
+        )
+        frappe.throw(
+            f"Cannot create Expense Claim. The following selected records are still in "
+            f"<b>Draft</b> state. Please submit them first before generating the Expense Claim:"
+            f"<br><br>{draft_list}",
+            title="Draft Records Found"
+        )
+
     eems = frappe.get_all(
         "Executive Expense Manager",
-        filters={"name": ["in", executive_expense_managers]},
+        filters={
+            "name": ["in", executive_expense_managers],
+            "docstatus": 1,
+        },
         fields=["name", "employee", "expense_claim_status"]
     )
 
     if not eems:
-        frappe.throw("No valid records found.")
+        frappe.throw("No valid submitted records found.")
 
     # ---- Group EEMs by Employee ----
     employee_map = {}
@@ -653,19 +679,44 @@ def create_employee_expense_claim(employee, start_date, end_date):
     if frappe.utils.getdate(start_date) > frappe.utils.getdate(end_date):
         frappe.throw("Start Date cannot be after End Date.")
 
+    # Check for any draft (docstatus=0) EEMs in the date range — block if found
+    draft_eems = frappe.get_all(
+        "Executive Expense Manager",
+        filters={
+            "employee": employee,
+            "date": ["between", [start_date, end_date]],
+            "docstatus": 0,
+        },
+        fields=["name", "date"],
+        order_by="date asc",
+    )
+
+    if draft_eems:
+        draft_list = "<br>".join(
+            f"&bull; <b>{frappe.utils.formatdate(d.date)}</b> &nbsp;({d.name})"
+            for d in draft_eems
+        )
+        frappe.throw(
+            f"Cannot create Expense Claim. The following Executive Expense Manager records "
+            f"in this date range are still in <b>Draft</b> state. "
+            f"Please submit them first before generating the Expense Claim:<br><br>{draft_list}",
+            title="Draft Records Found"
+        )
+
     eems = frappe.get_all(
         "Executive Expense Manager",
         filters={
             "employee": employee,
             "date": ["between", [start_date, end_date]],
             "expense_claim_status": "Not Created",
+            "docstatus": 1,
         },
         fields=["name"],
         order_by="date asc, name asc",
     )
 
     if not eems:
-        frappe.throw("No Not Created Executive Expense Manager records found for the selected employee and date range.")
+        frappe.throw("No eligible submitted Executive Expense Manager records found for the selected employee and date range. Only submitted records without an existing Expense Claim are included.")
 
     return bulk_create_expense_claim([row.name for row in eems])
 

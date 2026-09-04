@@ -95,4 +95,4 @@ mit
 - Create expense claim option under "Action"
 
 #### Bug Fixes
-- 
+- Draft expenses getting added to executive expense manager
