@@ -85,3 +85,14 @@ mit
 
 #### Bug Fixes
 - 
+
+### v1.0.15 (2026-09-04)
+
+#### New Features
+- 
+
+#### Improvements
+- Create expense claim option under "Action"
+
+#### Bug Fixes
+- 
