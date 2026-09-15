@@ -96,3 +96,14 @@ mit
 
 #### Bug Fixes
 - Draft expenses getting added to executive expense manager
+
+### v1.1.0 (2026-09-15)
+
+#### New Features
+- MobiBiz PWA Module added
+
+#### Improvements
+- 
+
+#### Bug Fixes
+- 
