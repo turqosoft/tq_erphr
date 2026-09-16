@@ -1,0 +1,10 @@
+{
+	"private": true,
+	"name": "tq_erphr",
+	"description": "MobiBiz Lite - Employee Portal & Field Operations",
+	"scripts": {
+		"postinstall": "cd frontend && yarn install --check-files",
+		"dev": "cd frontend && yarn dev",
+		"build": "cd frontend && yarn build"
+	}
+}
