@@ -107,3 +107,14 @@ mit
 
 #### Bug Fixes
 - 
+
+### v1.1.1 (2026-09-16)
+
+#### New Features
+- 
+
+#### Improvements
+- MobiBiz PWA Module added - build updates
+
+#### Bug Fixes
+- 

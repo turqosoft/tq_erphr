@@ -20,7 +20,7 @@ app_license = "mit"
 # include custom scss in every website theme (without file extension ".scss")
 # website_theme_scss = "tq_erphr/public/scss/website"
 website_route_rules = [
-    {"from_route": "/tq_erphr/<path:app_path>", "to_route": "mobibiz"},
+    {"from_route": "/mobibiz/<path:app_path>", "to_route": "mobibiz"},
 ]
 
 # include js, css files in header of web form

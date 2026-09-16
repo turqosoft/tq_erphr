@@ -25,7 +25,7 @@ export default defineConfig({
 				display: "standalone",
 				name: "MobiBiz Lite",
 				short_name: "MobiBiz Lite",
-				start_url: "/tq_erphr",
+				start_url: "/mobibiz",
 				description: "MobiBiz Lite - Employee Portal & Field Operations",
 				theme_color: "#14b8a6",
 				background_color: "#f8fafc",

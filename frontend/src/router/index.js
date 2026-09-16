@@ -25,7 +25,7 @@ const routes = [
 ]
 
 const router = createRouter({
-	history: createWebHistory("/tq_erphr"),
+	history: createWebHistory("/mobibiz"),
 	routes,
 })
 

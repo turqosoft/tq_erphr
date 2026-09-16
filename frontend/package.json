@@ -7,7 +7,7 @@
 		"dev": "vite",
 		"serve": "vite preview",
 		"build": "vite build --base=/assets/tq_erphr/frontend/ && yarn copy-html-entry",
-		"copy-html-entry": "cp ../tq_erphr/public/frontend/index.html ../tq_erphr/www/tq_erphr.html"
+		"copy-html-entry": "cp ../tq_erphr/public/frontend/index.html ../tq_erphr/www/mobibiz.html"
 	},
 	"dependencies": {
 		"@vitejs/plugin-vue": "^4.4.0",
