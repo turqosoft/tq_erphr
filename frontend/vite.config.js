@@ -21,11 +21,14 @@ export default defineConfig({
 			devOptions: {
 				enabled: true,
 			},
+			scope: "/mobibiz/",
 			manifest: {
+				id: "/mobibiz/",
+				scope: "/mobibiz/",
+				start_url: "/mobibiz",
 				display: "standalone",
 				name: "MobiBiz Lite",
 				short_name: "MobiBiz Lite",
-				start_url: "/mobibiz",
 				description: "MobiBiz Lite - Employee Portal & Field Operations",
 				theme_color: "#14b8a6",
 				background_color: "#f8fafc",

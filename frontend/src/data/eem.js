@@ -23,6 +23,11 @@ export const endTripResource = createResource({
 
 export const eemHistoryResource = createResource({
 	url: "tq_erphr.pwa_api.get_eem_history",
+	auto: true,
+})
+
+export const eemDetailResource = createResource({
+	url: "tq_erphr.pwa_api.get_eem_detail",
 })
 
 export const expenseTypesResource = createResource({
@@ -34,3 +39,4 @@ export const customersResource = createResource({
 	url: "tq_erphr.pwa_api.get_customers_list",
 	auto: true,
 })
+

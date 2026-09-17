@@ -1208,8 +1208,7 @@ function refreshData() {
 }
 
 function openHistoryModal() {
-	showHistoryModal.value = true
-	eemHistoryResource.fetch()
+	router.push("/eem/history")
 }
 
 async function openSiteVisitModal() {

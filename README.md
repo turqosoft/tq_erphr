@@ -118,3 +118,14 @@ mit
 
 #### Bug Fixes
 - 
+
+### v1.1.2 (2026-09-17)
+
+#### New Features
+- 
+
+#### Improvements
+- Travel history
+
+#### Bug Fixes
+- Not showing app download and install

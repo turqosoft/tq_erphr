@@ -14,6 +14,15 @@ const routes = [
 		component: () => import("@/views/ExecutiveExpenseManager.vue"),
 	},
 	{
+		path: "/eem/history",
+		name: "ExecutiveExpenseHistory",
+		component: () => import("@/views/ExecutiveExpenseHistory.vue"),
+	},
+	{
+		path: "/eem-history",
+		redirect: "/eem/history",
+	},
+	{
 		path: "/login",
 		name: "Login",
 		component: () => import("@/views/Login.vue"),
@@ -43,7 +52,11 @@ router.beforeEach(async (to, from, next) => {
 		if (to.name === "Login") {
 			return next({ name: "Home" })
 		}
-		if (to.name === "ExecutiveExpenseManager" && employeeResource.data && !employeeResource.data.is_sales_person) {
+		if (
+			(to.name === "ExecutiveExpenseManager" || to.name === "ExecutiveExpenseHistory") &&
+			employeeResource.data &&
+			!employeeResource.data.is_sales_person
+		) {
 			return next({ name: "Home" })
 		}
 	}

@@ -138,6 +138,33 @@
 											<span>Expense Manager (EEM)</span>
 										</button>
 
+										<!-- EEM Trip History Option (Visible only for Sales Persons) -->
+										<button
+											v-if="employee?.is_sales_person"
+											@click="goToEemHistory"
+											class="w-full flex items-center space-x-2.5 px-3 py-2 rounded-2xl text-xs font-medium text-slate-700 hover:bg-teal-50 hover:text-teal-800 transition text-left active:scale-98"
+										>
+											<svg class="w-4 h-4 text-teal-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+											</svg>
+											<span>EEM Trip History</span>
+										</button>
+
+										<!-- Install MobiBiz App Option -->
+										<button
+											v-if="!pwaState.isInstalled"
+											@click="handlePwaInstall"
+											class="w-full flex items-center justify-between px-3 py-2 rounded-2xl text-xs font-semibold text-teal-800 bg-teal-50/90 hover:bg-teal-100 border border-teal-200/70 transition text-left active:scale-98 shadow-xs"
+										>
+											<div class="flex items-center space-x-2.5">
+												<svg class="w-4 h-4 text-teal-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+													<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+												</svg>
+												<span>Install MobiBiz App</span>
+											</div>
+											<span class="text-[9px] font-bold bg-teal-600 text-white px-1.5 py-0.5 rounded-full uppercase tracking-wider">Install</span>
+										</button>
+
 										<!-- Change Password Option -->
 										<button
 											@click="openChangePasswordModal"
@@ -429,6 +456,134 @@
 						</div>
 					</div>
 
+					<!-- ========================================== -->
+					<!-- QUICK SERVICES & ACTIONS GRID              -->
+					<!-- ========================================== -->
+					<div class="space-y-2">
+						<div class="flex items-center justify-between px-1">
+							<span class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Quick Services</span>
+							<span class="text-[10px] text-teal-600 font-medium">Shortcuts</span>
+						</div>
+
+						<!-- Grid for Sales Persons (Includes Site & Trip + Claims) -->
+						<div v-if="employee?.is_sales_person" class="grid grid-cols-2 gap-2.5">
+							<!-- Tile 1: Field Visits & Expenses -->
+							<button
+								@click="goToEem"
+								class="bg-white p-3.5 rounded-3xl border border-slate-100 shadow-xs hover:border-teal-200 hover:shadow-sm transition-all active:scale-[0.98] text-left flex flex-col justify-between space-y-3"
+							>
+								<div class="w-8 h-8 rounded-xl bg-teal-50 text-teal-700 flex items-center justify-center border border-teal-100">
+									<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+									</svg>
+								</div>
+								<div>
+									<h4 class="text-xs font-bold text-slate-900">Site & Trip</h4>
+									<p class="text-[10px] text-slate-500 mt-0.5">Visits & Expense claim</p>
+								</div>
+							</button>
+
+							<!-- Tile 2: Punch Logs History -->
+							<button
+								@click="openHistoryModal"
+								class="bg-white p-3.5 rounded-3xl border border-slate-100 shadow-xs hover:border-teal-200 hover:shadow-sm transition-all active:scale-[0.98] text-left flex flex-col justify-between space-y-3"
+							>
+								<div class="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center border border-emerald-100">
+									<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+									</svg>
+								</div>
+								<div>
+									<h4 class="text-xs font-bold text-slate-900">Punch Logs</h4>
+									<p class="text-[10px] text-slate-500 mt-0.5">Attendance history</p>
+								</div>
+							</button>
+
+							<!-- Tile 3: My HR Profile -->
+							<button
+								@click="openProfileModal"
+								class="bg-white p-3.5 rounded-3xl border border-slate-100 shadow-xs hover:border-teal-200 hover:shadow-sm transition-all active:scale-[0.98] text-left flex flex-col justify-between space-y-3"
+							>
+								<div class="w-8 h-8 rounded-xl bg-sky-50 text-sky-700 flex items-center justify-center border border-sky-100">
+									<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+									</svg>
+								</div>
+								<div>
+									<h4 class="text-xs font-bold text-slate-900">My Profile</h4>
+									<p class="text-[10px] text-slate-500 mt-0.5">HR & Designation</p>
+								</div>
+							</button>
+
+							<!-- Tile 4: Claim Summary / EEM History -->
+							<button
+								@click="goToEemHistory"
+								class="bg-white p-3.5 rounded-3xl border border-slate-100 shadow-xs hover:border-teal-200 hover:shadow-sm transition-all active:scale-[0.98] text-left flex flex-col justify-between space-y-3"
+							>
+								<div class="w-8 h-8 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center border border-amber-100">
+									<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+									</svg>
+								</div>
+								<div>
+									<h4 class="text-xs font-bold text-slate-900">EEM History</h4>
+									<p class="text-[10px] text-slate-500 mt-0.5">Past trips & claims</p>
+								</div>
+							</button>
+						</div>
+
+						<!-- Grid for Non-Sales Staff (Clean Attendance, Logs & Security) -->
+						<div v-else class="grid grid-cols-3 gap-2.5">
+							<!-- Tile 1: Punch Logs History -->
+							<button
+								@click="openHistoryModal"
+								class="bg-white p-3.5 rounded-3xl border border-slate-100 shadow-xs hover:border-teal-200 hover:shadow-sm transition-all active:scale-[0.98] text-left flex flex-col justify-between space-y-3"
+							>
+								<div class="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center border border-emerald-100">
+									<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+									</svg>
+								</div>
+								<div>
+									<h4 class="text-xs font-bold text-slate-900">Punch Logs</h4>
+									<p class="text-[10px] text-slate-500 mt-0.5">History</p>
+								</div>
+							</button>
+
+							<!-- Tile 2: My HR Profile -->
+							<button
+								@click="openProfileModal"
+								class="bg-white p-3.5 rounded-3xl border border-slate-100 shadow-xs hover:border-teal-200 hover:shadow-sm transition-all active:scale-[0.98] text-left flex flex-col justify-between space-y-3"
+							>
+								<div class="w-8 h-8 rounded-xl bg-sky-50 text-sky-700 flex items-center justify-center border border-sky-100">
+									<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+									</svg>
+								</div>
+								<div>
+									<h4 class="text-xs font-bold text-slate-900">My Profile</h4>
+									<p class="text-[10px] text-slate-500 mt-0.5">Details</p>
+								</div>
+							</button>
+
+							<!-- Tile 3: Change Password / Security -->
+							<button
+								@click="openChangePasswordModal"
+								class="bg-white p-3.5 rounded-3xl border border-slate-100 shadow-xs hover:border-teal-200 hover:shadow-sm transition-all active:scale-[0.98] text-left flex flex-col justify-between space-y-3"
+							>
+								<div class="w-8 h-8 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center border border-amber-100">
+									<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+									</svg>
+								</div>
+								<div>
+									<h4 class="text-xs font-bold text-slate-900">Password</h4>
+									<p class="text-[10px] text-slate-500 mt-0.5">Security</p>
+								</div>
+							</button>
+						</div>
+					</div>
+
 					<!-- ======================================================= -->
 					<!-- FIELD TRAVEL & EXPENSE MANAGER (EEM) CARD - SALES ONLY  -->
 					<!-- ======================================================= -->
@@ -507,134 +662,6 @@
 								<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7" />
 								</svg>
-							</button>
-						</div>
-					</div>
-
-					<!-- ========================================== -->
-					<!-- QUICK SERVICES & ACTIONS GRID              -->
-					<!-- ========================================== -->
-					<div class="space-y-2">
-						<div class="flex items-center justify-between px-1">
-							<span class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Quick Services</span>
-							<span class="text-[10px] text-teal-600 font-medium">Shortcuts</span>
-						</div>
-
-						<!-- Grid for Sales Persons (Includes Site & Trip + Claims) -->
-						<div v-if="employee?.is_sales_person" class="grid grid-cols-2 gap-2.5">
-							<!-- Tile 1: Field Visits & Expenses -->
-							<button
-								@click="goToEem"
-								class="bg-white p-3.5 rounded-3xl border border-slate-100 shadow-xs hover:border-teal-200 hover:shadow-sm transition-all active:scale-[0.98] text-left flex flex-col justify-between space-y-3"
-							>
-								<div class="w-8 h-8 rounded-xl bg-teal-50 text-teal-700 flex items-center justify-center border border-teal-100">
-									<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-									</svg>
-								</div>
-								<div>
-									<h4 class="text-xs font-bold text-slate-900">Site & Trip</h4>
-									<p class="text-[10px] text-slate-500 mt-0.5">Visits & Expense claim</p>
-								</div>
-							</button>
-
-							<!-- Tile 2: Punch Logs History -->
-							<button
-								@click="openHistoryModal"
-								class="bg-white p-3.5 rounded-3xl border border-slate-100 shadow-xs hover:border-teal-200 hover:shadow-sm transition-all active:scale-[0.98] text-left flex flex-col justify-between space-y-3"
-							>
-								<div class="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center border border-emerald-100">
-									<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-									</svg>
-								</div>
-								<div>
-									<h4 class="text-xs font-bold text-slate-900">Punch Logs</h4>
-									<p class="text-[10px] text-slate-500 mt-0.5">Attendance history</p>
-								</div>
-							</button>
-
-							<!-- Tile 3: My HR Profile -->
-							<button
-								@click="openProfileModal"
-								class="bg-white p-3.5 rounded-3xl border border-slate-100 shadow-xs hover:border-teal-200 hover:shadow-sm transition-all active:scale-[0.98] text-left flex flex-col justify-between space-y-3"
-							>
-								<div class="w-8 h-8 rounded-xl bg-sky-50 text-sky-700 flex items-center justify-center border border-sky-100">
-									<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-									</svg>
-								</div>
-								<div>
-									<h4 class="text-xs font-bold text-slate-900">My Profile</h4>
-									<p class="text-[10px] text-slate-500 mt-0.5">HR & Designation</p>
-								</div>
-							</button>
-
-							<!-- Tile 4: Claim Summary / EEM History -->
-							<button
-								@click="goToEem"
-								class="bg-white p-3.5 rounded-3xl border border-slate-100 shadow-xs hover:border-teal-200 hover:shadow-sm transition-all active:scale-[0.98] text-left flex flex-col justify-between space-y-3"
-							>
-								<div class="w-8 h-8 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center border border-amber-100">
-									<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
-									</svg>
-								</div>
-								<div>
-									<h4 class="text-xs font-bold text-slate-900">Claims History</h4>
-									<p class="text-[10px] text-slate-500 mt-0.5">Past submissions</p>
-								</div>
-							</button>
-						</div>
-
-						<!-- Grid for Non-Sales Staff (Clean Attendance, Logs & Security) -->
-						<div v-else class="grid grid-cols-3 gap-2.5">
-							<!-- Tile 1: Punch Logs History -->
-							<button
-								@click="openHistoryModal"
-								class="bg-white p-3.5 rounded-3xl border border-slate-100 shadow-xs hover:border-teal-200 hover:shadow-sm transition-all active:scale-[0.98] text-left flex flex-col justify-between space-y-3"
-							>
-								<div class="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center border border-emerald-100">
-									<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-									</svg>
-								</div>
-								<div>
-									<h4 class="text-xs font-bold text-slate-900">Punch Logs</h4>
-									<p class="text-[10px] text-slate-500 mt-0.5">History</p>
-								</div>
-							</button>
-
-							<!-- Tile 2: My HR Profile -->
-							<button
-								@click="openProfileModal"
-								class="bg-white p-3.5 rounded-3xl border border-slate-100 shadow-xs hover:border-teal-200 hover:shadow-sm transition-all active:scale-[0.98] text-left flex flex-col justify-between space-y-3"
-							>
-								<div class="w-8 h-8 rounded-xl bg-sky-50 text-sky-700 flex items-center justify-center border border-sky-100">
-									<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-									</svg>
-								</div>
-								<div>
-									<h4 class="text-xs font-bold text-slate-900">My Profile</h4>
-									<p class="text-[10px] text-slate-500 mt-0.5">Details</p>
-								</div>
-							</button>
-
-							<!-- Tile 3: Change Password / Security -->
-							<button
-								@click="openChangePasswordModal"
-								class="bg-white p-3.5 rounded-3xl border border-slate-100 shadow-xs hover:border-teal-200 hover:shadow-sm transition-all active:scale-[0.98] text-left flex flex-col justify-between space-y-3"
-							>
-								<div class="w-8 h-8 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center border border-amber-100">
-									<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-									</svg>
-								</div>
-								<div>
-									<h4 class="text-xs font-bold text-slate-900">Password</h4>
-									<p class="text-[10px] text-slate-500 mt-0.5">Security</p>
-								</div>
 							</button>
 						</div>
 					</div>
@@ -1337,6 +1364,7 @@ import {
 } from "@/data/checkin"
 import { todayEemResource } from "@/data/eem"
 import { detectDeviceDetails } from "@/utils/device"
+import { pwaState, promptPwaInstall } from "@/data/pwa"
 
 const router = useRouter()
 const route = useRoute()
@@ -1352,6 +1380,11 @@ const showChangePasswordModal = ref(false)
 const profileDropdownRef = ref(null)
 const isEmployeeInfoExpanded = ref(false)
 const isPunchesExpanded = ref(false)
+
+function handlePwaInstall() {
+	isDropdownOpen.value = false
+	promptPwaInstall()
+}
 
 // Change Password States
 const oldPassword = ref("")
@@ -1487,6 +1520,14 @@ function goToEem() {
 		return
 	}
 	router.push("/eem")
+}
+
+function goToEemHistory() {
+	closeDropdown()
+	if (!employee.value?.is_sales_person) {
+		return
+	}
+	router.push("/eem/history")
 }
 
 function goToEemFromModal() {
