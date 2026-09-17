@@ -505,22 +505,165 @@
 			</template>
 			<template #body-content>
 				<div class="mt-2 space-y-3.5">
-					<!-- Customer Selection -->
+					<!-- Customer Selection (Searchable) -->
 					<div>
-						<label class="block text-xs font-bold text-slate-700 mb-1">Customer / Client</label>
-						<select
-							v-model="siteVisitForm.customer"
-							class="w-full px-3.5 py-2.5 text-xs rounded-2xl bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:ring-4 focus:ring-teal-500/15 focus:border-teal-500 text-slate-900 font-medium"
+						<div class="flex items-center justify-between mb-1">
+							<label class="block text-xs font-bold text-slate-700">Customer / Client</label>
+							<span v-if="customersList.length > 0" class="text-[10px] text-slate-400 font-medium">
+								{{ customersList.length }} available
+							</span>
+						</div>
+
+						<!-- Selected Customer Card -->
+						<div
+							v-if="siteVisitForm.customer && !isCustomerSearchOpen"
+							class="p-2.5 bg-teal-50/70 border border-teal-200/90 rounded-2xl flex items-center justify-between transition-all shadow-xs"
 						>
-							<option value="">Select Customer (or type custom site below)</option>
-							<option
-								v-for="c in customersList"
-								:key="c.name"
-								:value="c.name"
-							>
-								{{ c.customer_name || c.name }}
-							</option>
-						</select>
+							<div class="flex items-center space-x-2.5 min-w-0">
+								<div class="w-8 h-8 rounded-xl bg-teal-500 text-white flex items-center justify-center flex-shrink-0 shadow-sm">
+									<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+									</svg>
+								</div>
+								<div class="min-w-0 truncate">
+									<p class="text-xs font-bold text-slate-900 truncate">
+										{{ selectedCustomerObj?.customer_name || siteVisitForm.customer }}
+									</p>
+									<p class="text-[10px] text-teal-700 font-medium truncate">
+										<span class="font-mono">{{ selectedCustomerObj?.name || siteVisitForm.customer }}</span>
+										<span v-if="selectedCustomerObj?.territory"> • {{ selectedCustomerObj.territory }}</span>
+										<span v-else-if="selectedCustomerObj?.customer_group"> • {{ selectedCustomerObj.customer_group }}</span>
+									</p>
+								</div>
+							</div>
+							<div class="flex items-center space-x-1.5 flex-shrink-0 ml-2">
+								<button
+									type="button"
+									@click="isCustomerSearchOpen = true"
+									class="px-2.5 py-1 text-[11px] font-semibold text-teal-700 bg-white border border-teal-200 rounded-xl hover:bg-teal-50 active:scale-95 transition-all shadow-xs"
+								>
+									Change
+								</button>
+								<button
+									type="button"
+									@click="clearCustomer"
+									class="p-1 text-slate-400 hover:text-rose-500 rounded-lg transition-colors"
+									title="Remove customer"
+								>
+									<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+									</svg>
+								</button>
+							</div>
+						</div>
+
+						<!-- Searchable Input & Dropdown -->
+						<div v-else class="space-y-1.5">
+							<div class="relative">
+								<div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+									<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+									</svg>
+								</div>
+								<input
+									type="text"
+									v-model="customerSearchQuery"
+									@input="onCustomerSearchInput"
+									@focus="isCustomerSearchOpen = true"
+									placeholder="Search customer name, code, territory, phone..."
+									class="w-full pl-9 pr-8 py-2.5 text-xs rounded-2xl bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:ring-4 focus:ring-teal-500/15 focus:border-teal-500 text-slate-900 font-medium placeholder:text-slate-400 shadow-xs"
+								/>
+								<button
+									v-if="customerSearchQuery"
+									type="button"
+									@click="customerSearchQuery = ''; onCustomerSearchInput()"
+									class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600"
+								>
+									<svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+									</svg>
+								</button>
+							</div>
+
+							<!-- Search Results List -->
+							<div class="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden animate-fadeIn">
+								<div class="px-3 py-1.5 bg-slate-50 border-b border-slate-100 flex items-center justify-between text-[10px] text-slate-500 font-medium">
+									<span>
+										{{ filteredCustomersList.length }} result{{ filteredCustomersList.length === 1 ? '' : 's' }}
+										<span v-if="customerSearchQuery">for "{{ customerSearchQuery }}"</span>
+									</span>
+									<button
+										v-if="siteVisitForm.customer"
+										type="button"
+										@click="isCustomerSearchOpen = false"
+										class="text-teal-600 hover:underline font-bold"
+									>
+										Cancel
+									</button>
+								</div>
+								<div class="max-h-48 overflow-y-auto divide-y divide-slate-100 overscroll-contain">
+									<!-- Option to proceed without customer -->
+									<button
+										type="button"
+										@click="clearCustomer(); isCustomerSearchOpen = false"
+										class="w-full px-3 py-2 text-left flex items-center justify-between hover:bg-slate-50 text-[11px] text-slate-600 group transition-colors"
+									>
+										<div class="flex items-center space-x-2">
+											<span class="w-5 h-5 rounded-lg bg-slate-100 flex items-center justify-center text-slate-400 group-hover:bg-teal-50 group-hover:text-teal-600 font-mono text-[10px]">
+												✕
+											</span>
+											<span class="font-medium italic">No Customer (Custom Location Only)</span>
+										</div>
+										<span class="text-[9px] text-slate-400">Skip</span>
+									</button>
+
+									<!-- Customer Items -->
+									<button
+										v-for="c in filteredCustomersList"
+										:key="c.name"
+										type="button"
+										@click="selectCustomer(c)"
+										:class="[
+											'w-full px-3 py-2 text-left flex items-center justify-between transition-colors text-xs',
+											siteVisitForm.customer === c.name ? 'bg-teal-50/80 text-teal-900 font-bold' : 'hover:bg-slate-50 text-slate-800'
+										]"
+									>
+										<div class="min-w-0 pr-2">
+											<p class="truncate font-semibold text-slate-900 leading-tight">
+												{{ c.customer_name || c.name }}
+											</p>
+											<div class="flex items-center space-x-1.5 text-[10px] text-slate-400 mt-0.5 truncate">
+												<span class="font-mono bg-slate-100 text-slate-600 px-1 py-0.2 rounded text-[9px]">{{ c.name }}</span>
+												<span v-if="c.territory">• {{ c.territory }}</span>
+												<span v-else-if="c.customer_group">• {{ c.customer_group }}</span>
+												<span v-if="c.mobile_no">• 📞 {{ c.mobile_no }}</span>
+											</div>
+										</div>
+										<svg
+											v-if="siteVisitForm.customer === c.name"
+											class="w-4 h-4 text-teal-600 flex-shrink-0"
+											fill="none"
+											viewBox="0 0 24 24"
+											stroke="currentColor"
+										>
+											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+										</svg>
+									</button>
+
+									<!-- Empty State / Use as Custom Site -->
+									<div v-if="filteredCustomersList.length === 0" class="p-3 text-center">
+										<p class="text-[11px] text-slate-500 mb-1.5">No customer found matching "{{ customerSearchQuery }}"</p>
+										<button
+											type="button"
+											@click="useQueryAsCustomSite"
+											class="px-2.5 py-1 text-[10px] font-bold text-teal-700 bg-teal-50 border border-teal-200 rounded-xl hover:bg-teal-100 active:scale-95 transition-all"
+										>
+											Use "{{ customerSearchQuery }}" as Site Location
+										</button>
+									</div>
+								</div>
+							</div>
+						</div>
 					</div>
 
 					<!-- Site / Location Name -->
@@ -1016,6 +1159,10 @@ const siteVisitForm = ref({
 	remarks: "",
 })
 
+// Customer Search & Filtering State
+const customerSearchQuery = ref("")
+const isCustomerSearchOpen = ref(false)
+
 const expenseForm = ref({
 	expense_type: "",
 	amount: "",
@@ -1048,6 +1195,70 @@ const expensesList = computed(() => eemDoc.value?.employee_expense_tracking || [
 const customersList = computed(() => customersResource.data || [])
 const expenseTypesList = computed(() => expenseTypesResource.data || ["Food", "Toll", "Parking", "Fuel", "Other"])
 const historyRecords = computed(() => eemHistoryResource.data || [])
+
+const selectedCustomerObj = computed(() => {
+	if (!siteVisitForm.value.customer) return null
+	return customersList.value.find((c) => c.name === siteVisitForm.value.customer) || {
+		name: siteVisitForm.value.customer,
+		customer_name: siteVisitForm.value.customer,
+	}
+})
+
+let searchDebounceTimer = null
+function onCustomerSearchInput() {
+	isCustomerSearchOpen.value = true
+	const q = customerSearchQuery.value.trim()
+	if (searchDebounceTimer) clearTimeout(searchDebounceTimer)
+	if (q.length >= 2) {
+		searchDebounceTimer = setTimeout(() => {
+			customersResource.fetch({ search_term: q })
+		}, 300)
+	}
+}
+
+const filteredCustomersList = computed(() => {
+	const list = customersList.value || []
+	const q = customerSearchQuery.value.trim().toLowerCase()
+	if (!q) return list
+	return list.filter((c) => {
+		const name = (c.customer_name || "").toLowerCase()
+		const id = (c.name || "").toLowerCase()
+		const territory = (c.territory || "").toLowerCase()
+		const group = (c.customer_group || "").toLowerCase()
+		const phone = (c.mobile_no || "").toLowerCase()
+		return (
+			name.includes(q) ||
+			id.includes(q) ||
+			territory.includes(q) ||
+			group.includes(q) ||
+			phone.includes(q)
+		)
+	})
+})
+
+function selectCustomer(c) {
+	siteVisitForm.value.customer = c.name
+	if (!siteVisitForm.value.site && c.customer_name) {
+		siteVisitForm.value.site = c.customer_name
+	}
+	isCustomerSearchOpen.value = false
+	customerSearchQuery.value = ""
+}
+
+function clearCustomer() {
+	siteVisitForm.value.customer = ""
+	customerSearchQuery.value = ""
+	isCustomerSearchOpen.value = true
+}
+
+function useQueryAsCustomSite() {
+	siteVisitForm.value.customer = ""
+	if (customerSearchQuery.value) {
+		siteVisitForm.value.site = customerSearchQuery.value.trim()
+	}
+	isCustomerSearchOpen.value = false
+	customerSearchQuery.value = ""
+}
 
 const totalExpensesSum = computed(() => {
 	if (!expensesList.value || expensesList.value.length === 0) return 0
@@ -1218,6 +1429,8 @@ async function openSiteVisitModal() {
 		actual_distance: "",
 		remarks: "",
 	}
+	customerSearchQuery.value = ""
+	isCustomerSearchOpen.value = false
 	customersResource.fetch()
 	getCurrentLocation()
 	showSiteVisitModal.value = true

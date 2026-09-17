@@ -22,13 +22,32 @@
 							</svg>
 						</button>
 						<div>
-							<h1 class="text-sm font-bold text-slate-900 leading-tight">EEM Travel History</h1>
+							<h1 class="text-sm font-bold text-slate-900 leading-tight flex items-center gap-1.5">
+								<span>EEM Travel History</span>
+								<span class="w-1.5 h-1.5 rounded-full bg-teal-500 inline-block"></span>
+							</h1>
 							<p class="text-[10px] font-medium text-slate-500 leading-none">Past Field Trips & Expenses</p>
 						</div>
 					</div>
 
 					<!-- Header Actions -->
 					<div class="flex items-center space-x-1.5">
+						<!-- Toggle Filter Panel Button -->
+						<button
+							@click="isFilterDrawerOpen = !isFilterDrawerOpen"
+							class="p-2 rounded-2xl text-slate-600 hover:text-teal-700 hover:bg-teal-50 active:scale-95 transition relative"
+							:class="{ 'bg-teal-50 text-teal-700 ring-1 ring-teal-300': hasActiveFilters || isFilterDrawerOpen }"
+							title="Toggle Filters"
+						>
+							<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+							</svg>
+							<span
+								v-if="hasActiveFilters"
+								class="absolute top-1 right-1 w-2 h-2 rounded-full bg-teal-600 ring-2 ring-white"
+							></span>
+						</button>
+
 						<!-- Refresh Button -->
 						<button
 							@click="fetchHistory"
@@ -49,26 +68,43 @@
 					</div>
 				</div>
 
-				<!-- Quick Filter Bar (Month & Status) -->
-				<div class="mt-3 flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
+				<!-- Quick Date Range Pills (Horizontal Scroll) -->
+				<div class="mt-3 flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
+					<button
+						v-for="preset in datePresets"
+						:key="preset.value"
+						@click="setDatePreset(preset.value)"
+						:class="[
+							'px-2.5 py-1 rounded-xl text-[11px] font-semibold whitespace-nowrap transition-all',
+							selectedDatePreset === preset.value
+								? 'bg-teal-700 text-white shadow-xs'
+								: 'bg-slate-100 text-slate-600 hover:bg-slate-200/80 hover:text-slate-800'
+						]"
+					>
+						{{ preset.label }}
+					</button>
+				</div>
+
+				<!-- Status Tabs Bar -->
+				<div class="mt-2 flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
 					<button
 						v-for="filter in statusFilters"
 						:key="filter.value"
 						@click="selectedStatus = filter.value"
 						:class="[
-							'px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all flex items-center space-x-1.5',
+							'px-2.5 py-1 rounded-xl text-[11px] font-medium whitespace-nowrap transition-all flex items-center space-x-1',
 							selectedStatus === filter.value
-								? 'bg-teal-700 text-white shadow-xs shadow-teal-700/20'
-								: 'bg-slate-100 text-slate-600 hover:bg-slate-200/80 hover:text-slate-800'
+								? 'bg-slate-800 text-white shadow-xs'
+								: 'bg-slate-100/80 text-slate-600 hover:bg-slate-200/70 hover:text-slate-800'
 						]"
 					>
 						<span>{{ filter.label }}</span>
 						<span
 							v-if="filter.count > 0"
 							:class="[
-								'text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold',
+								'text-[9px] px-1.5 py-0.2 rounded-full font-mono font-bold',
 								selectedStatus === filter.value
-									? 'bg-teal-800 text-teal-100'
+									? 'bg-slate-700 text-slate-100'
 									: 'bg-slate-200 text-slate-700'
 							]"
 						>
@@ -76,6 +112,117 @@
 						</span>
 					</button>
 				</div>
+
+				<!-- Expandable Filter / Refine Drawer -->
+				<transition
+					enter-active-class="transition duration-150 ease-out"
+					enter-from-class="transform opacity-0 -translate-y-2"
+					enter-to-class="transform opacity-100 translate-y-0"
+					leave-active-class="transition duration-100 ease-in"
+					leave-from-class="transform opacity-100 translate-y-0"
+					leave-to-class="transform opacity-0 -translate-y-2"
+				>
+					<div
+						v-if="isFilterDrawerOpen"
+						class="mt-3 p-3.5 bg-slate-50 rounded-2xl border border-slate-200/90 space-y-3 text-xs"
+					>
+						<!-- Filter Header with Reset -->
+						<div class="flex items-center justify-between">
+							<span class="font-bold text-slate-800 flex items-center gap-1.5">
+								<svg class="w-3.5 h-3.5 text-teal-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+								</svg>
+								<span>Refine Trips</span>
+							</span>
+							<button
+								v-if="hasActiveFilters"
+								@click="resetAllFilters"
+								class="text-[11px] font-bold text-teal-700 hover:text-teal-900 hover:underline"
+							>
+								Reset Filters
+							</button>
+						</div>
+
+						<!-- Custom Date Pickers (Shown if Custom Range selected) -->
+						<div v-if="selectedDatePreset === 'custom'" class="grid grid-cols-2 gap-2 pt-1">
+							<div>
+								<label class="text-[10px] font-bold text-slate-500 block mb-0.5">From Date</label>
+								<input
+									v-model="customFromDate"
+									type="date"
+									class="w-full px-2.5 py-1.5 bg-white rounded-xl border border-slate-200 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+								/>
+							</div>
+							<div>
+								<label class="text-[10px] font-bold text-slate-500 block mb-0.5">To Date</label>
+								<input
+									v-model="customToDate"
+									type="date"
+									class="w-full px-2.5 py-1.5 bg-white rounded-xl border border-slate-200 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+								/>
+							</div>
+						</div>
+
+						<!-- Specific Month Selector -->
+						<div v-if="availableMonths.length > 0">
+							<label class="text-[10px] font-bold text-slate-500 block mb-1">Jump to Month</label>
+							<select
+								v-model="selectedMonth"
+								class="w-full px-3 py-1.5 bg-white rounded-xl border border-slate-200 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-500/20 font-medium"
+							>
+								<option value="all">All Available Months</option>
+								<option
+									v-for="month in availableMonths"
+									:key="month.key"
+									:value="month.key"
+								>
+									{{ month.label }} ({{ month.count }} trips)
+								</option>
+							</select>
+						</div>
+
+						<!-- Vehicle Type & Sort By Row -->
+						<div class="grid grid-cols-2 gap-2">
+							<div>
+								<label class="text-[10px] font-bold text-slate-500 block mb-1">Vehicle</label>
+								<select
+									v-model="selectedVehicle"
+									class="w-full px-2.5 py-1.5 bg-white rounded-xl border border-slate-200 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+								>
+									<option value="all">All Vehicles</option>
+									<option value="Two Wheeler">🛵 Two Wheeler</option>
+									<option value="Four Wheeler">🚗 Four Wheeler</option>
+									<option value="Other">🚌 Other</option>
+								</select>
+							</div>
+
+							<div>
+								<label class="text-[10px] font-bold text-slate-500 block mb-1">Sort Order</label>
+								<select
+									v-model="selectedSort"
+									class="w-full px-2.5 py-1.5 bg-white rounded-xl border border-slate-200 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+								>
+									<option value="date_desc">📅 Newest First</option>
+									<option value="date_asc">📅 Oldest First</option>
+									<option value="claim_desc">💰 Highest Claim</option>
+									<option value="dist_desc">🛣️ Longest Distance</option>
+								</select>
+							</div>
+						</div>
+
+						<!-- View Layout Mode Switcher -->
+						<div class="pt-1 flex items-center justify-between border-t border-slate-200/70">
+							<span class="text-[11px] text-slate-600 font-medium">Group by Month:</span>
+							<button
+								@click="isGroupedByMonth = !isGroupedByMonth"
+								class="px-2.5 py-1 rounded-lg text-[11px] font-bold transition flex items-center gap-1"
+								:class="isGroupedByMonth ? 'bg-teal-600 text-white' : 'bg-slate-200 text-slate-700'"
+							>
+								<span>{{ isGroupedByMonth ? 'Enabled' : 'Disabled' }}</span>
+							</button>
+						</div>
+					</div>
+				</transition>
 			</header>
 
 			<!-- Main Scrollable Content -->
@@ -92,7 +239,7 @@
 								</svg>
 								<span>Filtered Period Summary</span>
 							</div>
-							<span class="text-[11px] font-mono text-teal-300">{{ filteredRecords.length }} Trips</span>
+							<span class="text-[11px] font-mono text-teal-300 font-bold">{{ filteredRecords.length }} {{ filteredRecords.length === 1 ? 'Trip' : 'Trips' }}</span>
 						</div>
 
 						<div class="grid grid-cols-3 gap-2 text-center">
@@ -122,7 +269,7 @@
 					<input
 						v-model="searchQuery"
 						type="text"
-						placeholder="Search by date, trip ID, or notes..."
+						placeholder="Search by date, site, vehicle, or notes..."
 						class="w-full pl-9 pr-8 py-2.5 bg-white rounded-2xl border border-slate-200/80 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600 transition shadow-xs"
 					/>
 					<button
@@ -136,14 +283,50 @@
 					</button>
 				</div>
 
+				<!-- Active Filter Chips (If Any Filter Active) -->
+				<div v-if="hasActiveFilters" class="flex flex-wrap items-center gap-1.5 text-[10px]">
+					<span class="text-slate-400 font-semibold">Active Filters:</span>
+					<span
+						v-if="selectedDatePreset !== 'all'"
+						class="px-2 py-0.5 rounded-lg bg-teal-50 text-teal-800 border border-teal-200 flex items-center gap-1 font-medium"
+					>
+						<span>Date: {{ selectedDatePresetLabel }}</span>
+						<button @click="setDatePreset('all')" class="hover:text-teal-950 font-bold">&times;</button>
+					</span>
+					<span
+						v-if="selectedMonth !== 'all'"
+						class="px-2 py-0.5 rounded-lg bg-teal-50 text-teal-800 border border-teal-200 flex items-center gap-1 font-medium"
+					>
+						<span>Month: {{ selectedMonthLabel }}</span>
+						<button @click="selectedMonth = 'all'" class="hover:text-teal-950 font-bold">&times;</button>
+					</span>
+					<span
+						v-if="selectedVehicle !== 'all'"
+						class="px-2 py-0.5 rounded-lg bg-teal-50 text-teal-800 border border-teal-200 flex items-center gap-1 font-medium"
+					>
+						<span>Vehicle: {{ selectedVehicle }}</span>
+						<button @click="selectedVehicle = 'all'" class="hover:text-teal-950 font-bold">&times;</button>
+					</span>
+					<span
+						v-if="selectedStatus !== 'all'"
+						class="px-2 py-0.5 rounded-lg bg-teal-50 text-teal-800 border border-teal-200 flex items-center gap-1 font-medium"
+					>
+						<span>Status: {{ selectedStatus }}</span>
+						<button @click="selectedStatus = 'all'" class="hover:text-teal-950 font-bold">&times;</button>
+					</span>
+					<button
+						@click="resetAllFilters"
+						class="text-[10px] text-rose-600 hover:text-rose-800 font-bold ml-1"
+					>
+						Clear all
+					</button>
+				</div>
+
 				<!-- Loading State -->
 				<div v-if="eemHistoryResource.loading" class="py-12 text-center space-y-3">
-					<div class="inline-block animate-spin text-teal-600">
-						<svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-						</svg>
-					</div>
-					<p class="text-xs text-slate-500 font-medium">Loading your field travel history...</p>
+					<div class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-teal-500 border-t-transparent"></div>
+					<h3 class="text-sm font-bold text-slate-900">Loading Travel Records...</h3>
+					<p class="text-xs text-slate-500">Fetching your field trip history</p>
 				</div>
 
 				<!-- Empty State -->
@@ -158,17 +341,173 @@
 					</div>
 					<h3 class="text-sm font-bold text-slate-800">No Trip Records Found</h3>
 					<p class="text-xs text-slate-500 max-w-xs mx-auto">
-						{{ searchQuery ? 'No records match your search criteria.' : 'No executive expense manager records have been logged yet.' }}
+						{{ hasActiveFilters || searchQuery ? 'No records match your selected filters.' : 'No executive expense manager records have been logged yet.' }}
 					</p>
-					<button
-						@click="goToEem"
-						class="mt-2 inline-flex items-center space-x-1.5 px-4 py-2 rounded-2xl bg-teal-600 text-white text-xs font-semibold shadow-xs hover:bg-teal-700 transition"
-					>
-						<span>Start Today's Travel</span>
-					</button>
+					<div class="pt-2 flex justify-center gap-2">
+						<button
+							v-if="hasActiveFilters || searchQuery"
+							@click="resetAllFilters"
+							class="px-3.5 py-2 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition"
+						>
+							Clear Filters
+						</button>
+						<button
+							@click="goToEem"
+							class="inline-flex items-center space-x-1.5 px-4 py-2 rounded-2xl bg-teal-600 text-white text-xs font-semibold shadow-xs hover:bg-teal-700 transition"
+						>
+							<span>Start Today's Travel</span>
+						</button>
+					</div>
 				</div>
 
-				<!-- List of Trip Cards -->
+				<!-- GROUPED BY MONTH VIEW -->
+				<div v-else-if="isGroupedByMonth" class="space-y-5">
+					<div
+						v-for="group in groupedRecords"
+						:key="group.monthKey"
+						class="space-y-3"
+					>
+						<!-- Month Group Header Card -->
+						<div class="sticky top-[106px] z-20 bg-slate-100/95 backdrop-blur-md py-1.5 px-3 rounded-2xl border border-slate-200/80 flex items-center justify-between text-xs shadow-xs">
+							<div class="flex items-center space-x-2">
+								<span class="font-bold text-slate-900">{{ group.monthLabel }}</span>
+								<span class="px-1.5 py-0.2 bg-teal-50 text-teal-800 font-bold rounded-md text-[10px] font-mono border border-teal-200">
+									{{ group.records.length }} trips
+								</span>
+							</div>
+							<div class="flex items-center space-x-2 text-[11px] font-mono">
+								<span class="text-slate-600 font-semibold">{{ group.totalDistance.toFixed(1) }} km</span>
+								<span class="text-slate-300">•</span>
+								<span class="text-teal-700 font-bold">₹{{ Math.round(group.totalExpense).toLocaleString('en-IN') }}</span>
+							</div>
+						</div>
+
+						<!-- List of Cards in this month -->
+						<div class="space-y-3">
+							<div
+								v-for="rec in group.records"
+								:key="rec.name"
+								@click="viewTripDetail(rec)"
+								:class="[
+									'rounded-2xl p-4 transition-all active:scale-[0.99] cursor-pointer relative overflow-hidden',
+									isTripInProgress(rec)
+										? 'bg-gradient-to-br from-emerald-50/90 via-teal-50/40 to-white border-2 border-teal-500 shadow-md ring-4 ring-teal-500/10'
+										: 'bg-white border border-slate-200/80 shadow-xs hover:border-teal-300 hover:shadow-sm'
+								]"
+							>
+								<!-- Render Single Trip Card -->
+								<div class="flex items-start justify-between">
+									<div class="space-y-0.5">
+										<div class="flex items-center space-x-2">
+											<h4 class="text-sm font-bold text-slate-900">
+												{{ formatDisplayDate(rec.date) }}
+											</h4>
+											<span
+												v-if="isTripInProgress(rec)"
+												class="px-2 py-0.5 text-[9px] font-black rounded-full bg-emerald-600 text-white uppercase tracking-wider shadow-xs"
+											>
+												Today • Active
+											</span>
+											<span
+												v-else-if="isToday(rec.date)"
+												class="px-1.5 py-0.5 text-[9px] font-bold rounded bg-slate-200 text-slate-700 uppercase tracking-wider"
+											>
+												Today
+											</span>
+										</div>
+										<p class="text-[11px] font-mono text-slate-400">{{ rec.name }}</p>
+									</div>
+
+									<!-- Claim / Approval Status Badge -->
+									<div class="flex flex-col items-end space-y-1">
+										<span
+											:class="[
+												'px-2.5 py-1 rounded-full text-[10px] tracking-wide uppercase flex items-center font-bold',
+												getStatusBadgeClass(rec)
+											]"
+										>
+											<span
+												v-if="isTripInProgress(rec)"
+												class="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-ping mr-1.5 inline-block"
+											></span>
+											<span>{{ getStatusBadgeLabel(rec) }}</span>
+										</span>
+									</div>
+								</div>
+
+								<!-- Card Middle Row: Metrics Grid -->
+								<div class="mt-3.5 grid grid-cols-3 gap-2 py-2.5 px-3 rounded-xl bg-slate-50 border border-slate-100/80 text-xs">
+									<div>
+										<span class="text-[10px] text-slate-500 font-medium block">Vehicle</span>
+										<div class="flex items-center space-x-1 font-semibold text-slate-800 mt-0.5 truncate">
+											<span>{{ rec.vehicle_type === 'Two Wheeler' ? '🛵' : '🚗' }}</span>
+											<span class="truncate">{{ rec.vehicle_type || 'Vehicle' }}</span>
+										</div>
+									</div>
+
+									<div class="text-center">
+										<span class="text-[10px] text-slate-500 font-medium block">Distance</span>
+										<span class="font-bold font-mono text-slate-900 mt-0.5 block">
+											{{ (rec.total_distance || 0).toFixed(1) }} km
+										</span>
+									</div>
+
+									<div class="text-right">
+										<span class="text-[10px] text-slate-500 font-medium block">Total Claim</span>
+										<span class="font-bold font-mono text-teal-700 mt-0.5 block">
+											₹{{ Math.round(rec.total_expense || 0).toLocaleString('en-IN') }}
+										</span>
+									</div>
+								</div>
+
+								<!-- Card Bottom Row: Sites & Timings Breakdown -->
+								<div class="mt-2.5 flex items-center justify-between text-[11px] text-slate-500">
+									<div class="flex items-center space-x-2">
+										<span class="inline-flex items-center space-x-1 font-medium text-slate-700">
+											<svg class="w-3.5 h-3.5 text-teal-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+											</svg>
+											<span>{{ rec.sites_count || 0 }} {{ rec.sites_count === 1 ? 'Site Visit' : 'Site Visits' }}</span>
+										</span>
+
+										<span v-if="rec.expenses_count" class="text-slate-300">•</span>
+
+										<span v-if="rec.expenses_count" class="text-slate-600">
+											{{ rec.expenses_count }} {{ rec.expenses_count === 1 ? 'expense' : 'expenses' }}
+										</span>
+									</div>
+
+									<div class="flex items-center space-x-1 text-teal-600 font-semibold">
+										<span>Details</span>
+										<svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+										</svg>
+									</div>
+								</div>
+
+								<!-- Today In-Progress Direct Action Bar -->
+								<div
+									v-if="isTripInProgress(rec)"
+									class="mt-3 pt-2.5 border-t border-teal-200/80 flex items-center justify-between"
+								>
+									<span class="text-[11px] font-bold text-teal-900">Trip is actively ongoing</span>
+									<button
+										@click.stop="goToEem"
+										class="px-3 py-1.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-[11px] font-bold shadow-xs transition flex items-center space-x-1"
+									>
+										<span>Manage Today's Trip</span>
+										<svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+										</svg>
+									</button>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+
+				<!-- FLAT LIST OF TRIP CARDS -->
 				<div v-else class="space-y-3">
 					<div
 						v-for="rec in filteredRecords"
@@ -208,7 +547,7 @@
 							<div class="flex flex-col items-end space-y-1">
 								<span
 									:class="[
-										'px-2.5 py-1 rounded-full text-[10px] tracking-wide uppercase flex items-center',
+										'px-2.5 py-1 rounded-full text-[10px] tracking-wide uppercase flex items-center font-bold',
 										getStatusBadgeClass(rec)
 									]"
 								>
@@ -260,7 +599,7 @@
 								<span v-if="rec.expenses_count" class="text-slate-300">•</span>
 
 								<span v-if="rec.expenses_count" class="text-slate-600">
-									{{ rec.expenses_count }} {{ rec.expenses_count === 1 ? 'expense item' : 'expense items' }}
+									{{ rec.expenses_count }} {{ rec.expenses_count === 1 ? 'expense' : 'expenses' }}
 								</span>
 							</div>
 
@@ -318,7 +657,7 @@
 
 		</div>
 
-		<!-- MODAL / DRAWER: DETAILED DAY VIEW                                     -->
+		<!-- MODAL / DRAWER: DETAILED DAY VIEW -->
 		<Dialog v-model="showDetailModal">
 			<template #body-title>
 				<div class="flex items-center justify-between w-full pr-6 text-left">
@@ -466,7 +805,7 @@
 
 										<div class="flex items-center space-x-2 text-[10px] text-slate-400">
 											<span v-if="site.checkin_time">Time: {{ formatTime(site.checkin_time) }}</span>
-											<span v-if="site.site_lat && site.site_long" class="truncate font-mono">({{ site.site_lat.toFixed(4) }}, {{ site.site_long.toFixed(4) }})</span>
+											<span v-if="site.site_lat && site.site_long" class="truncate font-mono">({{ Number(site.site_lat).toFixed(4) }}, {{ Number(site.site_long).toFixed(4) }})</span>
 										</div>
 
 										<p v-if="site.remarks" class="text-[11px] text-slate-600 italic">
@@ -532,33 +871,174 @@ import { eemHistoryResource, eemDetailResource } from "@/data/eem"
 
 const router = useRouter()
 
+// Filters state
 const searchQuery = ref("")
-const selectedStatus = ref("all")
+const selectedStatus = ref("in_progress")
+const selectedDatePreset = ref("all")
+const selectedMonth = ref("all")
+const selectedVehicle = ref("all")
+const selectedSort = ref("date_desc")
+const isGroupedByMonth = ref(false)
+const isFilterDrawerOpen = ref(false)
+const customFromDate = ref("")
+const customToDate = ref("")
+
+// Modal State
 const showDetailModal = ref(false)
 const currentDetailDoc = ref(null)
 const linkedExpenseClaim = ref(null)
 
+const datePresets = [
+	{ label: "All Time", value: "all" },
+	{ label: "This Month", value: "this_month" },
+	{ label: "Last Month", value: "last_month" },
+	{ label: "Last 3 Months", value: "last_3_months" },
+	{ label: "This Year", value: "this_year" },
+	{ label: "Custom", value: "custom" },
+]
+
+function setDatePreset(val) {
+	selectedDatePreset.value = val
+	if (val !== "custom") {
+		customFromDate.value = ""
+		customToDate.value = ""
+	} else {
+		isFilterDrawerOpen.value = true
+	}
+}
+
+const hasActiveFilters = computed(() => {
+	return (
+		selectedDatePreset.value !== "all" ||
+		selectedMonth.value !== "all" ||
+		selectedVehicle.value !== "all" ||
+		selectedStatus.value !== "in_progress" ||
+		(searchQuery.value && searchQuery.value.trim().length > 0)
+	)
+})
+
+function resetAllFilters() {
+	searchQuery.value = ""
+	selectedStatus.value = "in_progress"
+	selectedDatePreset.value = "all"
+	selectedMonth.value = "all"
+	selectedVehicle.value = "all"
+	selectedSort.value = "date_desc"
+	customFromDate.value = ""
+	customToDate.value = ""
+}
+
+// Available months dynamically extracted from loaded history
+const availableMonths = computed(() => {
+	const records = (eemHistoryResource.data || []).filter(r => r.docstatus !== 2 && r.expense_claim_status !== "Cancelled")
+	const monthMap = {}
+	for (const r of records) {
+		if (!r.date) continue
+		const d = new Date(r.date)
+		if (isNaN(d.getTime())) continue
+		const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`
+		const label = d.toLocaleDateString("en-US", { month: "short", year: "numeric" })
+		if (!monthMap[key]) {
+			monthMap[key] = { key, label, count: 0 }
+		}
+		monthMap[key].count++
+	}
+	return Object.values(monthMap).sort((a, b) => b.key.localeCompare(a.key))
+})
+
+const selectedMonthLabel = computed(() => {
+	const found = availableMonths.value.find(m => m.key === selectedMonth.value)
+	return found ? found.label : selectedMonth.value
+})
+
+const selectedDatePresetLabel = computed(() => {
+	const found = datePresets.find(p => p.value === selectedDatePreset.value)
+	return found ? found.label : selectedDatePreset.value
+})
+
 const statusFilters = computed(() => {
-	const all = (eemHistoryResource.data || []).filter(r => r.docstatus !== 2 && r.expense_claim_status !== 'Cancelled')
-	const submitted = all.filter(r => r.docstatus === 1 || r.expense_claim_status === 'Submitted' || r.expense_claim_status === 'Approved' || r.expense_claim_status === 'Paid').length
-	const draft = all.filter(r => r.docstatus === 0).length
+	const all = (eemHistoryResource.data || []).filter(r => r.docstatus !== 2 && r.expense_claim_status !== "Cancelled")
+	const inProgress = all.filter(r => isTripInProgress(r)).length
+	const submitted = all.filter(r => r.docstatus === 1 || r.expense_claim_status === "Submitted" || r.expense_claim_status === "Approved" || r.expense_claim_status === "Paid").length
+	const draft = all.filter(r => r.docstatus === 0 && !isTripInProgress(r)).length
 
 	return [
+		{ label: "Active", value: "in_progress", count: inProgress },
 		{ label: "All Trips", value: "all", count: all.length },
-		{ label: "Submitted / Claimed", value: "submitted", count: submitted },
-		{ label: "Draft Trips", value: "draft", count: draft },
+		{ label: "Submitted", value: "submitted", count: submitted },
+		{ label: "Drafts", value: "draft", count: draft },
 	]
 })
 
 const filteredRecords = computed(() => {
-	let list = (eemHistoryResource.data || []).filter(r => r.docstatus !== 2 && r.expense_claim_status !== 'Cancelled')
+	let list = (eemHistoryResource.data || []).filter(r => r.docstatus !== 2 && r.expense_claim_status !== "Cancelled")
 
+	// Status Filter
 	if (selectedStatus.value === "submitted") {
-		list = list.filter(r => r.docstatus === 1 || r.expense_claim_status === 'Submitted' || r.expense_claim_status === 'Approved' || r.expense_claim_status === 'Paid')
+		list = list.filter(r => r.docstatus === 1 || r.expense_claim_status === "Submitted" || r.expense_claim_status === "Approved" || r.expense_claim_status === "Paid")
 	} else if (selectedStatus.value === "draft") {
-		list = list.filter(r => r.docstatus === 0)
+		list = list.filter(r => r.docstatus === 0 && !isTripInProgress(r))
+	} else if (selectedStatus.value === "in_progress") {
+		list = list.filter(r => isTripInProgress(r))
 	}
 
+	// Vehicle Filter
+	if (selectedVehicle.value !== "all") {
+		list = list.filter(r => r.vehicle_type === selectedVehicle.value)
+	}
+
+	// Specific Month Filter
+	if (selectedMonth.value !== "all") {
+		list = list.filter(r => {
+			if (!r.date) return false
+			const d = new Date(r.date)
+			const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`
+			return key === selectedMonth.value
+		})
+	}
+
+	// Date Range Presets
+	const now = new Date()
+	if (selectedDatePreset.value === "this_month") {
+		const thisMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`
+		list = list.filter(r => {
+			if (!r.date) return false
+			const d = new Date(r.date)
+			const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`
+			return key === thisMonthKey
+		})
+	} else if (selectedDatePreset.value === "last_month") {
+		const lastMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+		const lastMonthKey = `${lastMonthDate.getFullYear()}-${String(lastMonthDate.getMonth() + 1).padStart(2, "0")}`
+		list = list.filter(r => {
+			if (!r.date) return false
+			const d = new Date(r.date)
+			const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`
+			return key === lastMonthKey
+		})
+	} else if (selectedDatePreset.value === "last_3_months") {
+		const pastDate = new Date()
+		pastDate.setMonth(pastDate.getMonth() - 3)
+		list = list.filter(r => {
+			if (!r.date) return false
+			return new Date(r.date) >= pastDate
+		})
+	} else if (selectedDatePreset.value === "this_year") {
+		const thisYear = now.getFullYear()
+		list = list.filter(r => {
+			if (!r.date) return false
+			return new Date(r.date).getFullYear() === thisYear
+		})
+	} else if (selectedDatePreset.value === "custom") {
+		if (customFromDate.value) {
+			list = list.filter(r => r.date >= customFromDate.value)
+		}
+		if (customToDate.value) {
+			list = list.filter(r => r.date <= customToDate.value)
+		}
+	}
+
+	// Search Query (ID, Date, Vehicle, Remarks, End Narration, Site Keywords)
 	if (searchQuery.value && searchQuery.value.trim()) {
 		const q = searchQuery.value.toLowerCase().trim()
 		list = list.filter(r => {
@@ -567,12 +1047,51 @@ const filteredRecords = computed(() => {
 				(r.date && r.date.toLowerCase().includes(q)) ||
 				(r.vehicle_type && r.vehicle_type.toLowerCase().includes(q)) ||
 				(r.remarks && r.remarks.toLowerCase().includes(q)) ||
-				(r.end_narration && r.end_narration.toLowerCase().includes(q))
+				(r.end_narration && r.end_narration.toLowerCase().includes(q)) ||
+				(r.site_keywords && r.site_keywords.toLowerCase().includes(q))
 			)
 		})
 	}
 
-	return list
+	// Sorting
+	return list.slice().sort((a, b) => {
+		if (selectedSort.value === "date_asc") {
+			return (a.date || "").localeCompare(b.date || "")
+		} else if (selectedSort.value === "claim_desc") {
+			return (b.total_expense || 0) - (a.total_expense || 0)
+		} else if (selectedSort.value === "dist_desc") {
+			return (b.total_distance || 0) - (a.total_distance || 0)
+		} else {
+			// date_desc
+			return (b.date || "").localeCompare(a.date || "") || (b.creation || "").localeCompare(a.creation || "")
+		}
+	})
+})
+
+// Grouped by Month Data Structure
+const groupedRecords = computed(() => {
+	const groups = {}
+	for (const rec of filteredRecords.value) {
+		if (!rec.date) continue
+		const d = new Date(rec.date)
+		const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`
+		const monthLabel = d.toLocaleDateString("en-US", { month: "long", year: "numeric" })
+		if (!groups[monthKey]) {
+			groups[monthKey] = {
+				monthKey,
+				monthLabel,
+				totalDistance: 0,
+				totalExpense: 0,
+				totalSites: 0,
+				records: [],
+			}
+		}
+		groups[monthKey].records.push(rec)
+		groups[monthKey].totalDistance += Number(rec.total_distance || 0)
+		groups[monthKey].totalExpense += Number(rec.total_expense || 0)
+		groups[monthKey].totalSites += Number(rec.sites_count || 0)
+	}
+	return Object.values(groups)
 })
 
 function isTripInProgress(rec) {
@@ -580,17 +1099,23 @@ function isTripInProgress(rec) {
 	return isToday(rec.date) && rec.docstatus === 0
 }
 
-// Summary metrics
+function isToday(dateStr) {
+	if (!dateStr) return false
+	const todayStr = new Date().toISOString().split("T")[0]
+	return dateStr === todayStr
+}
+
+// Summary Statistics for the active filter set
 const statsTotalDistance = computed(() => {
-	return filteredRecords.value.reduce((sum, r) => sum + (r.total_distance || 0), 0)
+	return filteredRecords.value.reduce((acc, r) => acc + (Number(r.total_distance) || 0), 0)
 })
 
 const statsTotalExpense = computed(() => {
-	return filteredRecords.value.reduce((sum, r) => sum + (r.total_expense || 0), 0)
+	return filteredRecords.value.reduce((acc, r) => acc + (Number(r.total_expense) || 0), 0)
 })
 
 const statsTotalSites = computed(() => {
-	return filteredRecords.value.reduce((sum, r) => sum + (r.sites_count || 0), 0)
+	return filteredRecords.value.reduce((acc, r) => acc + (Number(r.sites_count) || 0), 0)
 })
 
 const detailSiteTracking = computed(() => {
@@ -601,8 +1126,54 @@ const detailExpenseTracking = computed(() => {
 	return currentDetailDoc.value?.employee_expense_tracking || []
 })
 
-function fetchHistory() {
-	eemHistoryResource.fetch({ limit: 100 })
+function formatDisplayDate(dateStr) {
+	if (!dateStr) return "-"
+	const d = new Date(dateStr)
+	if (isNaN(d.getTime())) return dateStr
+	return d.toLocaleDateString("en-US", {
+		weekday: "short",
+		day: "numeric",
+		month: "short",
+		year: "numeric",
+	})
+}
+
+function formatTime(timeStr) {
+	if (!timeStr) return "-"
+	if (timeStr.includes(":")) {
+		const parts = timeStr.split(":")
+		let hours = parseInt(parts[0], 10)
+		const minutes = parts[1]
+		const ampm = hours >= 12 ? "PM" : "AM"
+		hours = hours % 12 || 12
+		return `${hours}:${minutes} ${ampm}`
+	}
+	return timeStr
+}
+
+function getStatusBadgeLabel(rec) {
+	if (!rec) return "-"
+	if (isTripInProgress(rec)) return "In Progress"
+	if (rec.docstatus === 1) return rec.expense_claim_status || "Submitted"
+	if (rec.docstatus === 0) return "Draft"
+	if (rec.docstatus === 2) return "Cancelled"
+	return "Saved"
+}
+
+function getStatusBadgeClass(rec) {
+	if (!rec) return "bg-slate-100 text-slate-600"
+	if (isTripInProgress(rec)) return "bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-xs"
+	if (rec.docstatus === 1) {
+		const st = (rec.expense_claim_status || "").toLowerCase()
+		if (st === "paid" || st === "approved") {
+			return "bg-emerald-50 text-emerald-700 border border-emerald-200"
+		}
+		return "bg-teal-50 text-teal-700 border border-teal-200"
+	}
+	if (rec.docstatus === 0) {
+		return "bg-amber-50 text-amber-700 border border-amber-200"
+	}
+	return "bg-slate-100 text-slate-600 border border-slate-200"
 }
 
 async function viewTripDetail(rec) {
@@ -611,91 +1182,22 @@ async function viewTripDetail(rec) {
 	showDetailModal.value = true
 
 	try {
-		const res = await eemDetailResource.fetch({ eem_name: rec.name })
+		const res = await eemDetailResource.submit({ eem_name: rec.name })
 		if (res && res.doc) {
 			currentDetailDoc.value = res.doc
-			linkedExpenseClaim.value = res.linked_expense_claim
+			linkedExpenseClaim.value = res.linked_expense_claim || null
 		}
 	} catch (err) {
-		console.error("Failed to load trip details:", err)
+		console.warn("Could not load full trip details, using cached card data:", err)
 	}
 }
 
-function getStatusBadgeLabel(rec) {
-	if (!rec) return ""
-	if (isTripInProgress(rec)) {
-		return "In Progress"
-	}
-	if (rec.expense_claim_status && rec.expense_claim_status !== "Not Created") {
-		return rec.expense_claim_status
-	}
-	if (rec.docstatus === 1) {
-		return "Submitted"
-	}
-	return "Draft"
-}
-
-function getStatusBadgeClass(rec) {
-	if (isTripInProgress(rec)) {
-		return "bg-emerald-100 text-emerald-800 border border-emerald-300 font-black shadow-xs"
-	}
-	const status = getStatusBadgeLabel(rec)
-	switch (status) {
-		case "Paid":
-		case "Approved":
-			return "bg-emerald-100 text-emerald-800 border border-emerald-300"
-		case "Submitted":
-		case "Processing":
-			return "bg-teal-100 text-teal-800 border border-teal-300"
-		default:
-			return "bg-amber-100 text-amber-800 border border-amber-300"
-	}
-}
-
-function formatDisplayDate(dateStr) {
-	if (!dateStr) return ""
-	try {
-		const d = new Date(dateStr)
-		return d.toLocaleDateString("en-IN", {
-			weekday: "short",
-			day: "numeric",
-			month: "short",
-			year: "numeric"
-		})
-	} catch (e) {
-		return dateStr
-	}
-}
-
-function formatTime(timeStr) {
-	if (!timeStr) return ""
-	try {
-		const parts = timeStr.split(":")
-		if (parts.length >= 2) {
-			let hours = parseInt(parts[0], 10)
-			const minutes = parts[1]
-			const ampm = hours >= 12 ? "PM" : "AM"
-			hours = hours % 12 || 12
-			return `${hours}:${minutes} ${ampm}`
-		}
-		return timeStr
-	} catch (e) {
-		return timeStr
-	}
-}
-
-function isToday(dateStr) {
-	if (!dateStr) return false
-	const today = new Date().toISOString().split("T")[0]
-	return dateStr === today
+function fetchHistory() {
+	eemHistoryResource.fetch({ limit: 200 })
 }
 
 function goBack() {
-	if (window.history.length > 1) {
-		router.back()
-	} else {
-		router.push("/")
-	}
+	router.push("/")
 }
 
 function goToEem() {

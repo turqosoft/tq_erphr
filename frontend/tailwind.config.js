@@ -1,5 +1,19 @@
 import frappeUIPreset from "frappe-ui/src/tailwind/preset"
 
+const turquoise = {
+	50: '#f0fdfc',
+	100: '#d3faf6',
+	200: '#aaf4ec',
+	300: '#73ebd9',
+	400: '#40e0d0', // User Specified Turquoise
+	500: '#1fc7b6',
+	600: '#139f92',
+	700: '#137e75',
+	800: '#14645d',
+	900: '#15534e',
+	950: '#06312e',
+}
+
 /** @type {import('tailwindcss').Config} */
 export default {
 	presets: [frappeUIPreset],
@@ -12,19 +26,8 @@ export default {
 	theme: {
 		extend: {
 			colors: {
-				brand: {
-					50: '#f0fdfa',
-					100: '#ccfbf1',
-					200: '#99f6e4',
-					300: '#5eead4',
-					400: '#2dd4bf',
-					500: '#14b8a6',
-					600: '#0d9488',
-					700: '#0f766e',
-					800: '#115e59',
-					900: '#134e4a',
-					950: '#042f2e',
-				},
+				brand: turquoise,
+				teal: turquoise,
 				surface: {
 					bg: '#f4f5f7',
 					card: '#ffffff',
