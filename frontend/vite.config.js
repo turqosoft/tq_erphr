@@ -34,25 +34,25 @@ export default defineConfig({
 				background_color: "#f8fafc",
 				icons: [
 					{
-						src: "/assets/tq_erphr/manifest/manifest-icon-192.maskable.png",
+						src: "/assets/tq_erphr/frontend/manifest/manifest-icon-192.png",
 						sizes: "192x192",
 						type: "image/png",
 						purpose: "any",
 					},
 					{
-						src: "/assets/tq_erphr/manifest/manifest-icon-192.maskable.png",
+						src: "/assets/tq_erphr/frontend/manifest/manifest-icon-192.maskable.png",
 						sizes: "192x192",
 						type: "image/png",
 						purpose: "maskable",
 					},
 					{
-						src: "/assets/tq_erphr/manifest/manifest-icon-512.maskable.png",
+						src: "/assets/tq_erphr/frontend/manifest/manifest-icon-512.png",
 						sizes: "512x512",
 						type: "image/png",
 						purpose: "any",
 					},
 					{
-						src: "/assets/tq_erphr/manifest/manifest-icon-512.maskable.png",
+						src: "/assets/tq_erphr/frontend/manifest/manifest-icon-512.maskable.png",
 						sizes: "512x512",
 						type: "image/png",
 						purpose: "maskable",
