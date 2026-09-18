@@ -141,6 +141,7 @@ mit
 #### Improvements
 - Customer search in employee expense manger
 - Show only first 10 site visits and logs
+- Checking for location based customer - mandatory check removed.
 
 #### Bug Fixes
 - 

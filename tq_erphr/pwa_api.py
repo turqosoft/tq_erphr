@@ -891,12 +891,18 @@ def get_customers_list(
 		params["territory"] = territory
 		territory_clause = " AND territory = %(territory)s"
 
-	if user_lat is not None and user_lng is not None:
+	has_lat_col = bool(frappe.db.has_column("Customer", "latitude"))
+	has_lng_col = bool(frappe.db.has_column("Customer", "longitude"))
+
+	lat_select = "latitude" if has_lat_col else "NULL AS latitude"
+	lng_select = "longitude" if has_lng_col else "NULL AS longitude"
+
+	if user_lat is not None and user_lng is not None and has_lat_col and has_lng_col:
 		params["user_lat"] = user_lat
 		params["user_lng"] = user_lng
 		query = f"""
 			SELECT 
-				name, customer_name, customer_group, territory, mobile_no, email_id, latitude, longitude,
+				name, customer_name, customer_group, territory, mobile_no, email_id, {lat_select}, {lng_select},
 				(SELECT GROUP_CONCAT(sales_person SEPARATOR ', ') FROM `tabSales Team` WHERE parent = `tabCustomer`.name AND parenttype = 'Customer' AND parentfield = 'sales_team') AS sales_person_names,
 				ROUND(
 					6371 * 2 * ASIN(
@@ -925,7 +931,7 @@ def get_customers_list(
 	return frappe.db.sql(
 		f"""
 		SELECT 
-			name, customer_name, customer_group, territory, mobile_no, email_id, latitude, longitude,
+			name, customer_name, customer_group, territory, mobile_no, email_id, {lat_select}, {lng_select},
 			(SELECT GROUP_CONCAT(sales_person SEPARATOR ', ') FROM `tabSales Team` WHERE parent = `tabCustomer`.name AND parenttype = 'Customer' AND parentfield = 'sales_team') AS sales_person_names,
 			NULL AS distance_km
 		FROM `tabCustomer`
@@ -951,14 +957,28 @@ def get_customer_detail(customer_name: str) -> dict:
 	if not customer_name:
 		return {}
 
+	customer_fields = [
+		"name", "customer_name", "customer_group", "territory", "mobile_no", "email_id",
+		"customer_primary_contact", "customer_primary_address", "disabled", "creation"
+	]
+	if frappe.db.has_column("Customer", "latitude"):
+		customer_fields.append("latitude")
+	if frappe.db.has_column("Customer", "longitude"):
+		customer_fields.append("longitude")
+
 	customer = frappe.db.get_value(
 		"Customer",
 		customer_name,
-		["name", "customer_name", "customer_group", "territory", "mobile_no", "email_id", "latitude", "longitude", "customer_primary_contact", "customer_primary_address", "disabled", "creation"],
+		customer_fields,
 		as_dict=True,
 	)
 	if not customer:
 		return {}
+
+	if "latitude" not in customer:
+		customer["latitude"] = None
+	if "longitude" not in customer:
+		customer["longitude"] = None
 
 	# Sales Team
 	sales_team = frappe.get_all(
