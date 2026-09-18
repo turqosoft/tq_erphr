@@ -7,20 +7,31 @@
 		<!-- Mobile App Shell Container -->
 		<div class="w-full sm:max-w-md bg-[#f8fafc] min-h-screen sm:min-h-[720px] sm:rounded-3xl sm:shadow-2xl sm:border sm:border-slate-200/80 flex flex-col justify-between relative z-10 overflow-hidden pb-6">
 			
-			<!-- Mobile Top App Header -->
-			<header class="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-slate-200/70 px-4 py-3 sm:px-5 transition-all shadow-xs">
-				<div class="flex items-center justify-between">
-					<!-- Brand Logo & Title -->
-					<div class="flex items-center space-x-2.5">
-						<div class="w-9 h-9 rounded-2xl bg-white p-1 flex items-center justify-center shadow-md shadow-teal-600/15 border border-slate-100 ring-2 ring-teal-50 overflow-hidden">
-							<img :src="mobibizIcon" alt="MobiBiz" class="w-full h-full object-contain" />
+			<!-- Mobile Top App Header (Fixed at top like BottomNavBar) -->
+			<header class="fixed top-0 inset-x-0 z-40 bg-white/95 backdrop-blur-xl border-b border-slate-200/80 shadow-[0_2px_16px_rgba(0,0,0,0.04)] px-3 py-2.5 sm:px-4">
+				<div class="max-w-md mx-auto flex items-center justify-between">
+					<!-- Company Logo & Name -->
+					<div class="flex items-center space-x-2.5 min-w-0 flex-1 mr-2">
+						<div class="w-9 h-9 rounded-2xl bg-white p-1 flex items-center justify-center shadow-md shadow-teal-600/10 border border-slate-100 ring-2 ring-teal-50 overflow-hidden flex-shrink-0">
+							<img
+								v-if="employee?.company_logo || employee?.app_logo"
+								:src="employee.company_logo || employee.app_logo"
+								:alt="employee?.company_name || 'Company Logo'"
+								class="w-full h-full object-contain"
+							/>
+							<img
+								v-else
+								:src="mobibizIcon"
+								alt="MobiBiz"
+								class="w-full h-full object-contain"
+							/>
 						</div>
-						<div>
-							<h1 class="text-sm font-bold text-slate-900 leading-tight flex items-center gap-1.5">
-								<span>MobiBiz Lite</span>
-								<span class="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block animate-pulse"></span>
+						<div class="min-w-0 flex-1">
+							<h1 class="text-sm font-bold text-slate-900 leading-tight flex items-center gap-1.5 truncate">
+								<span class="truncate">{{ employee?.company_name || employee?.company || 'Total Quality' }}</span>
+								<span class="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block animate-pulse flex-shrink-0" title="Connected"></span>
 							</h1>
-							<p class="text-[10px] font-medium text-slate-500 leading-none">Employee Portal</p>
+							<p class="text-[10px] font-medium text-slate-500 leading-none truncate mt-0.5">MobiBiz Lite • Employee Portal</p>
 						</div>
 					</div>
 
@@ -30,7 +41,7 @@
 						<button
 							@click="refreshData"
 							:disabled="employeeResource.loading || checkinStatusResource.loading || todayEemResource.loading"
-							class="p-2 rounded-2xl text-slate-500 hover:text-teal-700 hover:bg-teal-50 active:scale-95 transition"
+							class="p-2 rounded-2xl text-slate-500 hover:text-teal-700 hover:bg-teal-50 active:scale-95 transition cursor-pointer"
 							title="Refresh data"
 						>
 							<svg
@@ -48,7 +59,7 @@
 						<div class="relative" ref="profileDropdownRef">
 							<button
 								@click="toggleDropdown"
-								class="flex items-center p-0.5 rounded-full hover:ring-2 hover:ring-teal-400/50 active:scale-95 transition focus:outline-none"
+								class="flex items-center p-0.5 rounded-full hover:ring-2 hover:ring-teal-400/50 active:scale-95 transition focus:outline-none cursor-pointer"
 								title="Account & Profile"
 								aria-label="User profile menu"
 							>
@@ -150,6 +161,29 @@
 											<span>EEM Trip History</span>
 										</button>
 
+										<!-- Supervisor Team EEM Option (Visible only for Supervisors) -->
+										<button
+											v-if="employee?.is_supervisor"
+											@click="goToSupervisorEem"
+											class="w-full flex items-center space-x-2.5 px-3 py-2 rounded-2xl text-xs font-semibold text-teal-800 bg-teal-50/70 hover:bg-teal-100 transition text-left active:scale-98"
+										>
+											<svg class="w-4 h-4 text-teal-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+											</svg>
+											<span>Supervisor Team EEM</span>
+										</button>
+
+										<!-- Customers Directory Option -->
+										<button
+											@click="goToCustomers"
+											class="w-full flex items-center space-x-2.5 px-3 py-2 rounded-2xl text-xs font-medium text-slate-700 hover:bg-teal-50 hover:text-teal-800 transition text-left active:scale-98"
+										>
+											<svg class="w-4 h-4 text-teal-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+											</svg>
+											<span>Customers Directory</span>
+										</button>
+
 										<!-- Install MobiBiz App Option -->
 										<button
 											v-if="!pwaState.isInstalled"
@@ -195,7 +229,7 @@
 			</header>
 
 			<!-- Main Content Scrollable Area -->
-			<main class="flex-1 w-full px-4 py-4 space-y-4 overflow-y-auto">
+			<main class="flex-1 w-full px-4 pt-16 sm:pt-16 pb-4 space-y-4">
 				<!-- Loading State -->
 				<div v-if="employeeResource.loading && !employee" class="p-8 text-center bg-white rounded-3xl shadow-sm border border-slate-100 my-6">
 					<div class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-teal-500 border-t-transparent mb-3"></div>
@@ -465,8 +499,8 @@
 							<span class="text-[10px] text-teal-600 font-medium">Shortcuts</span>
 						</div>
 
-						<!-- Grid for Sales Persons (Includes Site & Trip + Claims) -->
-						<div v-if="employee?.is_sales_person" class="grid grid-cols-2 gap-2.5">
+						<!-- Grid for Sales Persons (Includes Site & Trip + Customers + Claims) -->
+						<div v-if="employee?.is_sales_person" class="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
 							<!-- Tile 1: Field Visits & Expenses -->
 							<button
 								@click="goToEem"
@@ -483,7 +517,23 @@
 								</div>
 							</button>
 
-							<!-- Tile 2: Punch Logs History -->
+							<!-- Tile 2: Customers Directory (Near Me & Search) -->
+							<button
+								@click="goToCustomers"
+								class="bg-white p-3.5 rounded-3xl border border-slate-100 shadow-xs hover:border-teal-200 hover:shadow-sm transition-all active:scale-[0.98] text-left flex flex-col justify-between space-y-3"
+							>
+								<div class="w-8 h-8 rounded-xl bg-cyan-50 text-cyan-700 flex items-center justify-center border border-cyan-100">
+									<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+									</svg>
+								</div>
+								<div>
+									<h4 class="text-xs font-bold text-slate-900">Customers</h4>
+									<p class="text-[10px] text-slate-500 mt-0.5">Directory & Nearby GPS</p>
+								</div>
+							</button>
+
+							<!-- Tile 3: Punch Logs History -->
 							<button
 								@click="openHistoryModal"
 								class="bg-white p-3.5 rounded-3xl border border-slate-100 shadow-xs hover:border-teal-200 hover:shadow-sm transition-all active:scale-[0.98] text-left flex flex-col justify-between space-y-3"
@@ -496,22 +546,6 @@
 								<div>
 									<h4 class="text-xs font-bold text-slate-900">Punch Logs</h4>
 									<p class="text-[10px] text-slate-500 mt-0.5">Attendance history</p>
-								</div>
-							</button>
-
-							<!-- Tile 3: My HR Profile -->
-							<button
-								@click="openProfileModal"
-								class="bg-white p-3.5 rounded-3xl border border-slate-100 shadow-xs hover:border-teal-200 hover:shadow-sm transition-all active:scale-[0.98] text-left flex flex-col justify-between space-y-3"
-							>
-								<div class="w-8 h-8 rounded-xl bg-sky-50 text-sky-700 flex items-center justify-center border border-sky-100">
-									<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-									</svg>
-								</div>
-								<div>
-									<h4 class="text-xs font-bold text-slate-900">My Profile</h4>
-									<p class="text-[10px] text-slate-500 mt-0.5">HR & Designation</p>
 								</div>
 							</button>
 
@@ -530,9 +564,46 @@
 									<p class="text-[10px] text-slate-500 mt-0.5">Past trips & claims</p>
 								</div>
 							</button>
+
+							<!-- Tile 5: Supervisor Team EEM (Visible if Supervisor) -->
+							<button
+								v-if="employee?.is_supervisor"
+								@click="goToSupervisorEem"
+								class="bg-gradient-to-br from-teal-500/10 via-emerald-500/10 to-transparent p-3.5 rounded-3xl border border-teal-200/90 shadow-xs hover:border-teal-300 hover:shadow-sm transition-all active:scale-[0.98] text-left flex flex-col justify-between space-y-3 relative overflow-hidden"
+							>
+								<div class="w-8 h-8 rounded-xl bg-teal-700 text-white flex items-center justify-center shadow-xs">
+									<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+									</svg>
+								</div>
+								<div>
+									<div class="flex items-center gap-1">
+										<h4 class="text-xs font-bold text-slate-900">Team EEM</h4>
+										<span class="px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-teal-100 text-teal-800">Lead</span>
+									</div>
+									<p class="text-[10px] text-slate-500 mt-0.5">Subordinate tracking</p>
+								</div>
+							</button>
+
+							<!-- Tile 6: My HR Profile -->
+							<button
+								@click="openProfileModal"
+								class="bg-white p-3.5 rounded-3xl border border-slate-100 shadow-xs hover:border-teal-200 hover:shadow-sm transition-all active:scale-[0.98] text-left flex flex-col justify-between space-y-3"
+								:class="{ 'col-span-2 sm:col-span-1': !employee?.is_supervisor }"
+							>
+								<div class="w-8 h-8 rounded-xl bg-sky-50 text-sky-700 flex items-center justify-center border border-sky-100">
+									<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+									</svg>
+								</div>
+								<div>
+									<h4 class="text-xs font-bold text-slate-900">My Profile</h4>
+									<p class="text-[10px] text-slate-500 mt-0.5">HR & Designation</p>
+								</div>
+							</button>
 						</div>
 
-						<!-- Grid for Non-Sales Staff (Clean Attendance, Logs & Security) -->
+						<!-- Grid for Non-Sales Staff (Clean Attendance, Logs & Customers) -->
 						<div v-else class="grid grid-cols-3 gap-2.5">
 							<!-- Tile 1: Punch Logs History -->
 							<button
@@ -550,7 +621,23 @@
 								</div>
 							</button>
 
-							<!-- Tile 2: My HR Profile -->
+							<!-- Tile 2: Customers Directory -->
+							<button
+								@click="goToCustomers"
+								class="bg-white p-3.5 rounded-3xl border border-slate-100 shadow-xs hover:border-teal-200 hover:shadow-sm transition-all active:scale-[0.98] text-left flex flex-col justify-between space-y-3"
+							>
+								<div class="w-8 h-8 rounded-xl bg-cyan-50 text-cyan-700 flex items-center justify-center border border-cyan-100">
+									<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+									</svg>
+								</div>
+								<div>
+									<h4 class="text-xs font-bold text-slate-900">Customers</h4>
+									<p class="text-[10px] text-slate-500 mt-0.5">Directory</p>
+								</div>
+							</button>
+
+							<!-- Tile 3: My HR Profile -->
 							<button
 								@click="openProfileModal"
 								class="bg-white p-3.5 rounded-3xl border border-slate-100 shadow-xs hover:border-teal-200 hover:shadow-sm transition-all active:scale-[0.98] text-left flex flex-col justify-between space-y-3"
@@ -563,22 +650,6 @@
 								<div>
 									<h4 class="text-xs font-bold text-slate-900">My Profile</h4>
 									<p class="text-[10px] text-slate-500 mt-0.5">Details</p>
-								</div>
-							</button>
-
-							<!-- Tile 3: Change Password / Security -->
-							<button
-								@click="openChangePasswordModal"
-								class="bg-white p-3.5 rounded-3xl border border-slate-100 shadow-xs hover:border-teal-200 hover:shadow-sm transition-all active:scale-[0.98] text-left flex flex-col justify-between space-y-3"
-							>
-								<div class="w-8 h-8 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center border border-amber-100">
-									<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-									</svg>
-								</div>
-								<div>
-									<h4 class="text-xs font-bold text-slate-900">Password</h4>
-									<p class="text-[10px] text-slate-500 mt-0.5">Security</p>
 								</div>
 							</button>
 						</div>
@@ -795,16 +866,16 @@
 			</template>
 			<template #body-content>
 				<div class="mt-2 space-y-2 max-h-80 overflow-y-auto pr-1">
-					<div v-if="checkinHistoryResource.loading" class="py-6 text-center text-xs text-slate-500">
+					<div v-if="isCheckinLoading && checkinLogs.length === 0" class="py-6 text-center text-xs text-slate-500">
 						<div class="inline-block animate-spin rounded-full h-5 w-5 border-2 border-teal-500 border-t-transparent mb-2"></div>
 						<p>Loading records...</p>
 					</div>
-					<div v-else-if="!checkinHistoryResource.data || checkinHistoryResource.data.length === 0" class="py-6 text-center text-xs text-slate-400">
+					<div v-else-if="!isCheckinLoading && checkinLogs.length === 0" class="py-6 text-center text-xs text-slate-400">
 						No check-in logs found.
 					</div>
 					<div
 						v-else
-						v-for="log in checkinHistoryResource.data"
+						v-for="log in checkinLogs"
 						:key="log.name"
 						class="flex items-center justify-between p-3.5 rounded-2xl bg-slate-50 border border-slate-100 text-xs"
 					>
@@ -827,6 +898,21 @@
 							<span class="text-[10px] text-slate-400 font-mono">{{ log.name }}</span>
 						</div>
 					</div>
+
+					<!-- View More Logs Button -->
+					<div v-if="hasMoreCheckins" class="pt-2 pb-1 text-center">
+						<button
+							@click="loadMoreCheckins"
+							:disabled="isLoadingMoreCheckins"
+							class="w-full py-2.5 px-3 text-xs font-semibold text-teal-700 bg-teal-50 hover:bg-teal-100 active:bg-teal-200 border border-teal-200/80 rounded-2xl transition-all duration-200 flex items-center justify-center space-x-2 shadow-xs cursor-pointer"
+						>
+							<svg v-if="isLoadingMoreCheckins" class="w-4 h-4 animate-spin text-teal-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+								<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+								<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+							</svg>
+							<span>{{ isLoadingMoreCheckins ? 'Loading older logs...' : `View More Logs (Showing ${checkinLogs.length})` }}</span>
+						</button>
+					</div>
 				</div>
 			</template>
 			<template #actions>
@@ -834,7 +920,7 @@
 					<Button
 						variant="subtle"
 						@click="refreshHistory"
-						:loading="checkinHistoryResource.loading"
+						:loading="isCheckinLoading"
 						class="px-3 py-2 text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-2xl"
 					>
 						Refresh
@@ -1151,6 +1237,42 @@
 						</div>
 					</div>
 
+					<!-- View All Customers Setting (for Sales Persons) -->
+					<div
+						v-if="employee?.is_sales_person"
+						class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-center justify-between"
+					>
+						<div class="pr-3">
+							<div class="flex items-center space-x-1.5">
+								<span class="text-xs font-bold text-slate-800">View All Customers</span>
+								<span class="px-1.5 py-0.2 rounded text-[9px] font-bold bg-teal-50 text-teal-700 border border-teal-200">
+									Sales Scope
+								</span>
+							</div>
+							<p class="text-[10px] text-slate-500 mt-0.5 leading-snug">
+								{{ employee?.view_all_customers ? 'Viewing all organization customers in site visit search.' : 'Restricted to only your assigned customers in the master.' }}
+							</p>
+						</div>
+						<button
+							type="button"
+							@click="toggleViewAllCustomers"
+							:disabled="isUpdatingCustomerViewPref"
+							:class="[
+								'relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none',
+								employee?.view_all_customers ? 'bg-teal-600' : 'bg-slate-300'
+							]"
+							role="switch"
+							:aria-checked="Boolean(employee?.view_all_customers)"
+						>
+							<span
+								:class="[
+									'pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out',
+									employee?.view_all_customers ? 'translate-x-5' : 'translate-x-0'
+								]"
+							/>
+						</button>
+					</div>
+
 					<!-- Change Password Trigger inside Profile -->
 					<div class="pt-1">
 						<button
@@ -1365,6 +1487,7 @@ import {
 import { todayEemResource } from "@/data/eem"
 import { detectDeviceDetails } from "@/utils/device"
 import { pwaState, promptPwaInstall } from "@/data/pwa"
+import { toast } from "@/utils/toast"
 
 const router = useRouter()
 const route = useRoute()
@@ -1380,6 +1503,12 @@ const showChangePasswordModal = ref(false)
 const profileDropdownRef = ref(null)
 const isEmployeeInfoExpanded = ref(false)
 const isPunchesExpanded = ref(false)
+
+// Check-in History Pagination States
+const checkinLogs = ref([])
+const isCheckinLoading = ref(false)
+const isLoadingMoreCheckins = ref(false)
+const hasMoreCheckins = ref(false)
 
 function handlePwaInstall() {
 	isDropdownOpen.value = false
@@ -1495,6 +1624,32 @@ function closeDropdown() {
 	isDropdownOpen.value = false
 }
 
+const isUpdatingCustomerViewPref = ref(false)
+
+async function toggleViewAllCustomers() {
+	if (isUpdatingCustomerViewPref.value) return
+	isUpdatingCustomerViewPref.value = true
+	const newVal = !employee.value?.view_all_customers
+	try {
+		const res = await call("tq_erphr.pwa_api.update_user_customer_view_preference", {
+			view_all: newVal,
+		})
+		if (res && res.status === "success") {
+			await employeeResource.fetch()
+			if (newVal) {
+				toast.success("You can now view and search all company customers in Site Visits.", "All Customers Enabled")
+			} else {
+				toast.info("Customer listing is now limited to your assigned customers.", "Assigned Customers Scope")
+			}
+		}
+	} catch (err) {
+		console.error("Failed to update customer view preference:", err)
+		toast.error("Failed to update preference")
+	} finally {
+		isUpdatingCustomerViewPref.value = false
+	}
+}
+
 function openProfileModal() {
 	closeDropdown()
 	showProfileModal.value = true
@@ -1503,11 +1658,49 @@ function openProfileModal() {
 function openHistoryModal() {
 	closeDropdown()
 	showHistoryModal.value = true
-	checkinHistoryResource.fetch()
+	fetchInitialCheckinHistory()
+}
+
+async function fetchInitialCheckinHistory() {
+	isCheckinLoading.value = true
+	try {
+		const res = await call("tq_erphr.pwa_api.get_employee_checkin_history", {
+			limit: 10,
+			limit_start: 0,
+		})
+		checkinLogs.value = res || []
+		hasMoreCheckins.value = (res || []).length === 10
+	} catch (err) {
+		console.error("Failed to fetch checkin history:", err)
+		toast.error("Failed to load check-in history")
+	} finally {
+		isCheckinLoading.value = false
+	}
+}
+
+async function loadMoreCheckins() {
+	if (isLoadingMoreCheckins.value || !hasMoreCheckins.value) return
+	isLoadingMoreCheckins.value = true
+	try {
+		const res = await call("tq_erphr.pwa_api.get_employee_checkin_history", {
+			limit: 10,
+			limit_start: checkinLogs.value.length,
+		})
+		const items = res || []
+		checkinLogs.value = [...checkinLogs.value, ...items]
+		if (items.length < 10) {
+			hasMoreCheckins.value = false
+		}
+	} catch (err) {
+		console.error("Failed to load more checkin history:", err)
+		toast.error("Failed to load more check-in logs")
+	} finally {
+		isLoadingMoreCheckins.value = false
+	}
 }
 
 function refreshHistory() {
-	checkinHistoryResource.fetch()
+	fetchInitialCheckinHistory()
 }
 
 function toggleTodayPunches() {
@@ -1522,12 +1715,22 @@ function goToEem() {
 	router.push("/eem")
 }
 
+function goToCustomers() {
+	closeDropdown()
+	router.push("/customers")
+}
+
 function goToEemHistory() {
 	closeDropdown()
 	if (!employee.value?.is_sales_person) {
 		return
 	}
 	router.push("/eem/history")
+}
+
+function goToSupervisorEem() {
+	closeDropdown()
+	router.push("/eem/team")
 }
 
 function goToEemFromModal() {
@@ -1640,7 +1843,10 @@ async function retryAcquireLocation() {
 		showLocationModal.value = false
 		showPunchConfirm.value = true
 	} else {
-		alert("GPS location could not be acquired. Please verify that Location / GPS is turned ON and location permission is allowed for this site.")
+		toast.warning(
+			"GPS location could not be acquired. Please verify that Location / GPS is turned ON and location permission is allowed for this site.",
+			"GPS Location Required"
+		)
 	}
 }
 
@@ -1692,6 +1898,7 @@ function getCurrentLocation() {
 async function handleCheckinAction() {
 	if (isSubmittingCheckin.value) return
 
+	const currentAction = nextAction.value
 	isSubmittingCheckin.value = true
 	locationStatusText.value = "Acquiring GPS location..."
 
@@ -1706,22 +1913,24 @@ async function handleCheckinAction() {
 		const dev = detectedDevice.value || detectDeviceDetails()
 		
 		await addCheckinResource.submit({
-			log_type: nextAction.value,
+			log_type: currentAction,
 			latitude: coords.latitude,
 			longitude: coords.longitude,
 			device_id: dev.shortDeviceId,
 			remarks: dev.remarks,
 		})
 
+		toast.success(`Punch ${currentAction === "IN" ? "IN" : "OUT"} recorded successfully!`, "Attendance Updated")
+
 		// Refresh status, eem and history
 		await checkinStatusResource.fetch()
 		await todayEemResource.fetch()
 		if (showHistoryModal.value) {
-			await checkinHistoryResource.fetch()
+			await fetchInitialCheckinHistory()
 		}
 	} catch (err) {
 		console.error("Check-in error:", err)
-		alert(err.messages?.[0] || err.message || "Failed to record check-in.")
+		toast.error(err.messages?.[0] || err.message || "Failed to record check-in.", "Punch Failed")
 	} finally {
 		isSubmittingCheckin.value = false
 	}

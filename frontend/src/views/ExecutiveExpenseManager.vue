@@ -7,32 +7,47 @@
 		<!-- Mobile App Shell Container -->
 		<div class="w-full sm:max-w-md bg-[#f8fafc] min-h-screen sm:min-h-[720px] sm:rounded-3xl sm:shadow-2xl sm:border sm:border-slate-200/80 flex flex-col justify-between relative z-10 overflow-hidden pb-6">
 			
-			<!-- Mobile Top Header -->
-			<header class="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-slate-200/70 px-4 py-3 sm:px-5 transition-all shadow-xs">
-				<div class="flex items-center justify-between">
+			<!-- Mobile Top Header (Fixed at top like BottomNavBar) -->
+			<header class="fixed top-0 inset-x-0 z-40 bg-white/95 backdrop-blur-xl border-b border-slate-200/80 shadow-[0_2px_16px_rgba(0,0,0,0.04)] px-3 py-2.5 sm:px-4 transition-all">
+				<div class="max-w-md mx-auto flex items-center justify-between">
 					<!-- Back Navigation & Title -->
-					<div class="flex items-center space-x-2.5">
+					<div class="flex items-center space-x-2.5 min-w-0 flex-1 mr-2">
 						<button
 							@click="goBack"
-							class="p-2 -ml-1 rounded-2xl text-slate-600 hover:text-teal-700 hover:bg-teal-50/80 active:scale-95 transition"
+							class="p-2 -ml-1 rounded-2xl text-slate-600 hover:text-teal-700 hover:bg-teal-50/80 active:scale-95 transition cursor-pointer flex-shrink-0"
 							title="Back to Dashboard"
 						>
 							<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7" />
 							</svg>
 						</button>
-						<div>
-							<h1 class="text-sm font-bold text-slate-900 leading-tight">Expense Manager</h1>
-							<p class="text-[10px] font-medium text-slate-500 leading-none">Daily Travel & Site Tracking</p>
+						<div class="min-w-0 flex-1">
+							<h1 class="text-sm font-bold text-slate-900 leading-tight truncate">Expense Manager</h1>
+							<p class="text-[10px] font-medium text-slate-500 leading-none flex items-center gap-1 mt-0.5 truncate">
+								<span v-if="employee?.company_name" class="font-semibold text-teal-700">{{ employee.company_name }} •</span>
+								<span class="truncate">Daily Travel & Site Tracking</span>
+							</p>
 						</div>
 					</div>
 
 					<!-- Header Actions -->
-					<div class="flex items-center space-x-1.5">
+					<div class="flex items-center space-x-1.5 flex-shrink-0">
+						<!-- Supervisor Team Button (Visible if supervisor) -->
+						<button
+							v-if="employee?.is_supervisor"
+							@click="router.push('/eem/team')"
+							class="p-2 rounded-2xl text-teal-700 bg-teal-50 hover:bg-teal-100 active:scale-95 transition cursor-pointer relative"
+							title="View Team Trips (Supervisor)"
+						>
+							<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+							</svg>
+						</button>
+
 						<!-- History Button -->
 						<button
 							@click="openHistoryModal"
-							class="p-2 rounded-2xl text-slate-500 hover:text-teal-700 hover:bg-teal-50 active:scale-95 transition"
+							class="p-2 rounded-2xl text-slate-500 hover:text-teal-700 hover:bg-teal-50 active:scale-95 transition cursor-pointer"
 							title="View Past Trips"
 						>
 							<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -44,7 +59,7 @@
 						<button
 							@click="refreshData"
 							:disabled="todayEemResource.loading"
-							class="p-2 rounded-2xl text-slate-500 hover:text-teal-700 hover:bg-teal-50 active:scale-95 transition"
+							class="p-2 rounded-2xl text-slate-500 hover:text-teal-700 hover:bg-teal-50 active:scale-95 transition cursor-pointer"
 							title="Refresh trip data"
 						>
 							<svg
@@ -62,7 +77,7 @@
 			</header>
 
 			<!-- Main Scrollable Body -->
-			<main class="flex-1 w-full px-4 py-4 space-y-4 overflow-y-auto">
+			<main class="flex-1 w-full px-4 pt-16 sm:pt-16 pb-4 space-y-4">
 				<!-- Loading State -->
 				<div v-if="todayEemResource.loading && !eemDoc && !tripStatus" class="p-8 text-center bg-white rounded-3xl shadow-sm border border-slate-100 my-6">
 					<div class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-teal-500 border-t-transparent mb-3"></div>
@@ -509,9 +524,19 @@
 					<div>
 						<div class="flex items-center justify-between mb-1">
 							<label class="block text-xs font-bold text-slate-700">Customer / Client</label>
-							<span v-if="customersList.length > 0" class="text-[10px] text-slate-400 font-medium">
-								{{ customersList.length }} available
-							</span>
+							<div class="flex items-center space-x-1.5 text-[10px]">
+								<span
+									v-if="employee?.is_sales_person"
+									class="px-1.5 py-0.2 rounded font-semibold text-[9px]"
+									:class="employee?.view_all_customers ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'bg-teal-50 text-teal-700 border border-teal-200'"
+								>
+									{{ employee?.view_all_customers ? 'All Customers' : 'My Customers' }}
+								</span>
+								<span class="font-medium flex items-center gap-1" :class="locationCoords?.latitude ? 'text-emerald-700' : 'text-slate-400'">
+									<span v-if="locationCoords?.latitude" class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+									{{ locationCoords?.latitude ? 'Nearby' : 'Top 20' }}
+								</span>
+							</div>
 						</div>
 
 						<!-- Selected Customer Card -->
@@ -526,10 +551,18 @@
 									</svg>
 								</div>
 								<div class="min-w-0 truncate">
-									<p class="text-xs font-bold text-slate-900 truncate">
-										{{ selectedCustomerObj?.customer_name || siteVisitForm.customer }}
-									</p>
-									<p class="text-[10px] text-teal-700 font-medium truncate">
+									<div class="flex items-center space-x-1.5">
+										<p class="text-xs font-bold text-slate-900 truncate">
+											{{ selectedCustomerObj?.customer_name || siteVisitForm.customer }}
+										</p>
+										<span
+											v-if="selectedCustomerObj?.distance_km !== undefined && selectedCustomerObj?.distance_km !== null"
+											class="px-1.5 py-0.2 rounded-md bg-emerald-100 text-emerald-800 font-bold text-[9px] font-mono flex-shrink-0 border border-emerald-300/80"
+										>
+											📍 {{ formatDistance(selectedCustomerObj.distance_km) }}
+										</span>
+									</div>
+									<p class="text-[10px] text-teal-700 font-medium truncate mt-0.5">
 										<span class="font-mono">{{ selectedCustomerObj?.name || siteVisitForm.customer }}</span>
 										<span v-if="selectedCustomerObj?.territory"> • {{ selectedCustomerObj.territory }}</span>
 										<span v-else-if="selectedCustomerObj?.customer_group"> • {{ selectedCustomerObj.customer_group }}</span>
@@ -561,8 +594,12 @@
 						<div v-else class="space-y-1.5">
 							<div class="relative">
 								<div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-									<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+									<svg v-if="!customersResource.loading" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+									</svg>
+									<svg v-else class="w-4 h-4 animate-spin text-teal-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+										<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+										<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
 									</svg>
 								</div>
 								<input
@@ -588,15 +625,27 @@
 							<!-- Search Results List -->
 							<div class="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden animate-fadeIn">
 								<div class="px-3 py-1.5 bg-slate-50 border-b border-slate-100 flex items-center justify-between text-[10px] text-slate-500 font-medium">
-									<span>
-										{{ filteredCustomersList.length }} result{{ filteredCustomersList.length === 1 ? '' : 's' }}
-										<span v-if="customerSearchQuery">for "{{ customerSearchQuery }}"</span>
-									</span>
+									<div class="flex items-center space-x-1.5 min-w-0 truncate">
+										<span v-if="locationCoords?.latitude" class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse flex-shrink-0"></span>
+										<span class="truncate">
+											<template v-if="customerSearchQuery">
+												{{ filteredCustomersList.length }} result{{ filteredCustomersList.length === 1 ? '' : 's' }}
+												for "{{ customerSearchQuery }}"
+												<span v-if="locationCoords?.latitude" class="text-teal-700 font-semibold">(nearest first)</span>
+											</template>
+											<template v-else-if="locationCoords?.latitude">
+												Nearest {{ filteredCustomersList.length }} {{ employee?.is_sales_person && !employee?.view_all_customers ? 'assigned' : '' }} customers
+											</template>
+											<template v-else>
+												Showing {{ filteredCustomersList.length }} {{ employee?.is_sales_person && !employee?.view_all_customers ? 'assigned' : '' }} customers
+											</template>
+										</span>
+									</div>
 									<button
 										v-if="siteVisitForm.customer"
 										type="button"
 										@click="isCustomerSearchOpen = false"
-										class="text-teal-600 hover:underline font-bold"
+										class="text-teal-600 hover:underline font-bold ml-2 flex-shrink-0"
 									>
 										Cancel
 									</button>
@@ -624,14 +673,24 @@
 										type="button"
 										@click="selectCustomer(c)"
 										:class="[
-											'w-full px-3 py-2 text-left flex items-center justify-between transition-colors text-xs',
+											'w-full px-3 py-2.5 text-left flex items-center justify-between transition-colors text-xs',
 											siteVisitForm.customer === c.name ? 'bg-teal-50/80 text-teal-900 font-bold' : 'hover:bg-slate-50 text-slate-800'
 										]"
 									>
 										<div class="min-w-0 pr-2">
-											<p class="truncate font-semibold text-slate-900 leading-tight">
-												{{ c.customer_name || c.name }}
-											</p>
+											<div class="flex items-center space-x-1.5">
+												<p class="truncate font-semibold text-slate-900 leading-tight">
+													{{ c.customer_name || c.name }}
+												</p>
+												<!-- Distance Badge -->
+												<span
+													v-if="c.distance_km !== null && c.distance_km !== undefined"
+													class="flex-shrink-0 px-1.5 py-0.2 rounded-md text-[9px] font-bold font-mono"
+													:class="Number(c.distance_km) <= 5 ? 'bg-emerald-100 text-emerald-800 border border-emerald-300/80' : 'bg-slate-100 text-slate-600 border border-slate-200'"
+												>
+													📍 {{ formatDistance(c.distance_km) }}
+												</span>
+											</div>
 											<div class="flex items-center space-x-1.5 text-[10px] text-slate-400 mt-0.5 truncate">
 												<span class="font-mono bg-slate-100 text-slate-600 px-1 py-0.2 rounded text-[9px]">{{ c.name }}</span>
 												<span v-if="c.territory">• {{ c.territory }}</span>
@@ -1103,7 +1162,7 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from "vue"
-import { useRouter } from "vue-router"
+import { useRoute, useRouter } from "vue-router"
 import { Dialog, Button } from "frappe-ui"
 import BottomNavBar from "@/components/BottomNavBar.vue"
 import { employeeResource } from "@/data/employee"
@@ -1118,7 +1177,9 @@ import {
 	expenseTypesResource,
 	customersResource,
 } from "@/data/eem"
+import { toast } from "@/utils/toast"
 
+const route = useRoute()
 const router = useRouter()
 
 // UI state
@@ -1177,6 +1238,7 @@ const endForm = ref({
 })
 
 // Data Accessors
+const employee = computed(() => employeeResource.data)
 const eemData = computed(() => todayEemResource.data || {})
 const eemDoc = computed(() => eemData.value.doc)
 const tripStatus = computed(() => eemData.value.trip_status || "NOT_STARTED")
@@ -1196,8 +1258,34 @@ const customersList = computed(() => customersResource.data || [])
 const expenseTypesList = computed(() => expenseTypesResource.data || ["Food", "Toll", "Parking", "Fuel", "Other"])
 const historyRecords = computed(() => eemHistoryResource.data || [])
 
+const selectedCustomerDetails = ref(null)
+
+function formatDistance(dist) {
+	if (dist === null || dist === undefined || isNaN(dist)) return null
+	const num = Number(dist)
+	if (num < 1) {
+		return `${Math.round(num * 1000)} m`
+	}
+	return `${num.toFixed(1)} km`
+}
+
+function fetchCustomersList({ search_term = "", limit = 20 } = {}) {
+	const params = { limit }
+	if (search_term && search_term.trim()) {
+		params.search_term = search_term.trim()
+	}
+	if (locationCoords.value && locationCoords.value.latitude && locationCoords.value.longitude) {
+		params.latitude = locationCoords.value.latitude
+		params.longitude = locationCoords.value.longitude
+	}
+	customersResource.fetch(params)
+}
+
 const selectedCustomerObj = computed(() => {
 	if (!siteVisitForm.value.customer) return null
+	if (selectedCustomerDetails.value && selectedCustomerDetails.value.name === siteVisitForm.value.customer) {
+		return selectedCustomerDetails.value
+	}
 	return customersList.value.find((c) => c.name === siteVisitForm.value.customer) || {
 		name: siteVisitForm.value.customer,
 		customer_name: siteVisitForm.value.customer,
@@ -1209,11 +1297,9 @@ function onCustomerSearchInput() {
 	isCustomerSearchOpen.value = true
 	const q = customerSearchQuery.value.trim()
 	if (searchDebounceTimer) clearTimeout(searchDebounceTimer)
-	if (q.length >= 2) {
-		searchDebounceTimer = setTimeout(() => {
-			customersResource.fetch({ search_term: q })
-		}, 300)
-	}
+	searchDebounceTimer = setTimeout(() => {
+		fetchCustomersList({ search_term: q, limit: 20 })
+	}, 250)
 }
 
 const filteredCustomersList = computed(() => {
@@ -1238,8 +1324,13 @@ const filteredCustomersList = computed(() => {
 
 function selectCustomer(c) {
 	siteVisitForm.value.customer = c.name
+	selectedCustomerDetails.value = c
 	if (!siteVisitForm.value.site && c.customer_name) {
 		siteVisitForm.value.site = c.customer_name
+	}
+	if ((!siteVisitForm.value.latitude || !siteVisitForm.value.longitude) && c.latitude && c.longitude && c.latitude != 0) {
+		siteVisitForm.value.latitude = c.latitude
+		siteVisitForm.value.longitude = c.longitude
 	}
 	isCustomerSearchOpen.value = false
 	customerSearchQuery.value = ""
@@ -1247,8 +1338,10 @@ function selectCustomer(c) {
 
 function clearCustomer() {
 	siteVisitForm.value.customer = ""
+	selectedCustomerDetails.value = null
 	customerSearchQuery.value = ""
 	isCustomerSearchOpen.value = true
+	fetchCustomersList({ search_term: "", limit: 20 })
 }
 
 function useQueryAsCustomSite() {
@@ -1406,8 +1499,12 @@ async function retryAcquireLocation() {
 
 	if (coords && (coords.latitude || coords.longitude)) {
 		showLocationModal.value = false
+		toast.success("GPS location acquired successfully!", "Location Ready")
 	} else {
-		alert("GPS location could not be acquired. Please verify that Location / GPS is turned ON and location permission is granted in your browser settings.")
+		toast.warning(
+			"GPS location could not be acquired. Please verify that Location / GPS is turned ON and location permission is granted in your browser settings.",
+			"GPS Location Required"
+		)
 	}
 }
 
@@ -1426,14 +1523,26 @@ async function openSiteVisitModal() {
 	siteVisitForm.value = {
 		customer: "",
 		site: "",
-		actual_distance: "",
+		latitude: "",
+		longitude: "",
 		remarks: "",
 	}
 	customerSearchQuery.value = ""
+	selectedCustomerDetails.value = null
 	isCustomerSearchOpen.value = false
-	customersResource.fetch()
-	getCurrentLocation()
 	showSiteVisitModal.value = true
+
+	// If locationCoords already available, fetch immediately
+	if (locationCoords.value && locationCoords.value.latitude) {
+		fetchCustomersList({ search_term: "", limit: 20 })
+	} else {
+		fetchCustomersList({ search_term: "", limit: 20 })
+		getCurrentLocation().then((coords) => {
+			if (coords && coords.latitude) {
+				fetchCustomersList({ search_term: customerSearchQuery.value, limit: 20 })
+			}
+		})
+	}
 }
 
 function openExpenseModal() {
@@ -1460,11 +1569,11 @@ function openEndTripModal() {
 // Action Handlers
 async function submitStartTrip() {
 	if (!startForm.value.vehicle_type) {
-		alert("Please select a vehicle type.")
+		toast.warning("Please select a vehicle type (2-Wheeler, 4-Wheeler, or Other) before starting your trip.", "Vehicle Required")
 		return
 	}
 	if (!startForm.value.start_odometerkm && startForm.value.start_odometerkm !== 0) {
-		alert("Please enter the starting odometer reading in KM.")
+		toast.warning("Please enter the starting odometer reading in KM.", "Odometer Required")
 		return
 	}
 
@@ -1485,10 +1594,11 @@ async function submitStartTrip() {
 			start_long: coords.longitude,
 		})
 
+		toast.success("Today's Travel Day started! Drive safely.", "Trip Started")
 		await todayEemResource.fetch()
 	} catch (err) {
 		console.error("Error starting trip:", err)
-		alert(err.messages?.[0] || err.message || "Failed to start trip.")
+		toast.error(err.messages?.[0] || err.message || "Failed to start trip.", "Trip Error")
 	} finally {
 		isSubmittingStart.value = false
 	}
@@ -1496,7 +1606,7 @@ async function submitStartTrip() {
 
 async function submitSiteVisit() {
 	if (!siteVisitForm.value.customer && !siteVisitForm.value.site) {
-		alert("Please select a customer or specify a site location.")
+		toast.warning("Please select a customer or specify a site branch location.", "Location Required")
 		return
 	}
 
@@ -1520,10 +1630,11 @@ async function submitSiteVisit() {
 		})
 
 		showSiteVisitModal.value = false
+		toast.success("Site visit recorded successfully!", "Visit Logged")
 		await todayEemResource.fetch()
 	} catch (err) {
 		console.error("Error adding site visit:", err)
-		alert(err.messages?.[0] || err.message || "Failed to log site visit.")
+		toast.error(err.messages?.[0] || err.message || "Failed to log site visit.", "Visit Error")
 	} finally {
 		isSubmittingSiteVisit.value = false
 	}
@@ -1531,11 +1642,11 @@ async function submitSiteVisit() {
 
 async function submitExpense() {
 	if (!expenseForm.value.expense_type) {
-		alert("Please select an expense type.")
+		toast.warning("Please select an expense category (Food, Fuel, Toll, Parking...).", "Category Required")
 		return
 	}
 	if (!expenseForm.value.amount || Number(expenseForm.value.amount) <= 0) {
-		alert("Please enter a valid expense amount.")
+		toast.warning("Please enter a valid expense amount greater than 0.", "Invalid Amount")
 		return
 	}
 
@@ -1548,10 +1659,11 @@ async function submitExpense() {
 		})
 
 		showExpenseModal.value = false
+		toast.success("Expense logged successfully!", "Expense Added")
 		await todayEemResource.fetch()
 	} catch (err) {
 		console.error("Error adding expense:", err)
-		alert(err.messages?.[0] || err.message || "Failed to add expense.")
+		toast.error(err.messages?.[0] || err.message || "Failed to add expense.", "Expense Error")
 	} finally {
 		isSubmittingExpense.value = false
 	}
@@ -1562,12 +1674,12 @@ async function submitEndTrip() {
 	const startOdo = Number(eemDoc.value?.start_odometerkm) || 0
 
 	if (!endForm.value.end_odometerkm && endForm.value.end_odometerkm !== 0) {
-		alert("Please enter the end odometer reading in KM.")
+		toast.warning("Please enter the end odometer reading in KM.", "End Odometer Required")
 		return
 	}
 
 	if (endOdo < startOdo) {
-		alert(`End odometer (${endOdo}) cannot be less than start odometer (${startOdo}).`)
+		toast.warning(`End odometer (${endOdo} KM) cannot be less than starting reading (${startOdo} KM).`, "Invalid Reading")
 		return
 	}
 
@@ -1591,10 +1703,11 @@ async function submitEndTrip() {
 		})
 
 		showEndTripModal.value = false
+		toast.success("Travel Day summary submitted successfully!", "Trip Completed")
 		await todayEemResource.fetch()
 	} catch (err) {
 		console.error("Error ending trip:", err)
-		alert(err.messages?.[0] || err.message || "Failed to end trip.")
+		toast.error(err.messages?.[0] || err.message || "Failed to end trip.", "Trip Error")
 	} finally {
 		isSubmittingEnd.value = false
 	}
@@ -1634,8 +1747,30 @@ onMounted(async () => {
 	}, 1000)
 
 	getCurrentLocation()
-	todayEemResource.fetch()
+	await todayEemResource.fetch()
 	checkinStatusResource.fetch()
+
+	// If navigated from Customers page with a customer pre-selected
+	if (route.query.prefillCustomer) {
+		const customerCode = route.query.prefillCustomer
+		const customerTitle = route.query.prefillCustomerName || customerCode
+		const preLat = route.query.prefillLat
+		const preLng = route.query.prefillLng
+
+		const tripStatus = todayEemResource.data?.trip_status
+		if (tripStatus === "IN_PROGRESS") {
+			openAddSiteVisitModal()
+			siteVisitForm.value.customer = customerCode
+			siteVisitForm.value.site = customerTitle
+			if (preLat && preLng) {
+				siteVisitForm.value.latitude = preLat
+				siteVisitForm.value.longitude = preLng
+			}
+			toast.info(`Pre-selected customer "${customerTitle}" for site visit.`, "Customer Selected")
+		} else {
+			toast.warning(`Please start your Travel Day first to log visits for "${customerTitle}".`, "Start Trip First")
+		}
+	}
 })
 
 onUnmounted(() => {

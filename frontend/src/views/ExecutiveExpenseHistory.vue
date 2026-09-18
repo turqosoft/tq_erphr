@@ -7,226 +7,213 @@
 		<!-- Mobile App Shell Container -->
 		<div class="w-full sm:max-w-md bg-[#f8fafc] min-h-screen sm:min-h-[720px] sm:rounded-3xl sm:shadow-2xl sm:border sm:border-slate-200/80 flex flex-col justify-between relative z-10 overflow-hidden pb-6">
 			
-			<!-- Mobile Top Header -->
-			<header class="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200/70 px-4 py-3.5 sm:px-5 transition-all shadow-xs">
-				<div class="flex items-center justify-between">
-					<!-- Back Navigation & Title -->
-					<div class="flex items-center space-x-2.5">
-						<button
-							@click="goBack"
-							class="p-2 -ml-1 rounded-2xl text-slate-600 hover:text-teal-700 hover:bg-teal-50/80 active:scale-95 transition"
-							title="Back"
-						>
-							<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7" />
-							</svg>
-						</button>
-						<div>
-							<h1 class="text-sm font-bold text-slate-900 leading-tight flex items-center gap-1.5">
-								<span>EEM Travel History</span>
-								<span class="w-1.5 h-1.5 rounded-full bg-teal-500 inline-block"></span>
-							</h1>
-							<p class="text-[10px] font-medium text-slate-500 leading-none">Past Field Trips & Expenses</p>
+			<!-- Mobile Top Header (Fixed at top like BottomNavBar) -->
+			<header class="fixed top-0 inset-x-0 z-40 bg-white/95 backdrop-blur-xl border-b border-slate-200/80 shadow-[0_2px_16px_rgba(0,0,0,0.04)] px-4 py-3 sm:px-5 transition-all">
+				<div class="max-w-md mx-auto">
+					<div class="flex items-center justify-between">
+						<!-- Back Navigation & Title -->
+						<div class="flex items-center space-x-2.5">
+							<button
+								@click="goBack"
+								class="p-2 -ml-1 rounded-2xl text-slate-600 hover:text-teal-700 hover:bg-teal-50/80 active:scale-95 transition cursor-pointer"
+								title="Back"
+							>
+								<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7" />
+								</svg>
+							</button>
+							<div>
+								<h1 class="text-sm font-bold text-slate-900 leading-tight flex items-center gap-1.5">
+									<span>EEM Travel History</span>
+									<span class="w-1.5 h-1.5 rounded-full bg-teal-500 inline-block"></span>
+								</h1>
+								<p class="text-[10px] font-medium text-slate-500 leading-none flex items-center gap-1 mt-0.5">
+									<span v-if="employee?.company_name" class="font-semibold text-teal-700">{{ employee.company_name }} •</span>
+									<span>Past Field Trips & Expenses</span>
+								</p>
+							</div>
+						</div>
+
+						<!-- Header Actions -->
+						<div class="flex items-center space-x-1.5">
+							<!-- Toggle Filter Panel Button -->
+							<button
+								@click="isFilterDrawerOpen = !isFilterDrawerOpen"
+								class="p-2 rounded-2xl text-slate-600 hover:text-teal-700 hover:bg-teal-50 active:scale-95 transition relative cursor-pointer"
+								:class="{ 'bg-teal-50 text-teal-700 ring-1 ring-teal-300': hasActiveFilters || isFilterDrawerOpen }"
+								title="Toggle Filters"
+							>
+								<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+								</svg>
+								<span
+									v-if="hasActiveFilters"
+									class="absolute top-1 right-1 w-2 h-2 rounded-full bg-teal-600 ring-2 ring-white"
+								></span>
+							</button>
+
+							<!-- Refresh Button -->
+							<button
+								@click="fetchHistory"
+								:disabled="isLoadingHistory"
+								class="p-2 rounded-2xl text-slate-500 hover:text-teal-700 hover:bg-teal-50 active:scale-95 transition cursor-pointer"
+								title="Refresh trip history"
+							>
+								<svg
+									class="w-4 h-4"
+									:class="{ 'animate-spin text-teal-600': isLoadingHistory }"
+									fill="none"
+									viewBox="0 0 24 24"
+									stroke="currentColor"
+								>
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+								</svg>
+							</button>
 						</div>
 					</div>
 
-					<!-- Header Actions -->
-					<div class="flex items-center space-x-1.5">
-						<!-- Toggle Filter Panel Button -->
+					<!-- Quick Date Range Pills (Horizontal Scroll) -->
+					<div class="mt-3 flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
 						<button
-							@click="isFilterDrawerOpen = !isFilterDrawerOpen"
-							class="p-2 rounded-2xl text-slate-600 hover:text-teal-700 hover:bg-teal-50 active:scale-95 transition relative"
-							:class="{ 'bg-teal-50 text-teal-700 ring-1 ring-teal-300': hasActiveFilters || isFilterDrawerOpen }"
-							title="Toggle Filters"
-						>
-							<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-							</svg>
-							<span
-								v-if="hasActiveFilters"
-								class="absolute top-1 right-1 w-2 h-2 rounded-full bg-teal-600 ring-2 ring-white"
-							></span>
-						</button>
-
-						<!-- Refresh Button -->
-						<button
-							@click="fetchHistory"
-							:disabled="eemHistoryResource.loading"
-							class="p-2 rounded-2xl text-slate-500 hover:text-teal-700 hover:bg-teal-50 active:scale-95 transition"
-							title="Refresh trip history"
-						>
-							<svg
-								class="w-4 h-4"
-								:class="{ 'animate-spin text-teal-600': eemHistoryResource.loading }"
-								fill="none"
-								viewBox="0 0 24 24"
-								stroke="currentColor"
-							>
-								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-							</svg>
-						</button>
-					</div>
-				</div>
-
-				<!-- Quick Date Range Pills (Horizontal Scroll) -->
-				<div class="mt-3 flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
-					<button
-						v-for="preset in datePresets"
-						:key="preset.value"
-						@click="setDatePreset(preset.value)"
-						:class="[
-							'px-2.5 py-1 rounded-xl text-[11px] font-semibold whitespace-nowrap transition-all',
-							selectedDatePreset === preset.value
-								? 'bg-teal-700 text-white shadow-xs'
-								: 'bg-slate-100 text-slate-600 hover:bg-slate-200/80 hover:text-slate-800'
-						]"
-					>
-						{{ preset.label }}
-					</button>
-				</div>
-
-				<!-- Status Tabs Bar -->
-				<div class="mt-2 flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
-					<button
-						v-for="filter in statusFilters"
-						:key="filter.value"
-						@click="selectedStatus = filter.value"
-						:class="[
-							'px-2.5 py-1 rounded-xl text-[11px] font-medium whitespace-nowrap transition-all flex items-center space-x-1',
-							selectedStatus === filter.value
-								? 'bg-slate-800 text-white shadow-xs'
-								: 'bg-slate-100/80 text-slate-600 hover:bg-slate-200/70 hover:text-slate-800'
-						]"
-					>
-						<span>{{ filter.label }}</span>
-						<span
-							v-if="filter.count > 0"
+							v-for="preset in datePresets"
+							:key="preset.value"
+							@click="setDatePreset(preset.value)"
 							:class="[
-								'text-[9px] px-1.5 py-0.2 rounded-full font-mono font-bold',
-								selectedStatus === filter.value
-									? 'bg-slate-700 text-slate-100'
-									: 'bg-slate-200 text-slate-700'
+								'px-2.5 py-1 rounded-xl text-[11px] font-semibold whitespace-nowrap transition-all cursor-pointer',
+								selectedDatePreset === preset.value
+									? 'bg-teal-700 text-white shadow-xs'
+									: 'bg-slate-100 text-slate-600 hover:bg-slate-200/80 hover:text-slate-800'
 							]"
 						>
-							{{ filter.count }}
-						</span>
-					</button>
-				</div>
-
-				<!-- Expandable Filter / Refine Drawer -->
-				<transition
-					enter-active-class="transition duration-150 ease-out"
-					enter-from-class="transform opacity-0 -translate-y-2"
-					enter-to-class="transform opacity-100 translate-y-0"
-					leave-active-class="transition duration-100 ease-in"
-					leave-from-class="transform opacity-100 translate-y-0"
-					leave-to-class="transform opacity-0 -translate-y-2"
-				>
-					<div
-						v-if="isFilterDrawerOpen"
-						class="mt-3 p-3.5 bg-slate-50 rounded-2xl border border-slate-200/90 space-y-3 text-xs"
-					>
-						<!-- Filter Header with Reset -->
-						<div class="flex items-center justify-between">
-							<span class="font-bold text-slate-800 flex items-center gap-1.5">
-								<svg class="w-3.5 h-3.5 text-teal-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
-								</svg>
-								<span>Refine Trips</span>
-							</span>
-							<button
-								v-if="hasActiveFilters"
-								@click="resetAllFilters"
-								class="text-[11px] font-bold text-teal-700 hover:text-teal-900 hover:underline"
-							>
-								Reset Filters
-							</button>
-						</div>
-
-						<!-- Custom Date Pickers (Shown if Custom Range selected) -->
-						<div v-if="selectedDatePreset === 'custom'" class="grid grid-cols-2 gap-2 pt-1">
-							<div>
-								<label class="text-[10px] font-bold text-slate-500 block mb-0.5">From Date</label>
-								<input
-									v-model="customFromDate"
-									type="date"
-									class="w-full px-2.5 py-1.5 bg-white rounded-xl border border-slate-200 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
-								/>
-							</div>
-							<div>
-								<label class="text-[10px] font-bold text-slate-500 block mb-0.5">To Date</label>
-								<input
-									v-model="customToDate"
-									type="date"
-									class="w-full px-2.5 py-1.5 bg-white rounded-xl border border-slate-200 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
-								/>
-							</div>
-						</div>
-
-						<!-- Specific Month Selector -->
-						<div v-if="availableMonths.length > 0">
-							<label class="text-[10px] font-bold text-slate-500 block mb-1">Jump to Month</label>
-							<select
-								v-model="selectedMonth"
-								class="w-full px-3 py-1.5 bg-white rounded-xl border border-slate-200 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-500/20 font-medium"
-							>
-								<option value="all">All Available Months</option>
-								<option
-									v-for="month in availableMonths"
-									:key="month.key"
-									:value="month.key"
-								>
-									{{ month.label }} ({{ month.count }} trips)
-								</option>
-							</select>
-						</div>
-
-						<!-- Vehicle Type & Sort By Row -->
-						<div class="grid grid-cols-2 gap-2">
-							<div>
-								<label class="text-[10px] font-bold text-slate-500 block mb-1">Vehicle</label>
-								<select
-									v-model="selectedVehicle"
-									class="w-full px-2.5 py-1.5 bg-white rounded-xl border border-slate-200 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
-								>
-									<option value="all">All Vehicles</option>
-									<option value="Two Wheeler">🛵 Two Wheeler</option>
-									<option value="Four Wheeler">🚗 Four Wheeler</option>
-									<option value="Other">🚌 Other</option>
-								</select>
-							</div>
-
-							<div>
-								<label class="text-[10px] font-bold text-slate-500 block mb-1">Sort Order</label>
-								<select
-									v-model="selectedSort"
-									class="w-full px-2.5 py-1.5 bg-white rounded-xl border border-slate-200 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
-								>
-									<option value="date_desc">📅 Newest First</option>
-									<option value="date_asc">📅 Oldest First</option>
-									<option value="claim_desc">💰 Highest Claim</option>
-									<option value="dist_desc">🛣️ Longest Distance</option>
-								</select>
-							</div>
-						</div>
-
-						<!-- View Layout Mode Switcher -->
-						<div class="pt-1 flex items-center justify-between border-t border-slate-200/70">
-							<span class="text-[11px] text-slate-600 font-medium">Group by Month:</span>
-							<button
-								@click="isGroupedByMonth = !isGroupedByMonth"
-								class="px-2.5 py-1 rounded-lg text-[11px] font-bold transition flex items-center gap-1"
-								:class="isGroupedByMonth ? 'bg-teal-600 text-white' : 'bg-slate-200 text-slate-700'"
-							>
-								<span>{{ isGroupedByMonth ? 'Enabled' : 'Disabled' }}</span>
-							</button>
-						</div>
+							{{ preset.label }}
+						</button>
 					</div>
-				</transition>
+
+					<!-- Status Tabs Bar -->
+					<div class="mt-2 flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
+						<button
+							v-for="filter in statusFilters"
+							:key="filter.value"
+							@click="selectedStatus = filter.value"
+							:class="[
+								'px-2.5 py-1 rounded-xl text-[11px] font-medium whitespace-nowrap transition-all flex items-center space-x-1 cursor-pointer',
+								selectedStatus === filter.value
+									? 'bg-slate-800 text-white shadow-xs'
+									: 'bg-slate-100/80 text-slate-600 hover:bg-slate-200/70 hover:text-slate-800'
+							]"
+						>
+							<span>{{ filter.label }}</span>
+							<span
+								v-if="filter.count > 0"
+								:class="[
+									'text-[9px] px-1.5 py-0.2 rounded-full font-mono font-bold',
+									selectedStatus === filter.value
+										? 'bg-slate-700 text-slate-100'
+										: 'bg-slate-200 text-slate-700'
+								]"
+							>
+								{{ filter.count }}
+							</span>
+						</button>
+					</div>
+
+					<!-- Expandable Filter / Refine Drawer -->
+					<transition
+						enter-active-class="transition duration-150 ease-out"
+						enter-from-class="transform opacity-0 -translate-y-2"
+						enter-to-class="transform opacity-100 translate-y-0"
+						leave-active-class="transition duration-100 ease-in"
+						leave-from-class="transform opacity-100 translate-y-0"
+						leave-to-class="transform opacity-0 -translate-y-2"
+					>
+						<div
+							v-if="isFilterDrawerOpen"
+							class="mt-3 p-3.5 bg-slate-50 rounded-2xl border border-slate-200/90 space-y-3 text-xs"
+						>
+							<!-- Filter Header with Reset -->
+							<div class="flex items-center justify-between">
+								<span class="font-bold text-slate-800 flex items-center gap-1.5">
+									<svg class="w-3.5 h-3.5 text-teal-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+									</svg>
+									<span>Refine Trips</span>
+								</span>
+								<button
+									v-if="hasActiveFilters"
+									@click="resetFilters"
+									class="text-[10px] text-teal-700 font-bold hover:underline cursor-pointer"
+								>
+									Reset All
+								</button>
+							</div>
+
+							<!-- Custom Date Range -->
+							<div class="grid grid-cols-2 gap-2">
+								<div>
+									<label class="text-[10px] font-bold text-slate-500 block mb-1">From Date</label>
+									<input
+										type="date"
+										v-model="filterFromDate"
+										class="w-full px-2.5 py-1.5 bg-white rounded-xl border border-slate-200 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+									/>
+								</div>
+								<div>
+									<label class="text-[10px] font-bold text-slate-500 block mb-1">To Date</label>
+									<input
+										type="date"
+										v-model="filterToDate"
+										class="w-full px-2.5 py-1.5 bg-white rounded-xl border border-slate-200 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+									/>
+								</div>
+							</div>
+
+							<!-- Vehicle Type & Sorting Filters -->
+							<div class="grid grid-cols-2 gap-2">
+								<div>
+									<label class="text-[10px] font-bold text-slate-500 block mb-1">Vehicle Type</label>
+									<select
+										v-model="filterVehicle"
+										class="w-full px-2.5 py-1.5 bg-white rounded-xl border border-slate-200 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+									>
+										<option value="">All Vehicles</option>
+										<option value="2-Wheeler">🏍️ 2-Wheeler</option>
+										<option value="4-Wheeler">🚗 4-Wheeler</option>
+										<option value="Public Transport">🚌 Public Transport</option>
+									</select>
+								</div>
+
+								<div>
+									<label class="text-[10px] font-bold text-slate-500 block mb-1">Sort Order</label>
+									<select
+										v-model="selectedSort"
+										class="w-full px-2.5 py-1.5 bg-white rounded-xl border border-slate-200 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+									>
+										<option value="date_desc">📅 Newest First</option>
+										<option value="date_asc">📅 Oldest First</option>
+										<option value="claim_desc">💰 Highest Claim</option>
+										<option value="dist_desc">🛣️ Longest Distance</option>
+									</select>
+								</div>
+							</div>
+
+							<!-- View Layout Mode Switcher -->
+							<div class="pt-1 flex items-center justify-between border-t border-slate-200/70">
+								<span class="text-[11px] text-slate-600 font-medium">Group by Month:</span>
+								<button
+									@click="isGroupedByMonth = !isGroupedByMonth"
+									class="px-2.5 py-1 rounded-lg text-[11px] font-bold transition flex items-center gap-1 cursor-pointer"
+									:class="isGroupedByMonth ? 'bg-teal-600 text-white' : 'bg-slate-200 text-slate-700'"
+								>
+									<span>{{ isGroupedByMonth ? 'Enabled' : 'Disabled' }}</span>
+								</button>
+							</div>
+						</div>
+					</transition>
+				</div>
 			</header>
 
 			<!-- Main Scrollable Content -->
-			<main class="flex-1 px-4 sm:px-5 py-4 space-y-4">
+			<main class="flex-1 px-4 sm:px-5 pt-28 sm:pt-28 pb-4 space-y-4">
 				
 				<!-- Cumulative Stats Banner -->
 				<div class="bg-gradient-to-br from-teal-800 via-teal-900 to-slate-900 rounded-3xl p-4 text-white shadow-md relative overflow-hidden">
@@ -323,7 +310,7 @@
 				</div>
 
 				<!-- Loading State -->
-				<div v-if="eemHistoryResource.loading" class="py-12 text-center space-y-3">
+				<div v-if="isLoadingHistory && rawHistoryRecords.length === 0" class="py-12 text-center space-y-3">
 					<div class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-teal-500 border-t-transparent"></div>
 					<h3 class="text-sm font-bold text-slate-900">Loading Travel Records...</h3>
 					<p class="text-xs text-slate-500">Fetching your field trip history</p>
@@ -630,6 +617,20 @@
 					</div>
 				</div>
 
+				<!-- View More Trips Button -->
+				<div v-if="hasMore && !isLoadingHistory && filteredRecords.length > 0" class="pt-4 pb-2 text-center">
+					<button
+						@click="loadMoreHistory"
+						:disabled="isLoadingMore"
+						class="w-full py-3 px-4 text-xs font-bold text-teal-800 bg-white hover:bg-teal-50/80 active:bg-teal-100 border border-teal-200/80 rounded-2xl transition-all duration-200 flex items-center justify-center space-x-2 shadow-xs hover:border-teal-300 cursor-pointer"
+					>
+						<svg v-if="isLoadingMore" class="w-4 h-4 animate-spin text-teal-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+							<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+							<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+						</svg>
+						<span>{{ isLoadingMore ? 'Loading older trips...' : `View More Trips (Showing ${rawHistoryRecords.length})` }}</span>
+					</button>
+				</div>
 			</main>
 
 			<!-- Quick Bottom Navigation Back to EEM -->
@@ -866,8 +867,8 @@
 <script setup>
 import { ref, computed, onMounted } from "vue"
 import { useRouter } from "vue-router"
-import { Dialog, Button } from "frappe-ui"
-import { eemHistoryResource, eemDetailResource } from "@/data/eem"
+import { Dialog, Button, call } from "frappe-ui"
+import { eemDetailResource } from "@/data/eem"
 
 const router = useRouter()
 
@@ -882,6 +883,12 @@ const isGroupedByMonth = ref(false)
 const isFilterDrawerOpen = ref(false)
 const customFromDate = ref("")
 const customToDate = ref("")
+
+// Pagination state
+const rawHistoryRecords = ref([])
+const isLoadingHistory = ref(false)
+const isLoadingMore = ref(false)
+const hasMore = ref(false)
 
 // Modal State
 const showDetailModal = ref(false)
@@ -930,7 +937,7 @@ function resetAllFilters() {
 
 // Available months dynamically extracted from loaded history
 const availableMonths = computed(() => {
-	const records = (eemHistoryResource.data || []).filter(r => r.docstatus !== 2 && r.expense_claim_status !== "Cancelled")
+	const records = (rawHistoryRecords.value || []).filter(r => r.docstatus !== 2 && r.expense_claim_status !== "Cancelled")
 	const monthMap = {}
 	for (const r of records) {
 		if (!r.date) continue
@@ -957,7 +964,7 @@ const selectedDatePresetLabel = computed(() => {
 })
 
 const statusFilters = computed(() => {
-	const all = (eemHistoryResource.data || []).filter(r => r.docstatus !== 2 && r.expense_claim_status !== "Cancelled")
+	const all = (rawHistoryRecords.value || []).filter(r => r.docstatus !== 2 && r.expense_claim_status !== "Cancelled")
 	const inProgress = all.filter(r => isTripInProgress(r)).length
 	const submitted = all.filter(r => r.docstatus === 1 || r.expense_claim_status === "Submitted" || r.expense_claim_status === "Approved" || r.expense_claim_status === "Paid").length
 	const draft = all.filter(r => r.docstatus === 0 && !isTripInProgress(r)).length
@@ -971,7 +978,7 @@ const statusFilters = computed(() => {
 })
 
 const filteredRecords = computed(() => {
-	let list = (eemHistoryResource.data || []).filter(r => r.docstatus !== 2 && r.expense_claim_status !== "Cancelled")
+	let list = (rawHistoryRecords.value || []).filter(r => r.docstatus !== 2 && r.expense_claim_status !== "Cancelled")
 
 	// Status Filter
 	if (selectedStatus.value === "submitted") {
@@ -1192,8 +1199,40 @@ async function viewTripDetail(rec) {
 	}
 }
 
-function fetchHistory() {
-	eemHistoryResource.fetch({ limit: 200 })
+async function fetchHistory() {
+	isLoadingHistory.value = true
+	try {
+		const res = await call("tq_erphr.pwa_api.get_eem_history", {
+			limit: 10,
+			limit_start: 0,
+		})
+		rawHistoryRecords.value = res || []
+		hasMore.value = (res || []).length === 10
+	} catch (err) {
+		console.error("Failed to fetch EEM history:", err)
+	} finally {
+		isLoadingHistory.value = false
+	}
+}
+
+async function loadMoreHistory() {
+	if (isLoadingMore.value || !hasMore.value) return
+	isLoadingMore.value = true
+	try {
+		const res = await call("tq_erphr.pwa_api.get_eem_history", {
+			limit: 10,
+			limit_start: rawHistoryRecords.value.length,
+		})
+		const items = res || []
+		rawHistoryRecords.value = [...rawHistoryRecords.value, ...items]
+		if (items.length < 10) {
+			hasMore.value = false
+		}
+	} catch (err) {
+		console.error("Failed to load more EEM history:", err)
+	} finally {
+		isLoadingMore.value = false
+	}
 }
 
 function goBack() {

@@ -25,7 +25,7 @@
 				v-if="showEem"
 				type="button"
 				@click="navigate('eem')"
-				class="flex-1 flex flex-col items-center justify-center py-1 px-2 rounded-2xl transition-all duration-150 active:scale-95 relative"
+				class="flex-1 flex flex-col items-center justify-center py-1 px-1 sm:px-2 rounded-2xl transition-all duration-150 active:scale-95 relative"
 				:class="activeTab === 'eem' ? 'text-teal-700 font-bold' : 'text-slate-400 hover:text-slate-600 font-medium'"
 			>
 				<div class="relative">
@@ -48,11 +48,30 @@
 				<span class="text-[11px] mt-1 leading-none">Site & Trip</span>
 			</button>
 
+			<!-- Customers Tab -->
+			<button
+				type="button"
+				@click="navigate('customers')"
+				class="flex-1 flex flex-col items-center justify-center py-1 px-1 sm:px-2 rounded-2xl transition-all duration-150 active:scale-95"
+				:class="activeTab === 'customers' ? 'text-teal-700 font-bold' : 'text-slate-400 hover:text-slate-600 font-medium'"
+			>
+				<div class="relative">
+					<div
+						v-if="activeTab === 'customers'"
+						class="absolute -inset-1.5 bg-teal-50 rounded-xl -z-10"
+					></div>
+					<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+					</svg>
+				</div>
+				<span class="text-[11px] mt-1 leading-none">Customers</span>
+			</button>
+
 			<!-- History Logs Tab -->
 			<button
 				type="button"
 				@click="$emit('openHistory')"
-				class="flex-1 flex flex-col items-center justify-center py-1 px-2 rounded-2xl transition-all duration-150 active:scale-95"
+				class="flex-1 flex flex-col items-center justify-center py-1 px-1 sm:px-2 rounded-2xl transition-all duration-150 active:scale-95"
 				:class="activeTab === 'history' ? 'text-teal-700 font-bold' : 'text-slate-400 hover:text-slate-600 font-medium'"
 			>
 				<div class="relative">
@@ -67,7 +86,7 @@
 			<button
 				type="button"
 				@click="$emit('openProfile')"
-				class="flex-1 flex flex-col items-center justify-center py-1 px-2 rounded-2xl transition-all duration-150 active:scale-95"
+				class="flex-1 flex flex-col items-center justify-center py-1 px-1 sm:px-2 rounded-2xl transition-all duration-150 active:scale-95"
 				:class="activeTab === 'profile' ? 'text-teal-700 font-bold' : 'text-slate-400 hover:text-slate-600 font-medium'"
 			>
 				<div class="relative">
@@ -107,6 +126,8 @@ function navigate(tab) {
 		router.push("/")
 	} else if (tab === "eem") {
 		router.push("/eem")
+	} else if (tab === "customers") {
+		router.push("/customers")
 	}
 }
 </script>

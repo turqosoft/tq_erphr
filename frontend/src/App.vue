@@ -6,6 +6,9 @@
 			</transition>
 		</router-view>
 
+		<!-- Global Toast Notifications Overlay -->
+		<ToastNotification />
+
 		<!-- Global PWA Install Prompt Component -->
 		<InstallPrompt />
 	</div>
@@ -13,4 +16,5 @@
 
 <script setup>
 import InstallPrompt from "@/components/InstallPrompt.vue"
+import ToastNotification from "@/components/ToastNotification.vue"
 </script>

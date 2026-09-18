@@ -23,6 +23,20 @@ const routes = [
 		redirect: "/eem/history",
 	},
 	{
+		path: "/eem/team",
+		name: "SupervisorEEM",
+		component: () => import("@/views/SupervisorEEM.vue"),
+	},
+	{
+		path: "/eem-team",
+		redirect: "/eem/team",
+	},
+	{
+		path: "/customers",
+		name: "Customers",
+		component: () => import("@/views/Customers.vue"),
+	},
+	{
 		path: "/login",
 		name: "Login",
 		component: () => import("@/views/Login.vue"),

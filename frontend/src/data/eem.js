@@ -40,3 +40,12 @@ export const customersResource = createResource({
 	auto: true,
 })
 
+export const supervisorEemDashboardResource = createResource({
+	url: "tq_erphr.pwa_api.get_supervisor_eem_dashboard",
+})
+
+export const supervisorTeamTripDetailResource = createResource({
+	url: "tq_erphr.pwa_api.get_supervisor_team_eem_detail",
+})
+
+

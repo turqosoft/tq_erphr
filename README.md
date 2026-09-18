@@ -129,3 +129,18 @@ mit
 
 #### Bug Fixes
 - Not showing app download and install
+
+### v1.1.3 (2026-09-18)
+
+#### New Features
+- Customer listing and search
+- Record site visit from customer list
+- Call, direction from customer list
+- Team site visit detals for supervisors
+
+#### Improvements
+- Customer search in employee expense manger
+- Show only first 10 site visits and logs
+
+#### Bug Fixes
+- 
