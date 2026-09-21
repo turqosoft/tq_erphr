@@ -1,11 +1,11 @@
 <template>
 	<nav class="fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur-xl border-t border-slate-200/80 shadow-[0_-4px_24px_rgba(0,0,0,0.06)] py-1.5 px-3">
 		<div class="max-w-md mx-auto flex items-center justify-around">
-			<!-- Home / Attendance Tab -->
+			<!-- Home Tab -->
 			<button
 				type="button"
 				@click="navigate('home')"
-				class="flex-1 flex flex-col items-center justify-center py-1 px-2 rounded-2xl transition-all duration-150 active:scale-95"
+				class="flex-1 flex flex-col items-center justify-center py-1 px-2 rounded-2xl transition-all duration-150 active:scale-95 cursor-pointer"
 				:class="activeTab === 'home' ? 'text-teal-700 font-bold' : 'text-slate-400 hover:text-slate-600 font-medium'"
 			>
 				<div class="relative">
@@ -14,10 +14,10 @@
 						class="absolute -inset-1.5 bg-teal-50 rounded-xl -z-10"
 					></div>
 					<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
 					</svg>
 				</div>
-				<span class="text-[11px] mt-1 leading-none">Attendance</span>
+				<span class="text-[11px] mt-1 leading-none">Home</span>
 			</button>
 
 			<!-- EEM Site & Trip Tab (Visible only for Sales Persons) -->

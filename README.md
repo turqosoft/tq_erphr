@@ -153,6 +153,7 @@ mit
 
 #### Improvements
 - Additional fields in employee site tracking to capture customer details.
+- MobiBiz Lite UI enhancements
 
 #### Bug Fixes
 - 

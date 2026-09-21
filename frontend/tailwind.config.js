@@ -2,16 +2,16 @@ import frappeUIPreset from "frappe-ui/src/tailwind/preset"
 
 const turquoise = {
 	50: '#f0fdfc',
-	100: '#d3faf6',
+	100: '#d5faf5',
 	200: '#aaf4ec',
-	300: '#73ebd9',
-	400: '#40e0d0', // User Specified Turquoise
-	500: '#1fc7b6',
-	600: '#139f92',
-	700: '#137e75',
-	800: '#14645d',
-	900: '#15534e',
-	950: '#06312e',
+	300: '#6eeadb',
+	400: '#40e0d0', // Exact User-Specified Turquoise (#40E0D0)
+	500: '#20cdba',
+	600: '#14b8a6',
+	700: '#0d9488',
+	800: '#115e59',
+	900: '#134e4a',
+	950: '#042f2c',
 }
 
 /** @type {import('tailwindcss').Config} */

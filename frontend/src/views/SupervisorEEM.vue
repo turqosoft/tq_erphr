@@ -236,7 +236,7 @@
 										/>
 										<div
 											v-else
-											class="w-8 h-8 rounded-full bg-gradient-to-br from-teal-500 to-teal-800 text-white font-bold text-xs flex items-center justify-center uppercase shadow-2xs"
+											class="w-8 h-8 rounded-full bg-gradient-to-br from-teal-600 to-teal-400 text-white font-bold text-xs flex items-center justify-center uppercase shadow-2xs"
 										>
 											{{ selectedMemberObj?.sales_person_name?.charAt(0) || 'S' }}
 										</div>
@@ -472,7 +472,7 @@
 										/>
 										<div
 											v-else
-											class="w-11 h-11 rounded-full bg-gradient-to-br from-teal-500 to-teal-800 text-white font-bold text-sm flex items-center justify-center uppercase shadow-sm"
+											class="w-11 h-11 rounded-full bg-gradient-to-br from-teal-600 to-teal-400 text-white font-bold text-sm flex items-center justify-center uppercase shadow-sm"
 										>
 											{{ trip.sales_person_name?.charAt(0) || 'S' }}
 										</div>

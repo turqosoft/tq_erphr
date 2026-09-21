@@ -478,6 +478,39 @@
 			</template>
 		</Dialog>
 
+		<!-- GPS Location Acquiring Radar Overlay -->
+		<div
+			v-if="isAcquiringGps"
+			class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 transition-all duration-300"
+		>
+			<div class="bg-white rounded-3xl p-6 shadow-2xl max-w-xs w-full text-center space-y-4 border border-teal-100">
+				<!-- Pulsing Radar Animation -->
+				<div class="relative w-20 h-20 mx-auto flex items-center justify-center">
+					<div class="absolute inset-0 rounded-full bg-teal-500/20 animate-ping"></div>
+					<div class="absolute inset-2 rounded-full bg-teal-500/30 animate-pulse"></div>
+					<div class="relative w-12 h-12 rounded-full bg-gradient-to-tr from-teal-600 to-emerald-500 flex items-center justify-center text-white shadow-lg shadow-teal-600/30">
+						<svg class="w-6 h-6 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+							<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"></circle>
+							<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+						</svg>
+					</div>
+				</div>
+
+				<div class="space-y-1">
+					<h3 class="text-sm font-bold text-slate-900">
+						{{ gpsLoadingTitle || 'Acquiring GPS Location...' }}
+					</h3>
+					<p class="text-[11px] text-slate-500 leading-relaxed">
+						{{ gpsLoadingSubtitle || 'Locking high-accuracy satellite coordinates. Please hold on for a moment...' }}
+					</p>
+				</div>
+
+				<div class="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+					<div class="bg-teal-600 h-1.5 rounded-full w-2/3 animate-[pulse_1s_ease-in-out_infinite]"></div>
+				</div>
+			</div>
+		</div>
+
 	</div>
 </template>
 
@@ -505,6 +538,9 @@ const searchQuery = ref("")
 const selectedGroup = ref("all")
 const isNearMeActive = ref(true)
 const locationCoords = ref(null)
+const isAcquiringGps = ref(false)
+const gpsLoadingTitle = ref("Acquiring GPS Location...")
+const gpsLoadingSubtitle = ref("Calculating proximity to nearest customers around you...")
 
 // Customer List Pagination
 const customersList = ref([])
@@ -633,10 +669,18 @@ function setCustomerGroup(group) {
 	fetchInitialCustomers()
 }
 
-function toggleNearMe() {
+async function toggleNearMe() {
 	isNearMeActive.value = !isNearMeActive.value
 	if (isNearMeActive.value && !locationCoords.value) {
-		acquireUserLocation().then(() => fetchInitialCustomers())
+		isAcquiringGps.value = true
+		gpsLoadingTitle.value = "Acquiring GPS Location..."
+		gpsLoadingSubtitle.value = "Calculating proximity to nearest customers around you..."
+		try {
+			await acquireUserLocation()
+		} finally {
+			isAcquiringGps.value = false
+		}
+		fetchInitialCustomers()
 	} else {
 		fetchInitialCustomers()
 	}
@@ -686,6 +730,7 @@ async function openCustomerDetails(c) {
 }
 
 function goToRecordVisit(c) {
+	if (!c) return
 	router.push({
 		path: "/eem",
 		query: {
@@ -693,6 +738,7 @@ function goToRecordVisit(c) {
 			prefillCustomerName: c.customer_name || c.name,
 			prefillLat: c.latitude || "",
 			prefillLng: c.longitude || "",
+			t: Date.now(),
 		},
 	})
 }

@@ -86,8 +86,8 @@
 				</div>
 
 				<div v-else class="space-y-4">
-					<!-- Date & Trip Status Hero Banner (Light Turquoise & Teal Theme) -->
-					<div class="relative overflow-hidden rounded-3xl bg-gradient-to-tr from-teal-700 via-teal-600 to-teal-500 text-white p-5 shadow-lg shadow-teal-700/20">
+					<!-- Date & Trip Status Hero Banner (Bright Turquoise Theme #40E0D0) -->
+					<div class="relative overflow-hidden rounded-3xl bg-gradient-to-tr from-teal-600 via-teal-500 to-teal-400 text-white p-5 shadow-lg shadow-teal-600/20">
 						<div class="absolute -right-8 -bottom-8 w-40 h-40 bg-white/10 rounded-full blur-2xl pointer-events-none"></div>
 
 						<div class="relative z-10 flex items-center justify-between">
@@ -592,6 +592,15 @@
 
 						<!-- Searchable Input & Dropdown -->
 						<div v-else class="space-y-1.5">
+							<!-- Locating GPS indicator if resolving location for modal -->
+							<div v-if="isLocatingForModal" class="p-2 rounded-xl bg-teal-50 border border-teal-200/70 flex items-center space-x-2 text-[11px] text-teal-800 animate-pulse">
+								<svg class="w-3.5 h-3.5 animate-spin text-teal-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+									<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+									<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+								</svg>
+								<span>Acquiring GPS location to sort nearby customers...</span>
+							</div>
+
 							<div class="relative">
 								<div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
 									<svg v-if="!customersResource.loading" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1149,6 +1158,39 @@
 			</template>
 		</Dialog>
 
+		<!-- GPS Location Acquiring Radar Overlay -->
+		<div
+			v-if="isAcquiringGps"
+			class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 transition-all duration-300"
+		>
+			<div class="bg-white rounded-3xl p-6 shadow-2xl max-w-xs w-full text-center space-y-4 border border-teal-100">
+				<!-- Pulsing Radar Animation -->
+				<div class="relative w-20 h-20 mx-auto flex items-center justify-center">
+					<div class="absolute inset-0 rounded-full bg-teal-500/20 animate-ping"></div>
+					<div class="absolute inset-2 rounded-full bg-teal-500/30 animate-pulse"></div>
+					<div class="relative w-12 h-12 rounded-full bg-gradient-to-tr from-teal-600 to-emerald-500 flex items-center justify-center text-white shadow-lg shadow-teal-600/30">
+						<svg class="w-6 h-6 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+							<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"></circle>
+							<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+						</svg>
+					</div>
+				</div>
+
+				<div class="space-y-1">
+					<h3 class="text-sm font-bold text-slate-900">
+						{{ gpsLoadingTitle || 'Acquiring GPS Location...' }}
+					</h3>
+					<p class="text-[11px] text-slate-500 leading-relaxed">
+						{{ gpsLoadingSubtitle || 'Locking high-accuracy satellite coordinates. Please hold on for a moment...' }}
+					</p>
+				</div>
+
+				<div class="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+					<div class="bg-teal-600 h-1.5 rounded-full w-2/3 animate-[pulse_1s_ease-in-out_infinite]"></div>
+				</div>
+			</div>
+		</div>
+
 		<!-- Global Mobile Bottom Navigation Bar -->
 		<BottomNavBar
 			active-tab="eem"
@@ -1161,7 +1203,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from "vue"
+import { ref, computed, watch, onMounted, onUnmounted } from "vue"
 import { useRoute, useRouter } from "vue-router"
 import { Dialog, Button } from "frappe-ui"
 import BottomNavBar from "@/components/BottomNavBar.vue"
@@ -1191,7 +1233,12 @@ const showHistoryModal = ref(false)
 const showLocationModal = ref(false)
 const showCheckinRequiredModal = ref(false)
 const isAcquiringLocation = ref(false)
+const isAcquiringGps = ref(false)
+const gpsLoadingTitle = ref("Acquiring GPS Location...")
+const gpsLoadingSubtitle = ref("Locking high-accuracy satellite coordinates. Please hold on...")
+const isLocatingForModal = ref(false)
 const locationModalContext = ref("start") // 'start' | 'site' | 'end'
+const pendingPrefillCustomer = ref(null)
 
 // Geolocation state
 const locationCoords = ref(null)
@@ -1494,17 +1541,24 @@ function goToHomeCheckin() {
 
 async function retryAcquireLocation() {
 	isAcquiringLocation.value = true
-	const coords = await getCurrentLocation()
-	isAcquiringLocation.value = false
+	isAcquiringGps.value = true
+	gpsLoadingTitle.value = "Connecting to GPS Satellites..."
+	gpsLoadingSubtitle.value = "Calibrating real-time coordinates from your device..."
 
-	if (coords && (coords.latitude || coords.longitude)) {
-		showLocationModal.value = false
-		toast.success("GPS location acquired successfully!", "Location Ready")
-	} else {
-		toast.warning(
-			"GPS location could not be acquired. Please verify that Location / GPS is turned ON and location permission is granted in your browser settings.",
-			"GPS Location Required"
-		)
+	try {
+		const coords = await getCurrentLocation()
+		if (coords && (coords.latitude || coords.longitude)) {
+			showLocationModal.value = false
+			toast.success("GPS location acquired successfully!", "Location Ready")
+		} else {
+			toast.warning(
+				"GPS location could not be acquired. Please verify that Location / GPS is turned ON and location permission is granted in your browser settings.",
+				"GPS Location Required"
+			)
+		}
+	} finally {
+		isAcquiringLocation.value = false
+		isAcquiringGps.value = false
 	}
 }
 
@@ -1519,17 +1573,28 @@ function openHistoryModal() {
 	router.push("/eem/history")
 }
 
-async function openSiteVisitModal() {
+async function openSiteVisitModal(prefillData = null) {
 	siteVisitForm.value = {
-		customer: "",
-		site: "",
-		latitude: "",
-		longitude: "",
+		customer: prefillData?.customer || "",
+		site: prefillData?.site || prefillData?.customer_name || "",
+		latitude: prefillData?.latitude || "",
+		longitude: prefillData?.longitude || "",
+		actual_distance: "",
 		remarks: "",
 	}
 	customerSearchQuery.value = ""
-	selectedCustomerDetails.value = null
-	isCustomerSearchOpen.value = false
+	if (prefillData?.customer) {
+		selectedCustomerDetails.value = {
+			name: prefillData.customer,
+			customer_name: prefillData.customer_name || prefillData.site || prefillData.customer,
+			latitude: prefillData.latitude,
+			longitude: prefillData.longitude,
+		}
+		isCustomerSearchOpen.value = false
+	} else {
+		selectedCustomerDetails.value = null
+		isCustomerSearchOpen.value = false
+	}
 	showSiteVisitModal.value = true
 
 	// If locationCoords already available, fetch immediately
@@ -1537,10 +1602,13 @@ async function openSiteVisitModal() {
 		fetchCustomersList({ search_term: "", limit: 20 })
 	} else {
 		fetchCustomersList({ search_term: "", limit: 20 })
+		isLocatingForModal.value = true
 		getCurrentLocation().then((coords) => {
 			if (coords && coords.latitude) {
 				fetchCustomersList({ search_term: customerSearchQuery.value, limit: 20 })
 			}
+		}).finally(() => {
+			isLocatingForModal.value = false
 		})
 	}
 }
@@ -1578,15 +1646,18 @@ async function submitStartTrip() {
 	}
 
 	isSubmittingStart.value = true
-	const coords = await getCurrentLocation()
-	if (!coords || (!coords.latitude && !coords.longitude)) {
-		locationModalContext.value = "start"
-		showLocationModal.value = true
-		isSubmittingStart.value = false
-		return
-	}
+	isAcquiringGps.value = true
+	gpsLoadingTitle.value = "Acquiring GPS to Start Trip..."
+	gpsLoadingSubtitle.value = "Locking your starting origin coordinates..."
 
 	try {
+		const coords = await getCurrentLocation()
+		if (!coords || (!coords.latitude && !coords.longitude)) {
+			locationModalContext.value = "start"
+			showLocationModal.value = true
+			return
+		}
+
 		await startTripResource.submit({
 			vehicle_type: startForm.value.vehicle_type,
 			start_odometerkm: Number(startForm.value.start_odometerkm),
@@ -1596,10 +1667,18 @@ async function submitStartTrip() {
 
 		toast.success("Today's Travel Day started! Drive safely.", "Trip Started")
 		await todayEemResource.fetch()
+
+		if (pendingPrefillCustomer.value) {
+			const prefill = { ...pendingPrefillCustomer.value }
+			pendingPrefillCustomer.value = null
+			openSiteVisitModal(prefill)
+			toast.info(`Recording site visit for customer "${prefill.customer_name || prefill.customer}".`, "Customer Ready")
+		}
 	} catch (err) {
 		console.error("Error starting trip:", err)
 		toast.error(err.messages?.[0] || err.message || "Failed to start trip.", "Trip Error")
 	} finally {
+		isAcquiringGps.value = false
 		isSubmittingStart.value = false
 	}
 }
@@ -1611,15 +1690,18 @@ async function submitSiteVisit() {
 	}
 
 	isSubmittingSiteVisit.value = true
-	const coords = await getCurrentLocation()
-	if (!coords || (!coords.latitude && !coords.longitude)) {
-		locationModalContext.value = "site"
-		showLocationModal.value = true
-		isSubmittingSiteVisit.value = false
-		return
-	}
+	isAcquiringGps.value = true
+	gpsLoadingTitle.value = "Acquiring GPS for Site Visit..."
+	gpsLoadingSubtitle.value = "Locking satellite coordinates for this site location..."
 
 	try {
+		const coords = await getCurrentLocation()
+		if (!coords || (!coords.latitude && !coords.longitude)) {
+			locationModalContext.value = "site"
+			showLocationModal.value = true
+			return
+		}
+
 		await addEemSiteVisitResource.submit({
 			customer: siteVisitForm.value.customer,
 			site: siteVisitForm.value.site,
@@ -1636,6 +1718,7 @@ async function submitSiteVisit() {
 		console.error("Error adding site visit:", err)
 		toast.error(err.messages?.[0] || err.message || "Failed to log site visit.", "Visit Error")
 	} finally {
+		isAcquiringGps.value = false
 		isSubmittingSiteVisit.value = false
 	}
 }
@@ -1684,15 +1767,18 @@ async function submitEndTrip() {
 	}
 
 	isSubmittingEnd.value = true
-	const coords = await getCurrentLocation()
-	if (!coords || (!coords.latitude && !coords.longitude)) {
-		locationModalContext.value = "end"
-		showLocationModal.value = true
-		isSubmittingEnd.value = false
-		return
-	}
+	isAcquiringGps.value = true
+	gpsLoadingTitle.value = "Acquiring GPS to End Trip..."
+	gpsLoadingSubtitle.value = "Locking your destination coordinates..."
 
 	try {
+		const coords = await getCurrentLocation()
+		if (!coords || (!coords.latitude && !coords.longitude)) {
+			locationModalContext.value = "end"
+			showLocationModal.value = true
+			return
+		}
+
 		await endTripResource.submit({
 			end_odometerkm: endOdo,
 			actual_end_distance: Number(endForm.value.actual_end_distance) || 0,
@@ -1709,6 +1795,7 @@ async function submitEndTrip() {
 		console.error("Error ending trip:", err)
 		toast.error(err.messages?.[0] || err.message || "Failed to end trip.", "Trip Error")
 	} finally {
+		isAcquiringGps.value = false
 		isSubmittingEnd.value = false
 	}
 }
@@ -1733,6 +1820,51 @@ function formatDate(dateStr) {
 	return d.toLocaleDateString([], { day: "2-digit", month: "short", year: "numeric" })
 }
 
+async function handlePrefillFromQuery() {
+	if (!route.query.prefillCustomer) return
+
+	const customerCode = String(route.query.prefillCustomer)
+	const customerTitle = String(route.query.prefillCustomerName || customerCode)
+	const preLat = route.query.prefillLat ? Number(route.query.prefillLat) : null
+	const preLng = route.query.prefillLng ? Number(route.query.prefillLng) : null
+
+	const prefillData = {
+		customer: customerCode,
+		customer_name: customerTitle,
+		site: customerTitle,
+		latitude: preLat,
+		longitude: preLng,
+	}
+
+	if (!todayEemResource.data && !todayEemResource.loading) {
+		await todayEemResource.fetch()
+	}
+
+	const tripStatusVal = tripStatus.value || todayEemResource.data?.trip_status
+
+	if (tripStatusVal === "IN_PROGRESS") {
+		pendingPrefillCustomer.value = null
+		activeTab.value = "visits"
+		openSiteVisitModal(prefillData)
+		toast.info(`Recording site visit for customer "${customerTitle}".`, "Customer Selected")
+	} else if (tripStatusVal === "NOT_STARTED") {
+		pendingPrefillCustomer.value = prefillData
+		toast.warning(`Please start your Travel Day first to log visit for "${customerTitle}".`, "Start Trip First")
+	} else {
+		toast.warning(`Today's travel is completed. You cannot log new visits for "${customerTitle}".`, "Trip Ended")
+	}
+}
+
+watch(
+	() => [route.query.prefillCustomer, route.query.t],
+	() => {
+		if (route.query.prefillCustomer) {
+			handlePrefillFromQuery()
+		}
+	},
+	{ immediate: false }
+)
+
 onMounted(async () => {
 	if (!employeeResource.data && !employeeResource.loading) {
 		await employeeResource.fetch()
@@ -1752,24 +1884,7 @@ onMounted(async () => {
 
 	// If navigated from Customers page with a customer pre-selected
 	if (route.query.prefillCustomer) {
-		const customerCode = route.query.prefillCustomer
-		const customerTitle = route.query.prefillCustomerName || customerCode
-		const preLat = route.query.prefillLat
-		const preLng = route.query.prefillLng
-
-		const tripStatus = todayEemResource.data?.trip_status
-		if (tripStatus === "IN_PROGRESS") {
-			openAddSiteVisitModal()
-			siteVisitForm.value.customer = customerCode
-			siteVisitForm.value.site = customerTitle
-			if (preLat && preLng) {
-				siteVisitForm.value.latitude = preLat
-				siteVisitForm.value.longitude = preLng
-			}
-			toast.info(`Pre-selected customer "${customerTitle}" for site visit.`, "Customer Selected")
-		} else {
-			toast.warning(`Please start your Travel Day first to log visits for "${customerTitle}".`, "Start Trip First")
-		}
+		await handlePrefillFromQuery()
 	}
 })
 

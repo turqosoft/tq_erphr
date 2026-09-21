@@ -242,7 +242,7 @@
 					<!-- ========================================== -->
 					<!-- HERO GREETING CARD WITH STATS RIBBON       -->
 					<!-- ========================================== -->
-					<div class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-teal-800 via-teal-700 to-teal-600 text-white p-5 shadow-lg shadow-teal-900/15">
+					<div class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-teal-600 via-teal-500 to-teal-400 text-white p-5 shadow-lg shadow-teal-600/20">
 						<!-- Ambient Glass Orbs -->
 						<div class="absolute -right-10 -bottom-10 w-44 h-44 bg-white/10 rounded-full blur-2xl pointer-events-none"></div>
 						<div class="absolute top-0 right-1/4 w-28 h-28 bg-teal-400/20 rounded-full blur-xl pointer-events-none"></div>
@@ -445,10 +445,11 @@
 									</div>
 
 									<button
+										type="button"
 										@click="toggleTodayPunches"
-										class="text-teal-700 hover:text-teal-800 font-bold hover:underline flex-shrink-0 flex items-center space-x-1"
+										class="text-teal-700 hover:text-teal-800 font-bold hover:underline flex-shrink-0 flex items-center space-x-1 cursor-pointer"
 									>
-										<span>{{ isPunchesExpanded ? 'Hide Punches' : "Today's Logs" }}</span>
+										<span>{{ isPunchesExpanded ? 'Hide Logs' : "Today's Logs" }}</span>
 										<svg class="w-3 h-3 transition-transform" :class="{ 'rotate-180': isPunchesExpanded }" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
 										</svg>
@@ -458,7 +459,7 @@
 						</div>
 
 						<!-- Today's Punches Collapsible Timeline -->
-						<div v-if="isPunchesExpanded || todayCheckins.length > 0" class="pt-2 border-t border-slate-100">
+						<div v-if="isPunchesExpanded" class="pt-2 border-t border-slate-100">
 							<div class="flex items-center justify-between mb-2">
 								<span class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Today's Attendance</span>
 								<span class="text-[10px] text-slate-400 font-medium">{{ todayCheckins.length }} {{ todayCheckins.length === 1 ? 'record' : 'records' }}</span>
@@ -499,12 +500,12 @@
 							<span class="text-[10px] text-teal-600 font-medium">Shortcuts</span>
 						</div>
 
-						<!-- Grid for Sales Persons (Includes Site & Trip + Customers + Claims) -->
-						<div v-if="employee?.is_sales_person" class="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+						<!-- Grid for Sales Persons (Site & Trip + Customers) -->
+						<div v-if="employee?.is_sales_person" class="grid grid-cols-2 gap-2.5">
 							<!-- Tile 1: Field Visits & Expenses -->
 							<button
 								@click="goToEem"
-								class="bg-white p-3.5 rounded-3xl border border-slate-100 shadow-xs hover:border-teal-200 hover:shadow-sm transition-all active:scale-[0.98] text-left flex flex-col justify-between space-y-3"
+								class="bg-white p-3.5 rounded-3xl border border-slate-100 shadow-xs hover:border-teal-200 hover:shadow-sm transition-all active:scale-[0.98] text-left flex flex-col justify-between space-y-3 cursor-pointer"
 							>
 								<div class="w-8 h-8 rounded-xl bg-teal-50 text-teal-700 flex items-center justify-center border border-teal-100">
 									<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -520,7 +521,7 @@
 							<!-- Tile 2: Customers Directory (Near Me & Search) -->
 							<button
 								@click="goToCustomers"
-								class="bg-white p-3.5 rounded-3xl border border-slate-100 shadow-xs hover:border-teal-200 hover:shadow-sm transition-all active:scale-[0.98] text-left flex flex-col justify-between space-y-3"
+								class="bg-white p-3.5 rounded-3xl border border-slate-100 shadow-xs hover:border-teal-200 hover:shadow-sm transition-all active:scale-[0.98] text-left flex flex-col justify-between space-y-3 cursor-pointer"
 							>
 								<div class="w-8 h-8 rounded-xl bg-cyan-50 text-cyan-700 flex items-center justify-center border border-cyan-100">
 									<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -532,125 +533,29 @@
 									<p class="text-[10px] text-slate-500 mt-0.5">Directory & Nearby GPS</p>
 								</div>
 							</button>
-
-							<!-- Tile 3: Punch Logs History -->
-							<button
-								@click="openHistoryModal"
-								class="bg-white p-3.5 rounded-3xl border border-slate-100 shadow-xs hover:border-teal-200 hover:shadow-sm transition-all active:scale-[0.98] text-left flex flex-col justify-between space-y-3"
-							>
-								<div class="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center border border-emerald-100">
-									<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-									</svg>
-								</div>
-								<div>
-									<h4 class="text-xs font-bold text-slate-900">Punch Logs</h4>
-									<p class="text-[10px] text-slate-500 mt-0.5">Attendance history</p>
-								</div>
-							</button>
-
-							<!-- Tile 4: Claim Summary / EEM History -->
-							<button
-								@click="goToEemHistory"
-								class="bg-white p-3.5 rounded-3xl border border-slate-100 shadow-xs hover:border-teal-200 hover:shadow-sm transition-all active:scale-[0.98] text-left flex flex-col justify-between space-y-3"
-							>
-								<div class="w-8 h-8 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center border border-amber-100">
-									<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
-									</svg>
-								</div>
-								<div>
-									<h4 class="text-xs font-bold text-slate-900">EEM History</h4>
-									<p class="text-[10px] text-slate-500 mt-0.5">Past trips & claims</p>
-								</div>
-							</button>
-
-							<!-- Tile 5: Supervisor Team EEM (Visible if Supervisor) -->
-							<button
-								v-if="employee?.is_supervisor"
-								@click="goToSupervisorEem"
-								class="bg-gradient-to-br from-teal-500/10 via-emerald-500/10 to-transparent p-3.5 rounded-3xl border border-teal-200/90 shadow-xs hover:border-teal-300 hover:shadow-sm transition-all active:scale-[0.98] text-left flex flex-col justify-between space-y-3 relative overflow-hidden"
-							>
-								<div class="w-8 h-8 rounded-xl bg-teal-700 text-white flex items-center justify-center shadow-xs">
-									<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-									</svg>
-								</div>
-								<div>
-									<div class="flex items-center gap-1">
-										<h4 class="text-xs font-bold text-slate-900">Team EEM</h4>
-										<span class="px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-teal-100 text-teal-800">Lead</span>
-									</div>
-									<p class="text-[10px] text-slate-500 mt-0.5">Subordinate tracking</p>
-								</div>
-							</button>
-
-							<!-- Tile 6: My HR Profile -->
-							<button
-								@click="openProfileModal"
-								class="bg-white p-3.5 rounded-3xl border border-slate-100 shadow-xs hover:border-teal-200 hover:shadow-sm transition-all active:scale-[0.98] text-left flex flex-col justify-between space-y-3"
-								:class="{ 'col-span-2 sm:col-span-1': !employee?.is_supervisor }"
-							>
-								<div class="w-8 h-8 rounded-xl bg-sky-50 text-sky-700 flex items-center justify-center border border-sky-100">
-									<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-									</svg>
-								</div>
-								<div>
-									<h4 class="text-xs font-bold text-slate-900">My Profile</h4>
-									<p class="text-[10px] text-slate-500 mt-0.5">HR & Designation</p>
-								</div>
-							</button>
 						</div>
 
-						<!-- Grid for Non-Sales Staff (Clean Attendance, Logs & Customers) -->
-						<div v-else class="grid grid-cols-3 gap-2.5">
-							<!-- Tile 1: Punch Logs History -->
-							<button
-								@click="openHistoryModal"
-								class="bg-white p-3.5 rounded-3xl border border-slate-100 shadow-xs hover:border-teal-200 hover:shadow-sm transition-all active:scale-[0.98] text-left flex flex-col justify-between space-y-3"
-							>
-								<div class="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center border border-emerald-100">
-									<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-									</svg>
-								</div>
-								<div>
-									<h4 class="text-xs font-bold text-slate-900">Punch Logs</h4>
-									<p class="text-[10px] text-slate-500 mt-0.5">History</p>
-								</div>
-							</button>
-
-							<!-- Tile 2: Customers Directory -->
+						<!-- Grid for Non-Sales Staff -->
+						<div v-else class="grid grid-cols-1 gap-2.5">
+							<!-- Tile: Customers Directory -->
 							<button
 								@click="goToCustomers"
-								class="bg-white p-3.5 rounded-3xl border border-slate-100 shadow-xs hover:border-teal-200 hover:shadow-sm transition-all active:scale-[0.98] text-left flex flex-col justify-between space-y-3"
+								class="bg-white p-3.5 rounded-3xl border border-slate-100 shadow-xs hover:border-teal-200 hover:shadow-sm transition-all active:scale-[0.98] text-left flex items-center justify-between cursor-pointer"
 							>
-								<div class="w-8 h-8 rounded-xl bg-cyan-50 text-cyan-700 flex items-center justify-center border border-cyan-100">
-									<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-									</svg>
+								<div class="flex items-center space-x-3">
+									<div class="w-8 h-8 rounded-xl bg-cyan-50 text-cyan-700 flex items-center justify-center border border-cyan-100">
+										<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+										</svg>
+									</div>
+									<div>
+										<h4 class="text-xs font-bold text-slate-900">Customers</h4>
+										<p class="text-[10px] text-slate-500 mt-0.5">Directory & Locations</p>
+									</div>
 								</div>
-								<div>
-									<h4 class="text-xs font-bold text-slate-900">Customers</h4>
-									<p class="text-[10px] text-slate-500 mt-0.5">Directory</p>
-								</div>
-							</button>
-
-							<!-- Tile 3: My HR Profile -->
-							<button
-								@click="openProfileModal"
-								class="bg-white p-3.5 rounded-3xl border border-slate-100 shadow-xs hover:border-teal-200 hover:shadow-sm transition-all active:scale-[0.98] text-left flex flex-col justify-between space-y-3"
-							>
-								<div class="w-8 h-8 rounded-xl bg-sky-50 text-sky-700 flex items-center justify-center border border-sky-100">
-									<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-									</svg>
-								</div>
-								<div>
-									<h4 class="text-xs font-bold text-slate-900">My Profile</h4>
-									<p class="text-[10px] text-slate-500 mt-0.5">Details</p>
-								</div>
+								<svg class="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+								</svg>
 							</button>
 						</div>
 					</div>
@@ -727,7 +632,7 @@
 						<div class="pt-0.5">
 							<button
 								@click="goToEem"
-								class="w-full py-3 px-4 rounded-2xl bg-gradient-to-r from-teal-600 to-teal-500 hover:from-teal-500 hover:to-teal-400 text-white font-bold text-xs flex items-center justify-center space-x-2 shadow-sm active:scale-[0.98] transition"
+								class="w-full py-3 px-4 rounded-2xl bg-gradient-to-r from-teal-600 to-teal-500 hover:from-teal-500 hover:to-teal-400 text-white font-bold text-xs flex items-center justify-center space-x-2 shadow-sm active:scale-[0.98] transition cursor-pointer"
 							>
 								<span>{{ eemTripStatus === 'NOT_STARTED' ? 'Start Travel Day' : 'Manage Field Visits & Expenses' }}</span>
 								<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -735,84 +640,6 @@
 								</svg>
 							</button>
 						</div>
-					</div>
-
-					<!-- ========================================== -->
-					<!-- STREAMLINED OFFICIAL EMPLOYEE INFO ACCORDION -->
-					<!-- ========================================== -->
-					<div class="bg-white rounded-3xl p-4 sm:p-5 shadow-sm border border-slate-100 space-y-3">
-						<button
-							@click="isEmployeeInfoExpanded = !isEmployeeInfoExpanded"
-							class="w-full flex items-center justify-between text-left focus:outline-none"
-						>
-							<div class="flex items-center space-x-2.5">
-								<div class="p-2 rounded-2xl bg-teal-50 text-teal-700 border border-teal-100">
-									<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-									</svg>
-								</div>
-								<div>
-									<h3 class="font-bold text-slate-900 text-xs">Official Employee Record</h3>
-									<p class="text-[10px] text-slate-500">Company, department & contact info</p>
-								</div>
-							</div>
-
-							<svg
-								class="w-4 h-4 text-slate-400 transition-transform duration-200"
-								:class="{ 'rotate-180': isEmployeeInfoExpanded }"
-								fill="none"
-								viewBox="0 0 24 24"
-								stroke="currentColor"
-							>
-								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-							</svg>
-						</button>
-
-						<transition
-							enter-active-class="transition duration-150 ease-out"
-							enter-from-class="transform opacity-0 -translate-y-2"
-							enter-to-class="transform opacity-100 translate-y-0"
-							leave-active-class="transition duration-100 ease-in"
-							leave-from-class="transform opacity-100 translate-y-0"
-							leave-to-class="transform opacity-0 -translate-y-2"
-						>
-							<div v-if="isEmployeeInfoExpanded" class="pt-2 border-t border-slate-100">
-								<dl class="space-y-2 text-xs">
-									<div class="flex justify-between py-1 border-b border-slate-50">
-										<dt class="text-slate-500">Employee ID</dt>
-										<dd class="font-mono font-bold text-slate-900">{{ employee.name }}</dd>
-									</div>
-									<div class="flex justify-between py-1 border-b border-slate-50">
-										<dt class="text-slate-500">Designation</dt>
-										<dd class="font-semibold text-slate-900">{{ employee.designation || '-' }}</dd>
-									</div>
-									<div class="flex justify-between py-1 border-b border-slate-50">
-										<dt class="text-slate-500">Department</dt>
-										<dd class="font-semibold text-slate-900">{{ employee.department || '-' }}</dd>
-									</div>
-									<div class="flex justify-between py-1 border-b border-slate-50">
-										<dt class="text-slate-500">Company</dt>
-										<dd class="font-semibold text-slate-900">{{ employee.company || '-' }}</dd>
-									</div>
-									<div class="flex justify-between py-1 border-b border-slate-50">
-										<dt class="text-slate-500">Reports To</dt>
-										<dd class="font-semibold text-slate-900 truncate max-w-[170px]">{{ employee.reports_to || 'None' }}</dd>
-									</div>
-									<div class="flex justify-between py-1 border-b border-slate-50">
-										<dt class="text-slate-500">Email ID</dt>
-										<dd class="font-semibold text-slate-900 truncate max-w-[170px]">{{ employee.company_email || employee.personal_email || employee.user_id }}</dd>
-									</div>
-									<div class="flex justify-between py-1 border-b border-slate-50">
-										<dt class="text-slate-500">Mobile Phone</dt>
-										<dd class="font-semibold text-slate-900">{{ employee.cell_number || '-' }}</dd>
-									</div>
-									<div class="flex justify-between py-1">
-										<dt class="text-slate-500">Joining Date</dt>
-										<dd class="font-semibold text-slate-900">{{ employee.date_of_joining || '-' }}</dd>
-									</div>
-								</dl>
-							</div>
-						</transition>
 					</div>
 				</div>
 
@@ -1224,6 +1051,10 @@
 							<span class="font-bold text-slate-900 font-mono text-[11px]">{{ employee?.name || '-' }}</span>
 						</div>
 						<div class="p-3 rounded-2xl bg-slate-50 border border-slate-100">
+							<span class="text-[10px] text-slate-400 font-medium block">Designation</span>
+							<span class="font-bold text-slate-900 truncate block">{{ employee?.designation || '-' }}</span>
+						</div>
+						<div class="p-3 rounded-2xl bg-slate-50 border border-slate-100">
 							<span class="text-[10px] text-slate-400 font-medium block">Department</span>
 							<span class="font-bold text-slate-900 truncate block">{{ employee?.department || '-' }}</span>
 						</div>
@@ -1232,8 +1063,24 @@
 							<span class="font-bold text-slate-900 truncate block">{{ employee?.company || '-' }}</span>
 						</div>
 						<div class="p-3 rounded-2xl bg-slate-50 border border-slate-100">
+							<span class="text-[10px] text-slate-400 font-medium block">Reports To</span>
+							<span class="font-bold text-slate-900 truncate block">{{ employee?.reports_to || 'None' }}</span>
+						</div>
+						<div class="p-3 rounded-2xl bg-slate-50 border border-slate-100">
+							<span class="text-[10px] text-slate-400 font-medium block">Joining Date</span>
+							<span class="font-bold text-slate-900 font-mono text-[11px] block">{{ employee?.date_of_joining || '-' }}</span>
+						</div>
+						<div class="p-3 rounded-2xl bg-slate-50 border border-slate-100">
+							<span class="text-[10px] text-slate-400 font-medium block">Mobile Phone</span>
+							<span class="font-bold text-slate-900 font-mono text-[11px] block">{{ employee?.cell_number || '-' }}</span>
+						</div>
+						<div class="p-3 rounded-2xl bg-slate-50 border border-slate-100">
 							<span class="text-[10px] text-slate-400 font-medium block">User ID</span>
 							<span class="font-bold text-slate-900 font-mono text-[10px] truncate block">{{ employee?.user_id || session.user }}</span>
+						</div>
+						<div class="p-3 rounded-2xl bg-slate-50 border border-slate-100 col-span-2">
+							<span class="text-[10px] text-slate-400 font-medium block">Email Address</span>
+							<span class="font-bold text-slate-900 font-mono text-[11px] truncate block">{{ employee?.company_email || employee?.personal_email || employee?.user_id }}</span>
 						</div>
 					</div>
 
@@ -1460,6 +1307,39 @@
 			</template>
 		</Dialog>
 
+		<!-- GPS Location Acquiring Radar Overlay -->
+		<div
+			v-if="isAcquiringGps"
+			class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 transition-all duration-300"
+		>
+			<div class="bg-white rounded-3xl p-6 shadow-2xl max-w-xs w-full text-center space-y-4 border border-teal-100">
+				<!-- Pulsing Radar Animation -->
+				<div class="relative w-20 h-20 mx-auto flex items-center justify-center">
+					<div class="absolute inset-0 rounded-full bg-teal-500/20 animate-ping"></div>
+					<div class="absolute inset-2 rounded-full bg-teal-500/30 animate-pulse"></div>
+					<div class="relative w-12 h-12 rounded-full bg-gradient-to-tr from-teal-600 to-emerald-500 flex items-center justify-center text-white shadow-lg shadow-teal-600/30">
+						<svg class="w-6 h-6 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+							<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"></circle>
+							<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+						</svg>
+					</div>
+				</div>
+
+				<div class="space-y-1">
+					<h3 class="text-sm font-bold text-slate-900">
+						{{ gpsLoadingTitle || 'Acquiring GPS Location...' }}
+					</h3>
+					<p class="text-[11px] text-slate-500 leading-relaxed">
+						{{ gpsLoadingSubtitle || 'Locking high-accuracy satellite coordinates. Please hold on for a moment...' }}
+					</p>
+				</div>
+
+				<div class="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+					<div class="bg-teal-600 h-1.5 rounded-full w-2/3 animate-[pulse_1s_ease-in-out_infinite]"></div>
+				</div>
+			</div>
+		</div>
+
 		<!-- Global Mobile Bottom Navigation Bar -->
 		<BottomNavBar
 			active-tab="home"
@@ -1501,7 +1381,6 @@ const showHistoryModal = ref(false)
 const showPunchConfirm = ref(false)
 const showChangePasswordModal = ref(false)
 const profileDropdownRef = ref(null)
-const isEmployeeInfoExpanded = ref(false)
 const isPunchesExpanded = ref(false)
 
 // Check-in History Pagination States
@@ -1615,6 +1494,9 @@ const showLocationModal = ref(false)
 const showCheckinRequiredModal = ref(false)
 const showActiveTripModal = ref(false)
 const isAcquiringLocation = ref(false)
+const isAcquiringGps = ref(false)
+const gpsLoadingTitle = ref("Acquiring GPS Location...")
+const gpsLoadingSubtitle = ref("Locking high-accuracy satellite coordinates. Please hold on...")
 
 function toggleDropdown() {
 	isDropdownOpen.value = !isDropdownOpen.value
@@ -1822,31 +1704,45 @@ async function submitChangePassword() {
 }
 
 async function promptPunchConfirmation() {
+	if (isAcquiringLocation.value || isSubmittingCheckin.value) return
 	isAcquiringLocation.value = true
-	const coords = await getCurrentLocation()
-	isAcquiringLocation.value = false
+	isAcquiringGps.value = true
+	gpsLoadingTitle.value = nextAction.value === "IN" ? "Locking GPS for Check In..." : "Locking GPS for Check Out..."
+	gpsLoadingSubtitle.value = "Acquiring high-accuracy satellite coordinates. Please hold on..."
 
-	if (!coords || (!coords.latitude && !coords.longitude)) {
-		showLocationModal.value = true
-		return
+	try {
+		const coords = await getCurrentLocation()
+		if (!coords || (!coords.latitude && !coords.longitude)) {
+			showLocationModal.value = true
+			return
+		}
+		showPunchConfirm.value = true
+	} finally {
+		isAcquiringLocation.value = false
+		isAcquiringGps.value = false
 	}
-
-	showPunchConfirm.value = true
 }
 
 async function retryAcquireLocation() {
 	isAcquiringLocation.value = true
-	const coords = await getCurrentLocation()
-	isAcquiringLocation.value = false
+	isAcquiringGps.value = true
+	gpsLoadingTitle.value = "Connecting to GPS Satellites..."
+	gpsLoadingSubtitle.value = "Calibrating real-time coordinates from your device..."
 
-	if (coords && (coords.latitude || coords.longitude)) {
-		showLocationModal.value = false
-		showPunchConfirm.value = true
-	} else {
-		toast.warning(
-			"GPS location could not be acquired. Please verify that Location / GPS is turned ON and location permission is allowed for this site.",
-			"GPS Location Required"
-		)
+	try {
+		const coords = await getCurrentLocation()
+		if (coords && (coords.latitude || coords.longitude)) {
+			showLocationModal.value = false
+			showPunchConfirm.value = true
+		} else {
+			toast.warning(
+				"GPS location could not be acquired. Please verify that Location / GPS is turned ON and location permission is allowed for this site.",
+				"GPS Location Required"
+			)
+		}
+	} finally {
+		isAcquiringLocation.value = false
+		isAcquiringGps.value = false
 	}
 }
 
@@ -1903,7 +1799,15 @@ async function handleCheckinAction() {
 	locationStatusText.value = "Acquiring GPS location..."
 
 	try {
-		const coords = await getCurrentLocation()
+		let coords = locationCoords.value
+		if (!coords || (!coords.latitude && !coords.longitude)) {
+			isAcquiringGps.value = true
+			gpsLoadingTitle.value = currentAction === "IN" ? "Locking GPS for Check In..." : "Locking GPS for Check Out..."
+			gpsLoadingSubtitle.value = "Acquiring high-accuracy satellite coordinates. Please hold on..."
+			coords = await getCurrentLocation()
+			isAcquiringGps.value = false
+		}
+
 		if (!coords || (!coords.latitude && !coords.longitude)) {
 			showLocationModal.value = true
 			isSubmittingCheckin.value = false
@@ -1932,6 +1836,7 @@ async function handleCheckinAction() {
 		console.error("Check-in error:", err)
 		toast.error(err.messages?.[0] || err.message || "Failed to record check-in.", "Punch Failed")
 	} finally {
+		isAcquiringGps.value = false
 		isSubmittingCheckin.value = false
 	}
 }

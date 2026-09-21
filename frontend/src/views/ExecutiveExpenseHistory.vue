@@ -215,9 +215,9 @@
 			<!-- Main Scrollable Content -->
 			<main class="flex-1 px-4 sm:px-5 pt-28 sm:pt-28 pb-4 space-y-4">
 				
-				<!-- Cumulative Stats Banner -->
-				<div class="bg-gradient-to-br from-teal-800 via-teal-900 to-slate-900 rounded-3xl p-4 text-white shadow-md relative overflow-hidden">
-					<div class="absolute -right-8 -bottom-8 w-32 h-32 bg-teal-500/10 rounded-full blur-2xl pointer-events-none"></div>
+				<!-- Cumulative Stats Banner (Bright Turquoise Theme #40E0D0) -->
+				<div class="bg-gradient-to-br from-teal-600 via-teal-500 to-teal-400 rounded-3xl p-4 text-white shadow-md shadow-teal-600/20 relative overflow-hidden">
+					<div class="absolute -right-8 -bottom-8 w-32 h-32 bg-white/10 rounded-full blur-2xl pointer-events-none"></div>
 					<div class="relative z-10">
 						<div class="flex items-center justify-between text-xs text-teal-200/80 mb-3">
 							<div class="flex items-center space-x-1.5 font-medium">
