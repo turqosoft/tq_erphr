@@ -145,3 +145,14 @@ mit
 
 #### Bug Fixes
 - 
+
+### v1.1.4 (2026-09-21)
+
+#### New Features
+- 
+
+#### Improvements
+- Additional fields in employee site tracking to capture customer details.
+
+#### Bug Fixes
+- 
