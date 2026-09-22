@@ -168,4 +168,4 @@ mit
 - UI enhancements
 
 #### Bug Fixes
-- 
+- Fixed bug with stock and warehouse display

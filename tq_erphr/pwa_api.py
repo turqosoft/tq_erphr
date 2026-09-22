@@ -968,12 +968,18 @@ def get_customers_list(
 		for st_row in sales_teams:
 			sp_map.setdefault(st_row.parent, []).append(st_row.sales_person)
 
-		invoice_stats = frappe.get_all(
-			"Sales Invoice",
-			filters={"docstatus": 1, "customer": ["in", customer_names]},
-			fields=["customer", "sum(grand_total) as total_billed", "sum(outstanding_amount) as total_unpaid"],
-			group_by="customer",
+		inv = frappe.qb.DocType("Sales Invoice")
+		inv_q = (
+			frappe.qb.from_(inv)
+			.select(
+				inv.customer,
+				Coalesce(Sum(inv.grand_total), 0).as_("total_billed"),
+				Coalesce(Sum(inv.outstanding_amount), 0).as_("total_unpaid"),
+			)
+			.where((inv.docstatus == 1) & (inv.customer.isin(customer_names)))
+			.groupby(inv.customer)
 		)
+		invoice_stats = inv_q.run(as_dict=True)
 		stats_map = {row.customer: row for row in invoice_stats}
 
 		for c in customers:
@@ -1052,11 +1058,16 @@ def get_customer_detail(customer_name: str) -> dict:
 			customer["address_text"] = ""
 
 	# Billing & Unpaid stats
-	inv_stats = frappe.get_all(
-		"Sales Invoice",
-		filters={"docstatus": 1, "customer": customer_name},
-		fields=["sum(grand_total) as total_billed", "sum(outstanding_amount) as total_unpaid"],
+	inv = frappe.qb.DocType("Sales Invoice")
+	inv_q = (
+		frappe.qb.from_(inv)
+		.select(
+			Coalesce(Sum(inv.grand_total), 0).as_("total_billed"),
+			Coalesce(Sum(inv.outstanding_amount), 0).as_("total_unpaid"),
+		)
+		.where((inv.docstatus == 1) & (inv.customer == customer_name))
 	)
+	inv_stats = inv_q.run(as_dict=True)
 	if inv_stats and inv_stats[0].get("total_billed") is not None:
 		customer["total_billed"] = float(inv_stats[0].get("total_billed") or 0.0)
 		customer["total_unpaid"] = float(inv_stats[0].get("total_unpaid") or 0.0)
@@ -1692,34 +1703,56 @@ def get_stock_meta_filters() -> dict:
 	if not current_user or current_user == "Guest":
 		return {"warehouses": [], "item_groups": [], "stats": {}}
 
-	warehouses = frappe.get_all(
-		"Bin",
-		filters={"warehouse": ["is", "set"]},
-		fields=["distinct warehouse as name"],
-		order_by="warehouse asc",
-	)
+	wh_tbl = frappe.qb.DocType("Warehouse")
+	item_tbl = frappe.qb.DocType("Item")
+	bin_tbl = frappe.qb.DocType("Bin")
 
-	item_groups = frappe.get_all(
-		"Item",
-		filters={"disabled": 0, "item_group": ["is", "set"]},
-		fields=["distinct item_group as name"],
-		order_by="item_group asc",
+	# 1. Fetch all active non-group warehouses
+	wh_rows = (
+		frappe.qb.from_(wh_tbl)
+		.select(wh_tbl.name)
+		.where((wh_tbl.is_group == 0) & (wh_tbl.disabled == 0))
+		.orderby(wh_tbl.name, order=frappe.qb.asc)
+		.run(as_dict=True)
 	)
+	warehouses = [w["name"] for w in wh_rows if w.get("name")]
 
-	bin_stats = frappe.get_all(
-		"Bin",
-		fields=[
-			"count(distinct item_code) as total_items",
-			"count(distinct warehouse) as total_warehouses",
-			"sum(actual_qty) as total_actual_qty",
-			"sum(projected_qty) as total_available_qty",
-		],
+	# 2. Fetch all active item groups
+	ig_rows = (
+		frappe.qb.from_(item_tbl)
+		.select(item_tbl.item_group.as_("name"))
+		.distinct()
+		.where((item_tbl.disabled == 0) & (item_tbl.item_group.isnotnull()) & (item_tbl.item_group != ""))
+		.orderby(item_tbl.item_group, order=frappe.qb.asc)
+		.run(as_dict=True)
 	)
-	in_stock_bins = frappe.get_all(
-		"Bin",
-		filters={"actual_qty": [">", 0]},
-		fields=["count(distinct item_code) as in_stock_items"],
+	item_groups = [g["name"] for g in ig_rows if g.get("name")]
+
+	# 3. Total items count (active items in catalog)
+	total_items_q = (
+		frappe.qb.from_(item_tbl)
+		.select(Count(item_tbl.name).as_("cnt"))
+		.where(item_tbl.disabled == 0)
 	)
+	total_items_res = total_items_q.run(as_dict=True)
+	total_items_cnt = int(total_items_res[0].cnt or 0) if total_items_res else 0
+
+	# 4. Total stock units across all bins
+	stats_q = (
+		frappe.qb.from_(bin_tbl)
+		.select(
+			Coalesce(Sum(bin_tbl.actual_qty), 0).as_("total_actual_qty"),
+			Coalesce(Sum(bin_tbl.projected_qty), 0).as_("total_available_qty"),
+		)
+	)
+	bin_stats = stats_q.run(as_dict=True)
+
+	in_stock_q = (
+		frappe.qb.from_(bin_tbl)
+		.select(Count(bin_tbl.item_code).distinct().as_("in_stock_items"))
+		.where(bin_tbl.actual_qty > 0)
+	)
+	in_stock_bins = in_stock_q.run(as_dict=True)
 
 	total_in_transit = 0.0
 	try:
@@ -1734,8 +1767,8 @@ def get_stock_meta_filters() -> dict:
 	is_cnt = in_stock_bins[0].get("in_stock_items") if in_stock_bins else 0
 
 	stats = {
-		"total_items": int(bs.get("total_items") or 0),
-		"total_warehouses": int(bs.get("total_warehouses") or 0),
+		"total_items": total_items_cnt,
+		"total_warehouses": len(warehouses),
 		"total_actual_qty": float(bs.get("total_actual_qty") or 0.0),
 		"total_available_qty": float(bs.get("total_available_qty") or 0.0),
 		"total_in_transit_qty": float(total_in_transit),
@@ -1743,10 +1776,11 @@ def get_stock_meta_filters() -> dict:
 	}
 
 	return {
-		"warehouses": [w.name for w in warehouses if w.name],
-		"item_groups": [g.name for g in item_groups if g.name],
+		"warehouses": warehouses,
+		"item_groups": item_groups,
 		"stats": stats,
 	}
+
 
 
 

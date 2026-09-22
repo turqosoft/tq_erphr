@@ -52,7 +52,7 @@
 							<span class="text-xs">📦</span>
 						</div>
 						<div class="mt-1 flex items-baseline space-x-1">
-							<span class="text-base font-black text-slate-900 font-mono">{{ dashboardStats.total_items || stockItems.length }}</span>
+							<span class="text-base font-black text-slate-900 font-mono">{{ formatCount(dashboardStats.total_items || totalCount || stockItems.length) }}</span>
 							<span class="text-[9px] text-slate-500 font-medium">items</span>
 						</div>
 					</div>
@@ -64,7 +64,7 @@
 							<span class="text-xs">🏢</span>
 						</div>
 						<div class="mt-1 flex items-baseline space-x-1">
-							<span class="text-base font-black text-slate-900 font-mono">{{ dashboardStats.total_warehouses || warehousesList.length }}</span>
+							<span class="text-base font-black text-slate-900 font-mono">{{ formatCount(dashboardStats.total_warehouses || warehousesList.length) }}</span>
 							<span class="text-[9px] text-slate-500 font-medium">active</span>
 						</div>
 					</div>
@@ -570,10 +570,18 @@ const hasMore = ref(false)
 const showDetailsModal = ref(false)
 const selectedItem = ref(null)
 
+function formatCount(val) {
+	if (val === null || val === undefined || isNaN(val)) return "0"
+	return Number(val).toLocaleString("en-IN")
+}
+
 function formatQty(val) {
 	if (val === null || val === undefined || isNaN(val)) return "0"
 	const num = Number(val)
-	return num % 1 !== 0 ? num.toFixed(2) : String(num)
+	return num.toLocaleString("en-IN", {
+		maximumFractionDigits: 2,
+		minimumFractionDigits: num % 1 !== 0 ? 2 : 0,
+	})
 }
 
 function formatCurrency(val) {
@@ -603,6 +611,9 @@ async function fetchStockItems() {
 		const res = await call("tq_erphr.pwa_api.get_stock_items", params)
 		stockItems.value = res?.items || []
 		totalCount.value = res?.total_count || stockItems.value.length
+		if (!dashboardStats.value.total_items && totalCount.value) {
+			dashboardStats.value.total_items = totalCount.value
+		}
 		hasMore.value = stockItems.value.length < totalCount.value
 	} catch (err) {
 		console.error("Failed to fetch stock items:", err)
