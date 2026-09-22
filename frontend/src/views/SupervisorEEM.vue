@@ -738,13 +738,29 @@
 											</span>
 											<div>
 												<h5 class="text-xs font-bold text-slate-900">{{ st.customer }}</h5>
-												<p v-if="st.site" class="text-[10px] text-slate-500 font-medium">{{ st.site }}</p>
+												<div class="flex items-center gap-1.5 mt-0.5">
+													<span v-if="st.category" class="px-1.5 py-0.2 rounded bg-teal-50 text-teal-800 font-bold text-[9px] border border-teal-200">
+														{{ st.category }}
+													</span>
+													<p v-if="st.site" class="text-[10px] text-slate-500 font-medium truncate max-w-[150px]">{{ st.site }}</p>
+												</div>
 											</div>
 										</div>
 
 										<span class="text-[10px] font-bold text-teal-700 bg-teal-50 px-2 py-0.5 rounded-lg shrink-0">
 											{{ formatTimeOnly(st.checkin_time) }}
 										</span>
+									</div>
+
+									<div v-if="st.contact_number || st.address" class="space-y-0.5 text-[10px] pl-7">
+										<div v-if="st.contact_number" class="flex items-center space-x-1 text-slate-700 font-mono">
+											<span>📞</span>
+											<a :href="'tel:' + st.contact_number" class="text-teal-700 font-bold hover:underline">{{ st.contact_number }}</a>
+										</div>
+										<div v-if="st.address" class="flex items-start space-x-1 text-slate-500">
+											<span>📍</span>
+											<span class="truncate">{{ st.address }}</span>
+										</div>
 									</div>
 
 									<p v-if="st.remarks" class="text-[11px] text-slate-600 bg-slate-50 p-2 rounded-xl border border-slate-100">

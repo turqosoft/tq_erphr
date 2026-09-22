@@ -1,6 +1,7 @@
 import frappe
 from frappe import _
 from frappe.boot import load_translations
+from frappe.query_builder.functions import Coalesce, Count, Sum, Avg, IfNull
 
 
 @frappe.whitelist()
@@ -472,7 +473,17 @@ def start_eem_trip(vehicle_type: str = "Two Wheeler", start_odometerkm: float = 
 
 
 @frappe.whitelist()
-def add_eem_site_visit(customer: str = None, site: str = None, remarks: str = None, latitude=None, longitude=None, actual_distance: float = 0) -> dict:
+def add_eem_site_visit(
+	customer: str = None,
+	site: str = None,
+	remarks: str = None,
+	latitude=None,
+	longitude=None,
+	actual_distance: float = 0,
+	address: str = None,
+	contact_number: str = None,
+	category: str = None,
+) -> dict:
 	current_user = frappe.session.user
 	if not current_user or current_user == "Guest":
 		frappe.throw(_("Not logged in"), frappe.AuthenticationError)
@@ -522,6 +533,9 @@ def add_eem_site_visit(customer: str = None, site: str = None, remarks: str = No
 			"site_lat": lat,
 			"site_long": lon,
 			"actual_distance": dist,
+			"address": address or "",
+			"contact_number": contact_number or "",
+			"category": category or "",
 			"remarks": remarks or "",
 		},
 	)
@@ -702,40 +716,32 @@ def get_eem_history(limit: int = 10, limit_start: int = 0, from_date: str = None
 
 	eem_names = [r.name for r in records]
 	if eem_names:
-		site_counts = dict(
-			frappe.db.sql(
-				"""
-				SELECT parent, COUNT(*)
-				FROM `tabEmployee Site Tracking`
-				WHERE parent IN %(parents)s
-				GROUP BY parent
-				""",
-				{"parents": eem_names},
-			)
+		site_rows = frappe.get_all(
+			"Employee Site Tracking",
+			filters={"parent": ["in", eem_names]},
+			fields=["parent", "customer", "site", "remarks"],
 		)
-		expense_counts = dict(
-			frappe.db.sql(
-				"""
-				SELECT parent, COUNT(*)
-				FROM `tabEmployee Expense Tracking`
-				WHERE parent IN %(parents)s
-				GROUP BY parent
-				""",
-				{"parents": eem_names},
-			)
+		site_counts = {}
+		site_keywords_map = {}
+		for row in site_rows:
+			parent = row.parent
+			site_counts[parent] = site_counts.get(parent, 0) + 1
+			kw = f"{row.customer or ''} {row.site or ''} {row.remarks or ''}".strip()
+			if kw:
+				if parent in site_keywords_map:
+					site_keywords_map[parent] += f" {kw}"
+				else:
+					site_keywords_map[parent] = kw
+
+		expense_rows = frappe.get_all(
+			"Employee Expense Tracking",
+			filters={"parent": ["in", eem_names]},
+			fields=["parent", "name"],
 		)
-		# Also get list of customer/site names for search matching
-		site_names_raw = frappe.db.sql(
-			"""
-			SELECT parent, GROUP_CONCAT(CONCAT_WS(' ', customer, site, remarks) SEPARATOR ' ') as site_keywords
-			FROM `tabEmployee Site Tracking`
-			WHERE parent IN %(parents)s
-			GROUP BY parent
-			""",
-			{"parents": eem_names},
-			as_dict=True,
-		)
-		site_keywords_map = {row.parent: (row.site_keywords or "") for row in site_names_raw}
+		expense_counts = {}
+		for row in expense_rows:
+			parent = row.parent
+			expense_counts[parent] = expense_counts.get(parent, 0) + 1
 
 		for r in records:
 			r["sites_count"] = site_counts.get(r.name, 0)
@@ -834,11 +840,7 @@ def get_customers_list(
 	view_all_pref = frappe.defaults.get_user_default("mobibiz_view_all_customers", current_user)
 	can_view_all = bool(view_all_pref and str(view_all_pref).lower() in ("1", "true", "yes"))
 
-	search_clause = ""
-	sales_person_clause = ""
-	group_clause = ""
-	territory_clause = ""
-	params = {"limit": limit, "limit_start": limit_start}
+	filters = {"disabled": 0}
 
 	if not can_view_all:
 		employee = frappe.db.get_value("Employee", {"user_id": current_user, "status": "Active"}, ["name", "employee_name"], as_dict=True)
@@ -860,92 +862,136 @@ def get_customers_list(
 				sales_persons = [sales_person]
 
 			if sales_persons:
-				sales_person_clause = """
-				  AND name IN (
-					SELECT parent 
-					FROM `tabSales Team` 
-					WHERE parenttype = 'Customer' 
-					  AND parentfield = 'sales_team' 
-					  AND sales_person IN %(sales_persons)s
-				  )
-				"""
-				params["sales_persons"] = tuple(sales_persons)
-
-	if search_term and search_term.strip():
-		params["term"] = f"%{search_term.strip()}%"
-		search_clause = """
-		  AND (
-			customer_name LIKE %(term)s
-			OR name LIKE %(term)s
-			OR territory LIKE %(term)s
-			OR customer_group LIKE %(term)s
-			OR mobile_no LIKE %(term)s
-		  )
-		"""
+				allowed_customer_names = frappe.get_all(
+					"Sales Team",
+					filters={
+						"parenttype": "Customer",
+						"parentfield": "sales_team",
+						"sales_person": ["in", sales_persons],
+					},
+					pluck="parent",
+				)
+				if allowed_customer_names:
+					filters["name"] = ["in", allowed_customer_names]
+				else:
+					filters["name"] = ["in", ["__NON_EXISTENT__"]]
 
 	if customer_group and customer_group not in ("all", "All", ""):
-		params["customer_group"] = customer_group
-		group_clause = " AND customer_group = %(customer_group)s"
+		filters["customer_group"] = customer_group
 
 	if territory and territory not in ("all", "All", ""):
-		params["territory"] = territory
-		territory_clause = " AND territory = %(territory)s"
+		filters["territory"] = territory
+
+	or_filters = None
+	if search_term and search_term.strip():
+		st = f"%{search_term.strip()}%"
+		or_filters = [
+			["customer_name", "like", st],
+			["name", "like", st],
+			["territory", "like", st],
+			["customer_group", "like", st],
+			["mobile_no", "like", st],
+		]
 
 	has_lat_col = bool(frappe.db.has_column("Customer", "latitude"))
 	has_lng_col = bool(frappe.db.has_column("Customer", "longitude"))
 
-	lat_select = "latitude" if has_lat_col else "NULL AS latitude"
-	lng_select = "longitude" if has_lng_col else "NULL AS longitude"
+	fields = [
+		"name",
+		"customer_name",
+		"customer_group",
+		"territory",
+		"mobile_no",
+		"email_id",
+	]
+	if has_lat_col:
+		fields.append("latitude")
+	if has_lng_col:
+		fields.append("longitude")
+
+	import math
+
+	def haversine_km(lat1, lon1, lat2, lon2):
+		if lat1 is None or lon1 is None or lat2 is None or lon2 is None:
+			return None
+		try:
+			lat1, lon1, lat2, lon2 = float(lat1), float(lon1), float(lat2), float(lon2)
+			if (lat1 == 0 and lon1 == 0) or (lat2 == 0 and lon2 == 0):
+				return None
+			r = 6371.0
+			dlat = math.radians(lat2 - lat1)
+			dlon = math.radians(lon2 - lon1)
+			a = math.sin(dlat / 2.0) ** 2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon / 2.0) ** 2
+			c = 2.0 * math.atan2(math.sqrt(a), math.sqrt(1.0 - a))
+			return round(r * c, 2)
+		except Exception:
+			return None
 
 	if user_lat is not None and user_lng is not None and has_lat_col and has_lng_col:
-		params["user_lat"] = user_lat
-		params["user_lng"] = user_lng
-		query = f"""
-			SELECT 
-				name, customer_name, customer_group, territory, mobile_no, email_id, {lat_select}, {lng_select},
-				(SELECT GROUP_CONCAT(sales_person SEPARATOR ', ') FROM `tabSales Team` WHERE parent = `tabCustomer`.name AND parenttype = 'Customer' AND parentfield = 'sales_team') AS sales_person_names,
-				ROUND(
-					6371 * 2 * ASIN(
-						SQRT(
-							POWER(SIN(RADIANS(latitude - %(user_lat)s) / 2), 2) +
-							COS(RADIANS(%(user_lat)s)) * COS(RADIANS(latitude)) *
-							POWER(SIN(RADIANS(longitude - %(user_lng)s) / 2), 2)
-						)
-					),
-					2
-				) AS distance_km
-			FROM `tabCustomer`
-			WHERE disabled = 0
-			  {sales_person_clause}
-			  {group_clause}
-			  {territory_clause}
-			  {search_clause}
-			ORDER BY 
-				CASE WHEN latitude IS NOT NULL AND longitude IS NOT NULL AND latitude != 0 AND longitude != 0 THEN 0 ELSE 1 END,
-				distance_km ASC,
-				customer_name ASC
-			LIMIT %(limit_start)s, %(limit)s
-		"""
-		return frappe.db.sql(query, params, as_dict=True)
+		all_customers = frappe.get_all(
+			"Customer",
+			filters=filters,
+			or_filters=or_filters,
+			fields=fields,
+		)
+		for c in all_customers:
+			c["distance_km"] = haversine_km(user_lat, user_lng, c.get("latitude"), c.get("longitude"))
 
-	return frappe.db.sql(
-		f"""
-		SELECT 
-			name, customer_name, customer_group, territory, mobile_no, email_id, {lat_select}, {lng_select},
-			(SELECT GROUP_CONCAT(sales_person SEPARATOR ', ') FROM `tabSales Team` WHERE parent = `tabCustomer`.name AND parenttype = 'Customer' AND parentfield = 'sales_team') AS sales_person_names,
-			NULL AS distance_km
-		FROM `tabCustomer`
-		WHERE disabled = 0
-		  {sales_person_clause}
-		  {group_clause}
-		  {territory_clause}
-		  {search_clause}
-		ORDER BY customer_name ASC
-		LIMIT %(limit_start)s, %(limit)s
-		""",
-		params,
-		as_dict=True,
-	)
+		def sort_key(c):
+			has_coords = 0 if (c.get("latitude") and c.get("longitude") and float(c.get("latitude") or 0) != 0 and float(c.get("longitude") or 0) != 0) else 1
+			dist = c.get("distance_km") if c.get("distance_km") is not None else 999999.0
+			return (has_coords, dist, c.get("customer_name") or "")
+
+		all_customers.sort(key=sort_key)
+		customers = all_customers[limit_start : limit_start + limit]
+	else:
+		customers = frappe.get_all(
+			"Customer",
+			filters=filters,
+			or_filters=or_filters,
+			fields=fields,
+			order_by="customer_name asc",
+			limit_start=limit_start,
+			limit_page_length=limit,
+		)
+		for c in customers:
+			c["distance_km"] = None
+
+	customer_names = [c["name"] for c in customers]
+	if customer_names:
+		sales_teams = frappe.get_all(
+			"Sales Team",
+			filters={"parent": ["in", customer_names], "parenttype": "Customer", "parentfield": "sales_team"},
+			fields=["parent", "sales_person"],
+		)
+		sp_map = {}
+		for st_row in sales_teams:
+			sp_map.setdefault(st_row.parent, []).append(st_row.sales_person)
+
+		invoice_stats = frappe.get_all(
+			"Sales Invoice",
+			filters={"docstatus": 1, "customer": ["in", customer_names]},
+			fields=["customer", "sum(grand_total) as total_billed", "sum(outstanding_amount) as total_unpaid"],
+			group_by="customer",
+		)
+		stats_map = {row.customer: row for row in invoice_stats}
+
+		for c in customers:
+			c["sales_person_names"] = ", ".join(sp_map.get(c["name"], []))
+			if "latitude" not in c:
+				c["latitude"] = None
+			if "longitude" not in c:
+				c["longitude"] = None
+			st = stats_map.get(c["name"])
+			c["total_billed"] = float(st.get("total_billed") or 0.0) if st else 0.0
+			c["total_unpaid"] = float(st.get("total_unpaid") or 0.0) if st else 0.0
+	else:
+		for c in customers:
+			c["total_billed"] = 0.0
+			c["total_unpaid"] = 0.0
+			c["sales_person_names"] = ""
+
+	return customers
 
 
 @frappe.whitelist()
@@ -989,23 +1035,68 @@ def get_customer_detail(customer_name: str) -> dict:
 	)
 	customer["sales_team"] = sales_team
 
-	# Recent Site Visits for this customer from Executive Expense Manager
-	recent_visits = frappe.db.sql(
-		"""
-		SELECT 
-			st.name, st.parent as eem_name, st.site, st.checkin_time as visit_time, st.remarks, st.site_lat as latitude, st.site_long as longitude,
-			eem.date as trip_date, eem.employee_name
-		FROM `tabEmployee Site Tracking` st
-		INNER JOIN `tabExecutive Expense Manager` eem ON eem.name = st.parent
-		WHERE st.customer = %(customer)s
-		  AND eem.docstatus != 2
-		ORDER BY eem.date DESC, st.checkin_time DESC
-		LIMIT 10
-		""",
-		{"customer": customer_name},
-		as_dict=True,
+	# Primary Address Text
+	customer["address_text"] = ""
+	if customer.get("customer_primary_address"):
+		try:
+			addr = frappe.db.get_value(
+				"Address",
+				customer["customer_primary_address"],
+				["address_line1", "address_line2", "city", "state", "pincode", "address_title"],
+				as_dict=True,
+			)
+			if addr:
+				parts = [addr.get(k) for k in ["address_line1", "address_line2", "city", "state", "pincode"] if addr.get(k)]
+				customer["address_text"] = ", ".join(parts)
+		except Exception:
+			customer["address_text"] = ""
+
+	# Billing & Unpaid stats
+	inv_stats = frappe.get_all(
+		"Sales Invoice",
+		filters={"docstatus": 1, "customer": customer_name},
+		fields=["sum(grand_total) as total_billed", "sum(outstanding_amount) as total_unpaid"],
 	)
-	customer["recent_visits"] = recent_visits
+	if inv_stats and inv_stats[0].get("total_billed") is not None:
+		customer["total_billed"] = float(inv_stats[0].get("total_billed") or 0.0)
+		customer["total_unpaid"] = float(inv_stats[0].get("total_unpaid") or 0.0)
+	else:
+		customer["total_billed"] = 0.0
+		customer["total_unpaid"] = 0.0
+
+	try:
+		from erpnext.accounts.party import get_dashboard_info
+		customer["dashboard_info"] = get_dashboard_info("Customer", customer_name)
+	except Exception:
+		customer["dashboard_info"] = None
+
+	# Recent Site Visits for this customer from Executive Expense Manager
+	st_doctype = frappe.qb.DocType("Employee Site Tracking")
+	eem_doctype = frappe.qb.DocType("Executive Expense Manager")
+	recent_visits_query = (
+		frappe.qb.from_(st_doctype)
+		.inner_join(eem_doctype)
+		.on(eem_doctype.name == st_doctype.parent)
+		.select(
+			st_doctype.name,
+			st_doctype.parent.as_("eem_name"),
+			st_doctype.site,
+			st_doctype.checkin_time.as_("visit_time"),
+			st_doctype.remarks,
+			st_doctype.site_lat.as_("latitude"),
+			st_doctype.site_long.as_("longitude"),
+			st_doctype.address,
+			st_doctype.contact_number,
+			st_doctype.category,
+			eem_doctype.date.as_("trip_date"),
+			eem_doctype.employee_name,
+		)
+		.where((st_doctype.customer == customer_name) & (eem_doctype.docstatus != 2))
+		.orderby(eem_doctype.date, order=frappe.qb.desc)
+		.orderby(st_doctype.checkin_time, order=frappe.qb.desc)
+		.limit(10)
+	)
+	customer["recent_visits"] = recent_visits_query.run(as_dict=True)
 
 	return customer
 
@@ -1211,17 +1302,25 @@ def get_supervisor_eem_dashboard(
 	eem_names = [r.name for r in eem_records]
 	site_visits_by_eem = {}
 	if eem_names:
-		site_rows = frappe.db.sql(
-			"""
-			SELECT 
-				st.name, st.parent as eem_name, st.customer, st.site, st.checkin_time as visit_time, 
-				st.remarks, st.site_lat, st.site_long, st.actual_distance, st.location_name
-			FROM `tabEmployee Site Tracking` st
-			WHERE st.parent IN %(parents)s
-			ORDER BY st.checkin_time ASC, st.idx ASC
-			""",
-			{"parents": eem_names},
-			as_dict=True,
+		site_rows = frappe.get_all(
+			"Employee Site Tracking",
+			filters={"parent": ["in", eem_names]},
+			fields=[
+				"name",
+				"parent as eem_name",
+				"customer",
+				"site",
+				"checkin_time as visit_time",
+				"remarks",
+				"site_lat",
+				"site_long",
+				"actual_distance",
+				"location_name",
+				"address",
+				"contact_number",
+				"category",
+			],
+			order_by="checkin_time asc, idx asc",
 		)
 		for sr in site_rows:
 			site_visits_by_eem.setdefault(sr["eem_name"], []).append(sr)
@@ -1407,6 +1506,248 @@ def get_supervisor_team_eem_detail(eem_name: str) -> dict:
 		doc_dict["trip_status"] = "NOT_STARTED"
 
 	return doc_dict
+
+
+@frappe.whitelist()
+def get_stock_items(
+	search_term: str = None,
+	warehouse: str = None,
+	item_group: str = None,
+	limit: int = 20,
+	limit_start: int = 0,
+	sort_by: str = "actual_qty",
+	sort_order: str = "desc",
+) -> dict:
+	current_user = frappe.session.user
+	if not current_user or current_user == "Guest":
+		return {"items": [], "total_count": 0}
+
+	try:
+		limit = min(int(limit), 100) if limit else 20
+		limit_start = int(limit_start) if limit_start else 0
+	except (ValueError, TypeError):
+		limit = 20
+		limit_start = 0
+
+	item_tbl = frappe.qb.DocType("Item")
+	bin_tbl = frappe.qb.DocType("Bin")
+
+	query = (
+		frappe.qb.from_(item_tbl)
+		.left_join(bin_tbl)
+		.on(bin_tbl.item_code == item_tbl.name)
+		.select(
+			item_tbl.name.as_("item_code"),
+			item_tbl.item_name,
+			item_tbl.item_group,
+			item_tbl.stock_uom,
+			item_tbl.brand,
+			item_tbl.image,
+			item_tbl.has_batch_no,
+			item_tbl.has_serial_no,
+			Coalesce(Sum(bin_tbl.actual_qty), 0).as_("actual_qty"),
+			Coalesce(Sum(bin_tbl.projected_qty), 0).as_("projected_qty"),
+			Coalesce(Sum(bin_tbl.reserved_qty), 0).as_("reserved_qty"),
+			Coalesce(Sum(bin_tbl.reserved_stock), 0).as_("reserved_stock"),
+			Coalesce(Avg(bin_tbl.valuation_rate), 0).as_("valuation_rate"),
+			Count(bin_tbl.warehouse).distinct().as_("warehouse_count"),
+		)
+		.where(item_tbl.disabled == 0)
+		.groupby(item_tbl.name)
+	)
+
+	if search_term and search_term.strip():
+		st = f"%{search_term.strip()}%"
+		query = query.where(
+			(item_tbl.name.like(st))
+			| (item_tbl.item_name.like(st))
+			| (item_tbl.description.like(st))
+			| (item_tbl.brand.like(st))
+		)
+
+	if item_group and item_group not in ("all", "All", ""):
+		query = query.where(item_tbl.item_group == item_group)
+
+	if warehouse and warehouse not in ("all", "All", ""):
+		query = query.where(bin_tbl.warehouse == warehouse)
+
+	# Execute items query
+	items = (
+		query.orderby(Coalesce(Sum(bin_tbl.actual_qty), 0), order=frappe.qb.desc)
+		.orderby(item_tbl.item_name, order=frappe.qb.asc)
+		.offset(limit_start)
+		.limit(limit)
+		.run(as_dict=True)
+	)
+
+	item_codes = [it["item_code"] for it in items]
+	bin_map = {}
+	in_transit_map = {}
+	if item_codes:
+		bin_rows = frappe.get_all(
+			"Bin",
+			filters={"item_code": ["in", item_codes]},
+			fields=[
+				"name as bin_name",
+				"item_code",
+				"warehouse",
+				"actual_qty",
+				"projected_qty",
+				"reserved_qty",
+				"reserved_stock",
+				"valuation_rate",
+			],
+			order_by="actual_qty desc, warehouse asc",
+		)
+		for br in bin_rows:
+			br["actual_qty"] = float(br.get("actual_qty") or 0.0)
+			br["projected_qty"] = float(br.get("projected_qty") or 0.0)
+			br["reserved_qty"] = float(br.get("reserved_qty") or 0.0)
+			br["reserved_stock"] = float(br.get("reserved_stock") or 0.0)
+			br["valuation_rate"] = float(br.get("valuation_rate") or 0.0)
+			bin_map.setdefault(br["item_code"], []).append(br)
+
+		# Fetch In-Transit details from mobibiz serv or fallback query
+		try:
+			from tqerp_mobibiz_serv.api import get_in_transit_item_details
+			transit_resp = get_in_transit_item_details()
+			if transit_resp and isinstance(transit_resp, dict) and transit_resp.get("data"):
+				for tr in transit_resp["data"]:
+					it_code = tr.get("item")
+					if it_code in item_codes:
+						in_transit_map.setdefault(it_code, []).append(tr)
+		except Exception:
+			pii = frappe.qb.DocType("Purchase Invoice Item")
+			pi = frappe.qb.DocType("Purchase Invoice")
+			pending_qty = pii.qty - Coalesce(pii.received_qty, 0)
+			transit_q = (
+				frappe.qb.from_(pii)
+				.inner_join(pi).on(pii.parent == pi.name)
+				.select(
+					pii.item_code.as_("item"),
+					pii.item_name,
+					pending_qty.as_("qty"),
+					pi.name.as_("purchase_invoice_number"),
+					pi.posting_date.as_("date_of_purchase"),
+					pi.supplier,
+					pi.supplier_name,
+				)
+				.where(pi.docstatus == 1)
+				.where(pi.is_return == 0)
+				.where(Coalesce(pi.update_stock, 0) == 0)
+				.where(pending_qty > 0)
+				.where(pii.item_code.isin(item_codes))
+				.orderby(pi.posting_date, order=frappe.qb.desc)
+			)
+			for tr in transit_q.run(as_dict=True):
+				in_transit_map.setdefault(tr.get("item"), []).append(tr)
+
+	for item in items:
+		item["actual_qty"] = float(item.get("actual_qty") or 0.0)
+		item["projected_qty"] = float(item.get("projected_qty") or 0.0)
+		item["reserved_qty"] = float(item.get("reserved_qty") or 0.0)
+		item["reserved_stock"] = float(item.get("reserved_stock") or 0.0)
+		item["valuation_rate"] = float(item.get("valuation_rate") or 0.0)
+		item["stock_value"] = round(item["actual_qty"] * item["valuation_rate"], 2)
+		item["warehouses"] = bin_map.get(item["item_code"], [])
+		item["warehouse_count"] = len(item["warehouses"])
+		
+		item_transits = in_transit_map.get(item["item_code"], [])
+		item["in_transit_records"] = item_transits
+		item["in_transit_qty"] = float(sum(float(t.get("qty") or 0.0) for t in item_transits))
+
+	# Count query
+	count_q = (
+		frappe.qb.from_(item_tbl)
+		.left_join(bin_tbl)
+		.on(bin_tbl.item_code == item_tbl.name)
+		.select(Count(item_tbl.name).distinct().as_("cnt"))
+		.where(item_tbl.disabled == 0)
+	)
+	if search_term and search_term.strip():
+		st = f"%{search_term.strip()}%"
+		count_q = count_q.where(
+			(item_tbl.name.like(st))
+			| (item_tbl.item_name.like(st))
+			| (item_tbl.description.like(st))
+			| (item_tbl.brand.like(st))
+		)
+	if item_group and item_group not in ("all", "All", ""):
+		count_q = count_q.where(item_tbl.item_group == item_group)
+	if warehouse and warehouse not in ("all", "All", ""):
+		count_q = count_q.where(bin_tbl.warehouse == warehouse)
+
+	cnt_res = count_q.run(as_dict=True)
+	total_count = int(cnt_res[0].cnt or 0) if cnt_res else len(items)
+
+	return {
+		"items": items,
+		"total_count": total_count,
+	}
+
+
+@frappe.whitelist()
+def get_stock_meta_filters() -> dict:
+	current_user = frappe.session.user
+	if not current_user or current_user == "Guest":
+		return {"warehouses": [], "item_groups": [], "stats": {}}
+
+	warehouses = frappe.get_all(
+		"Bin",
+		filters={"warehouse": ["is", "set"]},
+		fields=["distinct warehouse as name"],
+		order_by="warehouse asc",
+	)
+
+	item_groups = frappe.get_all(
+		"Item",
+		filters={"disabled": 0, "item_group": ["is", "set"]},
+		fields=["distinct item_group as name"],
+		order_by="item_group asc",
+	)
+
+	bin_stats = frappe.get_all(
+		"Bin",
+		fields=[
+			"count(distinct item_code) as total_items",
+			"count(distinct warehouse) as total_warehouses",
+			"sum(actual_qty) as total_actual_qty",
+			"sum(projected_qty) as total_available_qty",
+		],
+	)
+	in_stock_bins = frappe.get_all(
+		"Bin",
+		filters={"actual_qty": [">", 0]},
+		fields=["count(distinct item_code) as in_stock_items"],
+	)
+
+	total_in_transit = 0.0
+	try:
+		from tqerp_mobibiz_serv.api import get_in_transit_item_details
+		transit_resp = get_in_transit_item_details()
+		if transit_resp and isinstance(transit_resp, dict) and transit_resp.get("data"):
+			total_in_transit = float(sum(float(r.get("qty") or 0.0) for r in transit_resp["data"]))
+	except Exception:
+		pass
+
+	bs = bin_stats[0] if bin_stats else {}
+	is_cnt = in_stock_bins[0].get("in_stock_items") if in_stock_bins else 0
+
+	stats = {
+		"total_items": int(bs.get("total_items") or 0),
+		"total_warehouses": int(bs.get("total_warehouses") or 0),
+		"total_actual_qty": float(bs.get("total_actual_qty") or 0.0),
+		"total_available_qty": float(bs.get("total_available_qty") or 0.0),
+		"total_in_transit_qty": float(total_in_transit),
+		"in_stock_items": int(is_cnt or 0),
+	}
+
+	return {
+		"warehouses": [w.name for w in warehouses if w.name],
+		"item_groups": [g.name for g in item_groups if g.name],
+		"stats": stats,
+	}
+
 
 
 

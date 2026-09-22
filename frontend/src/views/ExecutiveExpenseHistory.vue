@@ -7,9 +7,9 @@
 		<!-- Mobile App Shell Container -->
 		<div class="w-full sm:max-w-md bg-[#f8fafc] min-h-screen sm:min-h-[720px] sm:rounded-3xl sm:shadow-2xl sm:border sm:border-slate-200/80 flex flex-col justify-between relative z-10 overflow-hidden pb-6">
 			
-			<!-- Mobile Top Header (Fixed at top like BottomNavBar) -->
-			<header class="fixed top-0 inset-x-0 z-40 bg-white/95 backdrop-blur-xl border-b border-slate-200/80 shadow-[0_2px_16px_rgba(0,0,0,0.04)] px-4 py-3 sm:px-5 transition-all">
-				<div class="max-w-md mx-auto">
+			<!-- Mobile Top Header (Sticky at top, natural flow, no content overlap) -->
+			<header class="sticky top-0 z-30 bg-white/95 backdrop-blur-xl border-b border-slate-200/80 shadow-2xs px-4 pt-3 pb-3 sm:px-5">
+				<div class="max-w-md mx-auto space-y-2.5">
 					<div class="flex items-center justify-between">
 						<!-- Back Navigation & Title -->
 						<div class="flex items-center space-x-2.5">
@@ -39,16 +39,17 @@
 							<!-- Toggle Filter Panel Button -->
 							<button
 								@click="isFilterDrawerOpen = !isFilterDrawerOpen"
-								class="p-2 rounded-2xl text-slate-600 hover:text-teal-700 hover:bg-teal-50 active:scale-95 transition relative cursor-pointer"
-								:class="{ 'bg-teal-50 text-teal-700 ring-1 ring-teal-300': hasActiveFilters || isFilterDrawerOpen }"
-								title="Toggle Filters"
+								class="px-2.5 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition active:scale-95 cursor-pointer"
+								:class="hasActiveFilters || isFilterDrawerOpen ? 'bg-teal-50 text-teal-700 border border-teal-200 shadow-2xs ring-2 ring-teal-500/20' : 'bg-slate-100 text-slate-600 hover:bg-slate-200/80'"
+								title="Toggle Advanced Filters"
 							>
-								<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+								<svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
 								</svg>
+								<span class="text-[11px] font-medium">Filters</span>
 								<span
 									v-if="hasActiveFilters"
-									class="absolute top-1 right-1 w-2 h-2 rounded-full bg-teal-600 ring-2 ring-white"
+									class="w-1.5 h-1.5 rounded-full bg-teal-600"
 								></span>
 							</button>
 
@@ -56,7 +57,7 @@
 							<button
 								@click="fetchHistory"
 								:disabled="isLoadingHistory"
-								class="p-2 rounded-2xl text-slate-500 hover:text-teal-700 hover:bg-teal-50 active:scale-95 transition cursor-pointer"
+								class="p-2 rounded-xl text-slate-500 hover:text-teal-700 hover:bg-teal-50 active:scale-95 transition cursor-pointer"
 								title="Refresh trip history"
 							>
 								<svg
@@ -72,49 +73,79 @@
 						</div>
 					</div>
 
-					<!-- Quick Date Range Pills (Horizontal Scroll) -->
-					<div class="mt-3 flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
-						<button
-							v-for="preset in datePresets"
-							:key="preset.value"
-							@click="setDatePreset(preset.value)"
-							:class="[
-								'px-2.5 py-1 rounded-xl text-[11px] font-semibold whitespace-nowrap transition-all cursor-pointer',
-								selectedDatePreset === preset.value
-									? 'bg-teal-700 text-white shadow-xs'
-									: 'bg-slate-100 text-slate-600 hover:bg-slate-200/80 hover:text-slate-800'
-							]"
-						>
-							{{ preset.label }}
-						</button>
-					</div>
-
-					<!-- Status Tabs Bar -->
-					<div class="mt-2 flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
+					<!-- Modern Segmented Status Tabs Bar -->
+					<div class="grid grid-cols-4 gap-1 p-1 bg-slate-100/90 rounded-2xl border border-slate-200/70">
 						<button
 							v-for="filter in statusFilters"
 							:key="filter.value"
 							@click="selectedStatus = filter.value"
 							:class="[
-								'px-2.5 py-1 rounded-xl text-[11px] font-medium whitespace-nowrap transition-all flex items-center space-x-1 cursor-pointer',
+								'py-1.5 px-1 rounded-xl text-[11px] font-bold transition-all flex items-center justify-center gap-1 cursor-pointer truncate',
 								selectedStatus === filter.value
-									? 'bg-slate-800 text-white shadow-xs'
-									: 'bg-slate-100/80 text-slate-600 hover:bg-slate-200/70 hover:text-slate-800'
+									? 'bg-white text-teal-800 shadow-xs border border-slate-200/60'
+									: 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
 							]"
 						>
-							<span>{{ filter.label }}</span>
+							<span class="truncate">{{ filter.label }}</span>
 							<span
-								v-if="filter.count > 0"
+								v-if="filter.count !== undefined"
 								:class="[
-									'text-[9px] px-1.5 py-0.2 rounded-full font-mono font-bold',
+									'text-[9px] px-1.5 py-0.2 rounded-full font-mono font-bold shrink-0',
 									selectedStatus === filter.value
-										? 'bg-slate-700 text-slate-100'
-										: 'bg-slate-200 text-slate-700'
+										? 'bg-teal-100 text-teal-900'
+										: 'bg-slate-200/80 text-slate-600'
 								]"
 							>
 								{{ filter.count }}
 							</span>
 						</button>
+					</div>
+
+					<!-- Quick Filter Dropdowns Row: Period & Vehicle -->
+					<div class="flex items-center gap-2">
+						<!-- Date Preset Dropdown -->
+						<div class="relative flex-1">
+							<select
+								:value="selectedDatePreset"
+								@change="setDatePreset($event.target.value)"
+								class="w-full pl-7 pr-6 py-1.5 bg-slate-50 hover:bg-slate-100/80 focus:bg-white text-[11px] font-semibold text-slate-700 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-teal-500/20 transition cursor-pointer appearance-none truncate"
+							>
+								<option value="all">📅 All Time</option>
+								<option value="this_month">📅 This Month</option>
+								<option value="last_month">📅 Last Month</option>
+								<option value="last_3_months">📅 Last 3 Months</option>
+								<option value="this_year">📅 This Year</option>
+								<option value="custom">📅 Custom Range...</option>
+							</select>
+							<div class="absolute inset-y-0 left-0 pl-2 flex items-center pointer-events-none text-slate-400">
+								<span class="text-xs">📅</span>
+							</div>
+							<div class="absolute inset-y-0 right-0 pr-2 flex items-center pointer-events-none text-slate-400">
+								<svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+								</svg>
+							</div>
+						</div>
+
+						<!-- Vehicle Filter Dropdown -->
+						<div class="relative flex-1">
+							<select
+								v-model="selectedVehicle"
+								class="w-full pl-7 pr-6 py-1.5 bg-slate-50 hover:bg-slate-100/80 focus:bg-white text-[11px] font-semibold text-slate-700 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-teal-500/20 transition cursor-pointer appearance-none truncate"
+							>
+								<option value="all">🚗 All Vehicles</option>
+								<option value="Two Wheeler">🛵 Two Wheeler</option>
+								<option value="Four Wheeler">🚗 Four Wheeler</option>
+							</select>
+							<div class="absolute inset-y-0 left-0 pl-2 flex items-center pointer-events-none text-slate-400">
+								<span class="text-xs">🚗</span>
+							</div>
+							<div class="absolute inset-y-0 right-0 pr-2 flex items-center pointer-events-none text-slate-400">
+								<svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+								</svg>
+							</div>
+						</div>
 					</div>
 
 					<!-- Expandable Filter / Refine Drawer -->
@@ -128,7 +159,7 @@
 					>
 						<div
 							v-if="isFilterDrawerOpen"
-							class="mt-3 p-3.5 bg-slate-50 rounded-2xl border border-slate-200/90 space-y-3 text-xs"
+							class="p-3.5 bg-slate-50 rounded-2xl border border-slate-200/90 space-y-3 text-xs"
 						>
 							<!-- Filter Header with Reset -->
 							<div class="flex items-center justify-between">
@@ -136,11 +167,11 @@
 									<svg class="w-3.5 h-3.5 text-teal-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
 									</svg>
-									<span>Refine Trips</span>
+									<span>Advanced Filters</span>
 								</span>
 								<button
 									v-if="hasActiveFilters"
-									@click="resetFilters"
+									@click="resetAllFilters"
 									class="text-[10px] text-teal-700 font-bold hover:underline cursor-pointer"
 								>
 									Reset All
@@ -153,7 +184,8 @@
 									<label class="text-[10px] font-bold text-slate-500 block mb-1">From Date</label>
 									<input
 										type="date"
-										v-model="filterFromDate"
+										v-model="customFromDate"
+										@change="selectedDatePreset = 'custom'"
 										class="w-full px-2.5 py-1.5 bg-white rounded-xl border border-slate-200 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
 									/>
 								</div>
@@ -161,24 +193,25 @@
 									<label class="text-[10px] font-bold text-slate-500 block mb-1">To Date</label>
 									<input
 										type="date"
-										v-model="filterToDate"
+										v-model="customToDate"
+										@change="selectedDatePreset = 'custom'"
 										class="w-full px-2.5 py-1.5 bg-white rounded-xl border border-slate-200 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
 									/>
 								</div>
 							</div>
 
-							<!-- Vehicle Type & Sorting Filters -->
+							<!-- Specific Month & Sorting Filters -->
 							<div class="grid grid-cols-2 gap-2">
 								<div>
-									<label class="text-[10px] font-bold text-slate-500 block mb-1">Vehicle Type</label>
+									<label class="text-[10px] font-bold text-slate-500 block mb-1">Specific Month</label>
 									<select
-										v-model="filterVehicle"
+										v-model="selectedMonth"
 										class="w-full px-2.5 py-1.5 bg-white rounded-xl border border-slate-200 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
 									>
-										<option value="">All Vehicles</option>
-										<option value="2-Wheeler">🏍️ 2-Wheeler</option>
-										<option value="4-Wheeler">🚗 4-Wheeler</option>
-										<option value="Public Transport">🚌 Public Transport</option>
+										<option value="all">All Months</option>
+										<option v-for="m in availableMonths" :key="m.key" :value="m.key">
+											{{ m.label }} ({{ m.count }})
+										</option>
 									</select>
 								</div>
 
@@ -213,7 +246,7 @@
 			</header>
 
 			<!-- Main Scrollable Content -->
-			<main class="flex-1 px-4 sm:px-5 pt-28 sm:pt-28 pb-4 space-y-4">
+			<main class="flex-1 px-4 sm:px-5 pt-3.5 pb-4 space-y-4">
 				
 				<!-- Cumulative Stats Banner (Bright Turquoise Theme #40E0D0) -->
 				<div class="bg-gradient-to-br from-teal-600 via-teal-500 to-teal-400 rounded-3xl p-4 text-white shadow-md shadow-teal-600/20 relative overflow-hidden">
@@ -796,12 +829,31 @@
 									</div>
 
 									<!-- Visit Details -->
-									<div class="flex-1 bg-slate-50 p-2.5 rounded-xl border border-slate-100/80 space-y-1">
+									<div class="flex-1 bg-slate-50 p-2.5 rounded-xl border border-slate-100/80 space-y-1.5">
 										<div class="flex items-start justify-between">
-											<span class="font-bold text-slate-900">{{ site.customer || site.location_name || site.site || 'Site Location' }}</span>
-											<span v-if="site.actual_distance" class="text-[10px] font-mono font-bold text-teal-700 bg-teal-50 px-1.5 py-0.5 rounded">
+											<div>
+												<span class="font-bold text-slate-900 block">{{ site.customer || site.location_name || site.site || 'Site Location' }}</span>
+												<div class="flex items-center gap-1.5 mt-0.5">
+													<span v-if="site.category" class="px-1.5 py-0.2 rounded bg-teal-50 text-teal-800 font-bold text-[9px] border border-teal-200">
+														{{ site.category }}
+													</span>
+													<span v-if="site.site" class="text-[10px] text-slate-500 truncate max-w-[150px]">{{ site.site }}</span>
+												</div>
+											</div>
+											<span v-if="site.actual_distance" class="text-[10px] font-mono font-bold text-teal-700 bg-teal-50 px-1.5 py-0.5 rounded border border-teal-100 shrink-0">
 												+{{ site.actual_distance }} km
 											</span>
+										</div>
+
+										<div v-if="site.contact_number || site.address" class="space-y-0.5 text-[10px]">
+											<div v-if="site.contact_number" class="flex items-center space-x-1 text-slate-700 font-mono">
+												<span>📞</span>
+												<a :href="'tel:' + site.contact_number" class="text-teal-700 font-bold hover:underline">{{ site.contact_number }}</a>
+											</div>
+											<div v-if="site.address" class="flex items-start space-x-1 text-slate-500">
+												<span>📍</span>
+												<span class="truncate">{{ site.address }}</span>
+											</div>
 										</div>
 
 										<div class="flex items-center space-x-2 text-[10px] text-slate-400">
@@ -809,7 +861,7 @@
 											<span v-if="site.site_lat && site.site_long" class="truncate font-mono">({{ Number(site.site_lat).toFixed(4) }}, {{ Number(site.site_long).toFixed(4) }})</span>
 										</div>
 
-										<p v-if="site.remarks" class="text-[11px] text-slate-600 italic">
+										<p v-if="site.remarks" class="text-[11px] text-slate-600 italic bg-white p-1.5 rounded-lg border border-slate-100">
 											"{{ site.remarks }}"
 										</p>
 									</div>

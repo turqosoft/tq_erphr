@@ -7,35 +7,35 @@
 		<!-- Mobile App Shell Container -->
 		<div class="w-full sm:max-w-md bg-[#f8fafc] min-h-screen sm:min-h-[720px] sm:rounded-3xl sm:shadow-2xl sm:border sm:border-slate-200/80 flex flex-col justify-between relative z-10 overflow-hidden pb-6">
 			
-			<!-- Mobile Top Header (Fixed at top like BottomNavBar) -->
-			<header class="fixed top-0 inset-x-0 z-40 bg-white/95 backdrop-blur-xl border-b border-slate-200/80 shadow-[0_2px_16px_rgba(0,0,0,0.04)] px-4 py-3 sm:px-5 transition-all">
+			<!-- Mobile Top Header (Sticky at top) -->
+			<header class="sticky top-0 z-40 bg-white/95 backdrop-blur-xl border-b border-slate-200/80 shadow-[0_2px_16px_rgba(0,0,0,0.04)] px-4 py-2.5 sm:px-5 transition-all">
 				<div class="max-w-md mx-auto">
 					<div class="flex items-center justify-between">
 						<!-- Back Navigation & Title -->
-						<div class="flex items-center space-x-2.5">
+						<div class="flex items-center space-x-2 min-w-0 pr-2">
 							<button
 								@click="goBack"
-								class="p-2 -ml-1 rounded-2xl text-slate-600 hover:text-teal-700 hover:bg-teal-50/80 active:scale-95 transition cursor-pointer"
+								class="p-2 -ml-1 rounded-2xl text-slate-600 hover:text-teal-700 hover:bg-teal-50/80 active:scale-95 transition cursor-pointer shrink-0"
 								title="Back"
 							>
 								<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7" />
 								</svg>
 							</button>
-							<div>
-								<h1 class="text-sm font-bold text-slate-900 leading-tight flex items-center gap-1.5">
+							<div class="min-w-0">
+								<h1 class="text-sm font-bold text-slate-900 leading-tight flex items-center gap-1.5 truncate">
 									<span>Customers Directory</span>
-									<span class="w-1.5 h-1.5 rounded-full bg-teal-500 inline-block"></span>
+									<span class="w-1.5 h-1.5 rounded-full bg-teal-500 inline-block shrink-0"></span>
 								</h1>
-								<p class="text-[10px] font-medium text-slate-500 leading-none flex items-center gap-1 mt-0.5">
-									<span v-if="employee?.company_name" class="font-semibold text-teal-700">{{ employee.company_name }} •</span>
+								<p class="text-[10px] font-medium text-slate-500 leading-tight truncate mt-0.5" :title="employee?.company_name || 'Partner Locations'">
+									<span v-if="employee?.company_name" class="font-semibold text-teal-700">{{ employee.company_name }} • </span>
 									<span>Partner Locations</span>
 								</p>
 							</div>
 						</div>
 
 						<!-- Header Actions -->
-						<div class="flex items-center space-x-1.5">
+						<div class="flex items-center space-x-1.5 shrink-0">
 							<!-- Toggle View All Customers Scope Quick Button (for Sales Persons) -->
 							<button
 								v-if="employee?.is_sales_person"
@@ -68,7 +68,7 @@
 					</div>
 
 					<!-- Search Input Box -->
-					<div class="mt-3 relative">
+					<div class="mt-2.5 relative">
 						<div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
 							<svg v-if="!isLoading" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -133,7 +133,7 @@
 			</header>
 
 			<!-- Main Content Area -->
-			<main class="flex-1 px-4 pt-36 sm:pt-36 pb-3 sm:px-5 space-y-3">
+			<main class="flex-1 px-4 pt-3.5 pb-3 sm:px-5 space-y-3">
 				<!-- Context / Active Filter Indicator -->
 				<div class="flex items-center justify-between text-xs px-1 text-slate-500">
 					<div class="flex items-center space-x-1.5">
@@ -268,8 +268,35 @@
 							</div>
 						</div>
 
+						<!-- Financial Snapshot Bar: Total Billed & Unpaid -->
+						<div class="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between gap-2">
+							<!-- Billed -->
+							<div class="flex items-center space-x-1.5 min-w-0">
+								<span class="text-[11px] text-slate-500 font-semibold shrink-0">Billing:</span>
+								<span
+									class="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-lg text-xs font-bold font-mono border shadow-2xs truncate"
+									:class="Number(c.total_billed) > 0 ? 'bg-emerald-50 text-emerald-800 border-emerald-300' : 'bg-slate-50 text-slate-500 border-slate-200'"
+								>
+									<span v-if="Number(c.total_billed) > 0" class="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"></span>
+									<span>₹{{ formatCurrency(c.total_billed) }}</span>
+								</span>
+							</div>
+
+							<!-- Unpaid / Outstanding -->
+							<div class="flex items-center space-x-1.5 shrink-0">
+								<span class="text-[11px] text-slate-500 font-semibold">Unpaid:</span>
+								<span
+									class="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-lg text-xs font-black font-mono border shadow-2xs"
+									:class="Number(c.total_unpaid) > 0 ? 'bg-rose-50 text-rose-700 border-rose-300' : 'bg-emerald-50 text-emerald-800 border-emerald-300'"
+								>
+									<span :class="Number(c.total_unpaid) > 0 ? 'w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0 animate-pulse' : 'w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0'"></span>
+									<span>₹{{ formatCurrency(c.total_unpaid) }}</span>
+								</span>
+							</div>
+						</div>
+
 						<!-- Card Bottom Action Toolbar -->
-						<div class="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between gap-1.5">
+						<div class="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between gap-1.5">
 							<!-- 1-Tap Google Maps Navigation -->
 							<a
 								v-if="c.latitude && c.longitude && c.latitude != 0"
@@ -363,6 +390,53 @@
 							<span class="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-white text-teal-800 border border-teal-200 shadow-2xs">
 								{{ selectedCustomer.customer_group || 'General' }}
 							</span>
+						</div>
+					</div>
+
+					<!-- Financial & Account Status Card -->
+					<div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2.5">
+						<div class="flex items-center justify-between text-xs font-bold text-slate-900">
+							<span class="flex items-center gap-1.5">
+								<span>💳 Accounts & Billing Overview</span>
+							</span>
+							<span
+								class="px-2 py-0.5 rounded-lg text-[10px] font-black font-mono border"
+								:class="Number(selectedCustomer.total_unpaid) > 0 ? 'bg-rose-50 text-rose-800 border-rose-200' : 'bg-emerald-50 text-emerald-800 border-emerald-200'"
+							>
+								{{ Number(selectedCustomer.total_unpaid) > 0 ? 'Outstanding Due' : 'All Dues Clear' }}
+							</span>
+						</div>
+
+						<div class="grid grid-cols-2 gap-2">
+							<div class="bg-white p-2.5 rounded-xl border border-slate-200/80 shadow-2xs">
+								<span class="text-[10px] text-slate-400 font-medium block">Total Billed</span>
+								<span class="text-sm font-black text-emerald-700 font-mono mt-0.5 block">
+									₹{{ formatCurrency(selectedCustomer.total_billed) }}
+								</span>
+							</div>
+							<div class="bg-white p-2.5 rounded-xl border border-slate-200/80 shadow-2xs">
+								<span class="text-[10px] text-slate-400 font-medium block">Total Unpaid</span>
+								<span
+									class="text-sm font-black font-mono mt-0.5 block"
+									:class="Number(selectedCustomer.total_unpaid) > 0 ? 'text-rose-700' : 'text-emerald-700'"
+								>
+									₹{{ formatCurrency(selectedCustomer.total_unpaid) }}
+								</span>
+							</div>
+						</div>
+
+						<!-- Company-wise breakdown if present -->
+						<div v-if="selectedCustomer.dashboard_info && selectedCustomer.dashboard_info.length > 0" class="pt-1.5 border-t border-slate-200/70 space-y-1">
+							<div
+								v-for="info in selectedCustomer.dashboard_info"
+								:key="info.company"
+								class="flex items-center justify-between text-[10px] text-slate-500"
+							>
+								<span class="font-medium text-slate-700">{{ info.company }} (This Year)</span>
+								<span class="font-mono font-bold text-slate-800">
+									Billing: ₹{{ formatCurrency(info.billing_this_year) }} | Unpaid: ₹{{ formatCurrency(info.total_unpaid) }}
+								</span>
+							</div>
 						</div>
 					</div>
 
@@ -569,6 +643,15 @@ function formatDistance(dist) {
 	return `${num.toFixed(1)} km`
 }
 
+function formatCurrency(val) {
+	if (val === null || val === undefined || isNaN(val)) return "0"
+	const num = Number(val)
+	return num.toLocaleString("en-IN", {
+		maximumFractionDigits: 2,
+		minimumFractionDigits: num % 1 !== 0 ? 2 : 0,
+	})
+}
+
 // Geolocation helper
 function acquireUserLocation() {
 	return new Promise((resolve) => {
@@ -738,6 +821,8 @@ function goToRecordVisit(c) {
 			prefillCustomerName: c.customer_name || c.name,
 			prefillLat: c.latitude || "",
 			prefillLng: c.longitude || "",
+			prefillMobile: c.mobile_no || "",
+			prefillAddress: c.address_text || c.primary_address || c.territory || "",
 			t: Date.now(),
 		},
 	})

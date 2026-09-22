@@ -184,6 +184,17 @@
 											<span>Customers Directory</span>
 										</button>
 
+										<!-- Stock & Inventory Option -->
+										<button
+											@click="goToStock"
+											class="w-full flex items-center space-x-2.5 px-3 py-2 rounded-2xl text-xs font-medium text-slate-700 hover:bg-teal-50 hover:text-teal-800 transition text-left active:scale-98"
+										>
+											<svg class="w-4 h-4 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+											</svg>
+											<span>Stock & Inventory</span>
+										</button>
+
 										<!-- Install MobiBiz App Option -->
 										<button
 											v-if="!pwaState.isInstalled"
@@ -500,12 +511,12 @@
 							<span class="text-[10px] text-teal-600 font-medium">Shortcuts</span>
 						</div>
 
-						<!-- Grid for Sales Persons (Site & Trip + Customers) -->
-						<div v-if="employee?.is_sales_person" class="grid grid-cols-2 gap-2.5">
+						<!-- Grid for Sales Persons (Site & Trip + Customers + Stock) -->
+						<div v-if="employee?.is_sales_person" class="grid grid-cols-3 gap-2">
 							<!-- Tile 1: Field Visits & Expenses -->
 							<button
 								@click="goToEem"
-								class="bg-white p-3.5 rounded-3xl border border-slate-100 shadow-xs hover:border-teal-200 hover:shadow-sm transition-all active:scale-[0.98] text-left flex flex-col justify-between space-y-3 cursor-pointer"
+								class="bg-white p-3 rounded-3xl border border-slate-100 shadow-xs hover:border-teal-200 hover:shadow-sm transition-all active:scale-[0.98] text-left flex flex-col justify-between space-y-2.5 cursor-pointer"
 							>
 								<div class="w-8 h-8 rounded-xl bg-teal-50 text-teal-700 flex items-center justify-center border border-teal-100">
 									<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -513,12 +524,47 @@
 									</svg>
 								</div>
 								<div>
-									<h4 class="text-xs font-bold text-slate-900">Site & Trip</h4>
-									<p class="text-[10px] text-slate-500 mt-0.5">Visits & Expense claim</p>
+									<h4 class="text-xs font-bold text-slate-900 leading-tight">Site & Trip</h4>
+									<p class="text-[9px] text-slate-500 mt-0.5 leading-tight truncate">Visits & Claims</p>
 								</div>
 							</button>
 
-							<!-- Tile 2: Customers Directory (Near Me & Search) -->
+							<!-- Tile 2: Customers Directory -->
+							<button
+								@click="goToCustomers"
+								class="bg-white p-3 rounded-3xl border border-slate-100 shadow-xs hover:border-teal-200 hover:shadow-sm transition-all active:scale-[0.98] text-left flex flex-col justify-between space-y-2.5 cursor-pointer"
+							>
+								<div class="w-8 h-8 rounded-xl bg-cyan-50 text-cyan-700 flex items-center justify-center border border-cyan-100">
+									<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+									</svg>
+								</div>
+								<div>
+									<h4 class="text-xs font-bold text-slate-900 leading-tight">Customers</h4>
+									<p class="text-[9px] text-slate-500 mt-0.5 leading-tight truncate">Directory & GPS</p>
+								</div>
+							</button>
+
+							<!-- Tile 3: Stock & Inventory -->
+							<button
+								@click="goToStock"
+								class="bg-white p-3 rounded-3xl border border-slate-100 shadow-xs hover:border-teal-200 hover:shadow-sm transition-all active:scale-[0.98] text-left flex flex-col justify-between space-y-2.5 cursor-pointer"
+							>
+								<div class="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center border border-emerald-100">
+									<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+									</svg>
+								</div>
+								<div>
+									<h4 class="text-xs font-bold text-slate-900 leading-tight">Stock Details</h4>
+									<p class="text-[9px] text-slate-500 mt-0.5 leading-tight truncate">Live Balances</p>
+								</div>
+							</button>
+						</div>
+
+						<!-- Grid for Non-Sales Staff (Customers + Stock) -->
+						<div v-else class="grid grid-cols-2 gap-2.5">
+							<!-- Tile 1: Customers Directory -->
 							<button
 								@click="goToCustomers"
 								class="bg-white p-3.5 rounded-3xl border border-slate-100 shadow-xs hover:border-teal-200 hover:shadow-sm transition-all active:scale-[0.98] text-left flex flex-col justify-between space-y-3 cursor-pointer"
@@ -530,32 +576,24 @@
 								</div>
 								<div>
 									<h4 class="text-xs font-bold text-slate-900">Customers</h4>
-									<p class="text-[10px] text-slate-500 mt-0.5">Directory & Nearby GPS</p>
+									<p class="text-[10px] text-slate-500 mt-0.5">Directory & Locations</p>
 								</div>
 							</button>
-						</div>
 
-						<!-- Grid for Non-Sales Staff -->
-						<div v-else class="grid grid-cols-1 gap-2.5">
-							<!-- Tile: Customers Directory -->
+							<!-- Tile 2: Stock & Inventory -->
 							<button
-								@click="goToCustomers"
-								class="bg-white p-3.5 rounded-3xl border border-slate-100 shadow-xs hover:border-teal-200 hover:shadow-sm transition-all active:scale-[0.98] text-left flex items-center justify-between cursor-pointer"
+								@click="goToStock"
+								class="bg-white p-3.5 rounded-3xl border border-slate-100 shadow-xs hover:border-teal-200 hover:shadow-sm transition-all active:scale-[0.98] text-left flex flex-col justify-between space-y-3 cursor-pointer"
 							>
-								<div class="flex items-center space-x-3">
-									<div class="w-8 h-8 rounded-xl bg-cyan-50 text-cyan-700 flex items-center justify-center border border-cyan-100">
-										<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-										</svg>
-									</div>
-									<div>
-										<h4 class="text-xs font-bold text-slate-900">Customers</h4>
-										<p class="text-[10px] text-slate-500 mt-0.5">Directory & Locations</p>
-									</div>
+								<div class="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center border border-emerald-100">
+									<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+									</svg>
 								</div>
-								<svg class="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-								</svg>
+								<div>
+									<h4 class="text-xs font-bold text-slate-900">Stock Details</h4>
+									<p class="text-[10px] text-slate-500 mt-0.5">Live Balances</p>
+								</div>
 							</button>
 						</div>
 					</div>
@@ -1600,6 +1638,11 @@ function goToEem() {
 function goToCustomers() {
 	closeDropdown()
 	router.push("/customers")
+}
+
+function goToStock() {
+	closeDropdown()
+	router.push("/stock")
 }
 
 function goToEemHistory() {

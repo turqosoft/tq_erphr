@@ -157,3 +157,15 @@ mit
 
 #### Bug Fixes
 - 
+
+### v1.1.5 (2026-09-22)
+
+#### New Features
+- Customer billed and unpaid amount display
+- Stock details
+
+#### Improvements
+- UI enhancements
+
+#### Bug Fixes
+- 

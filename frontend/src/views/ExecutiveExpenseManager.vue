@@ -350,25 +350,51 @@
 									v-else
 									v-for="(visit, idx) in siteVisitsList"
 									:key="visit.name || idx"
-									class="p-3.5 rounded-2xl bg-slate-50/80 border border-slate-100 space-y-1.5 text-xs relative"
+									class="p-3.5 rounded-2xl bg-slate-50/80 border border-slate-100 space-y-2 text-xs relative"
 								>
 									<div class="flex items-start justify-between">
-										<div class="flex items-center space-x-2">
-											<span class="w-5 h-5 rounded-full bg-teal-100 text-teal-800 font-bold text-[10px] flex items-center justify-center">
+										<div class="flex items-center space-x-2 min-w-0">
+											<span class="w-5 h-5 rounded-full bg-teal-100 text-teal-800 font-bold text-[10px] flex items-center justify-center shrink-0">
 												{{ idx + 1 }}
 											</span>
-											<h4 class="font-bold text-slate-900 truncate max-w-[180px]">
-												{{ visit.customer || visit.site || 'Site Location' }}
-											</h4>
+											<div class="min-w-0">
+												<h4 class="font-bold text-slate-900 truncate max-w-[180px]">
+													{{ visit.customer || visit.site || 'Site Location' }}
+												</h4>
+												<div class="flex items-center gap-1.5 mt-0.5">
+													<span
+														v-if="visit.category"
+														class="px-1.5 py-0.2 rounded-md bg-teal-50 text-teal-800 font-bold text-[9px] border border-teal-200"
+													>
+														{{ visit.category }}
+													</span>
+													<span class="text-[10px] text-slate-500 truncate max-w-[160px]">{{ visit.site || visit.location_name }}</span>
+												</div>
+											</div>
 										</div>
-										<span class="text-[10px] text-slate-500 font-mono">{{ formatLogTime(visit.checkin_time) }}</span>
+										<div class="text-right shrink-0">
+											<span class="text-[10px] text-slate-500 font-mono block">{{ formatLogTime(visit.checkin_time) }}</span>
+											<span v-if="visit.actual_distance" class="text-teal-700 font-bold font-mono text-[10px] bg-teal-50 px-1.5 py-0.2 rounded border border-teal-100 inline-block mt-0.5">
+												+{{ visit.actual_distance }} km
+											</span>
+										</div>
 									</div>
 
-									<div class="flex items-center justify-between text-[11px] text-slate-600 pl-7">
-										<span class="truncate max-w-[180px]">{{ visit.site || visit.location_name || 'Client Premises' }}</span>
-										<span v-if="visit.actual_distance" class="text-teal-700 font-bold font-mono text-[11px] bg-teal-50 px-2 py-0.5 rounded-lg border border-teal-100">
-											{{ visit.actual_distance }} km
-										</span>
+									<!-- Contact & Address Details -->
+									<div v-if="visit.contact_number || visit.address" class="pl-7 space-y-1 text-[11px] text-slate-600">
+										<div v-if="visit.contact_number" class="flex items-center space-x-1.5 font-mono text-[10px] text-slate-700">
+											<svg class="w-3 h-3 text-teal-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+											</svg>
+											<a :href="'tel:' + visit.contact_number" class="text-teal-700 hover:underline font-bold">{{ visit.contact_number }}</a>
+										</div>
+										<div v-if="visit.address" class="flex items-start space-x-1.5 text-[10px] text-slate-500">
+											<svg class="w-3 h-3 text-slate-400 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+											</svg>
+											<span class="truncate">{{ visit.address }}</span>
+										</div>
 									</div>
 
 									<p v-if="visit.remarks" class="text-[10px] text-slate-500 italic bg-white p-2 rounded-xl border border-slate-100 ml-7">
@@ -743,6 +769,68 @@
 							placeholder="e.g. Central Warehouse / Head Office"
 							class="w-full px-3.5 py-2.5 text-xs rounded-2xl bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:ring-4 focus:ring-teal-500/15 focus:border-teal-500 text-slate-900"
 						/>
+					</div>
+
+					<!-- Category (Chips & Input) -->
+					<div>
+						<div class="flex items-center justify-between mb-1.5">
+							<label class="block text-xs font-bold text-slate-700">Visit Category</label>
+							<span class="text-[10px] text-teal-700 font-semibold">{{ siteVisitForm.category || 'Select' }}</span>
+						</div>
+						<div class="flex flex-wrap gap-1.5 mb-2">
+							<button
+								type="button"
+								v-for="cat in siteVisitCategories"
+								:key="cat"
+								@click="siteVisitForm.category = cat"
+								class="px-2.5 py-1 rounded-xl text-[11px] font-semibold transition-all cursor-pointer"
+								:class="siteVisitForm.category === cat ? 'bg-teal-600 text-white shadow-xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'"
+							>
+								{{ cat }}
+							</button>
+						</div>
+						<input
+							type="text"
+							v-model="siteVisitForm.category"
+							placeholder="Or type custom category..."
+							class="w-full px-3.5 py-2 text-xs rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 text-slate-900"
+						/>
+					</div>
+
+					<!-- Contact Number -->
+					<div>
+						<label class="block text-xs font-bold text-slate-700 mb-1">Contact Number</label>
+						<div class="relative">
+							<div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+								<svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+								</svg>
+							</div>
+							<input
+								type="tel"
+								v-model="siteVisitForm.contact_number"
+								placeholder="e.g. +91 98765 43210"
+								class="w-full pl-9 pr-3.5 py-2.5 text-xs rounded-2xl bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:ring-4 focus:ring-teal-500/15 focus:border-teal-500 text-slate-900 font-mono"
+							/>
+						</div>
+					</div>
+
+					<!-- Address / Location Details -->
+					<div>
+						<label class="block text-xs font-bold text-slate-700 mb-1">Address / Location Details</label>
+						<div class="relative">
+							<div class="absolute top-2.5 left-3 pointer-events-none text-slate-400">
+								<svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+								</svg>
+							</div>
+							<textarea
+								v-model="siteVisitForm.address"
+								rows="2"
+								placeholder="Door / Building No, Street, Landmark, Area..."
+								class="w-full pl-9 pr-3.5 py-2.5 text-xs rounded-2xl bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:ring-4 focus:ring-teal-500/15 focus:border-teal-500 text-slate-900"
+							></textarea>
+						</div>
 					</div>
 
 					<!-- Distance in KM -->
@@ -1260,9 +1348,22 @@ const startForm = ref({
 	start_odometerkm: "",
 })
 
+const siteVisitCategories = [
+	"Client Meeting",
+	"Site Inspection",
+	"Payment Follow-up",
+	"Product Demo",
+	"Service / Maintenance",
+	"Delivery / Pick-up",
+	"Other",
+]
+
 const siteVisitForm = ref({
 	customer: "",
 	site: "",
+	category: "Client Meeting",
+	contact_number: "",
+	address: "",
 	actual_distance: "",
 	remarks: "",
 })
@@ -1374,6 +1475,12 @@ function selectCustomer(c) {
 	selectedCustomerDetails.value = c
 	if (!siteVisitForm.value.site && c.customer_name) {
 		siteVisitForm.value.site = c.customer_name
+	}
+	if (c.mobile_no) {
+		siteVisitForm.value.contact_number = c.mobile_no
+	}
+	if (c.address_text || c.primary_address || c.territory) {
+		siteVisitForm.value.address = c.address_text || c.primary_address || c.territory || ""
 	}
 	if ((!siteVisitForm.value.latitude || !siteVisitForm.value.longitude) && c.latitude && c.longitude && c.latitude != 0) {
 		siteVisitForm.value.latitude = c.latitude
@@ -1579,8 +1686,11 @@ async function openSiteVisitModal(prefillData = null) {
 		site: prefillData?.site || prefillData?.customer_name || "",
 		latitude: prefillData?.latitude || "",
 		longitude: prefillData?.longitude || "",
+		category: prefillData?.category || "Client Meeting",
+		contact_number: prefillData?.contact_number || prefillData?.mobile_no || "",
+		address: prefillData?.address || prefillData?.address_text || "",
 		actual_distance: "",
-		remarks: "",
+		remarks: prefillData?.remarks || "",
 	}
 	customerSearchQuery.value = ""
 	if (prefillData?.customer) {
@@ -1589,6 +1699,8 @@ async function openSiteVisitModal(prefillData = null) {
 			customer_name: prefillData.customer_name || prefillData.site || prefillData.customer,
 			latitude: prefillData.latitude,
 			longitude: prefillData.longitude,
+			mobile_no: prefillData.contact_number || prefillData.mobile_no,
+			address_text: prefillData.address || prefillData.address_text,
 		}
 		isCustomerSearchOpen.value = false
 	} else {
@@ -1705,6 +1817,9 @@ async function submitSiteVisit() {
 		await addEemSiteVisitResource.submit({
 			customer: siteVisitForm.value.customer,
 			site: siteVisitForm.value.site,
+			category: siteVisitForm.value.category,
+			contact_number: siteVisitForm.value.contact_number,
+			address: siteVisitForm.value.address,
 			remarks: siteVisitForm.value.remarks,
 			actual_distance: Number(siteVisitForm.value.actual_distance) || 0,
 			latitude: coords.latitude,
@@ -1827,6 +1942,8 @@ async function handlePrefillFromQuery() {
 	const customerTitle = String(route.query.prefillCustomerName || customerCode)
 	const preLat = route.query.prefillLat ? Number(route.query.prefillLat) : null
 	const preLng = route.query.prefillLng ? Number(route.query.prefillLng) : null
+	const preMobile = route.query.prefillMobile ? String(route.query.prefillMobile) : ""
+	const preAddress = route.query.prefillAddress ? String(route.query.prefillAddress) : ""
 
 	const prefillData = {
 		customer: customerCode,
@@ -1834,6 +1951,9 @@ async function handlePrefillFromQuery() {
 		site: customerTitle,
 		latitude: preLat,
 		longitude: preLng,
+		contact_number: preMobile,
+		address: preAddress,
+		category: "Client Meeting",
 	}
 
 	if (!todayEemResource.data && !todayEemResource.loading) {
