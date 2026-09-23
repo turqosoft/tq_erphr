@@ -169,3 +169,14 @@ mit
 
 #### Bug Fixes
 - Fixed bug with stock and warehouse display
+
+### v1.1.6 (2026-09-23)
+
+#### New Features
+- New Report - Customer visit report.
+
+#### Improvements
+- 
+
+#### Bug Fixes
+- 
