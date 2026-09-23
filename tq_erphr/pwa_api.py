@@ -1616,7 +1616,8 @@ def get_stock_items(
 			br["reserved_qty"] = float(br.get("reserved_qty") or 0.0)
 			br["reserved_stock"] = float(br.get("reserved_stock") or 0.0)
 			br["valuation_rate"] = float(br.get("valuation_rate") or 0.0)
-			bin_map.setdefault(br["item_code"], []).append(br)
+			if br["actual_qty"] > 0 or br["projected_qty"] > 0:
+				bin_map.setdefault(br["item_code"], []).append(br)
 
 		# Fetch In-Transit details from mobibiz serv or fallback query
 		try:

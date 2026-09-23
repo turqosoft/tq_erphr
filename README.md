@@ -176,7 +176,7 @@ mit
 - New Report - Customer visit report.
 
 #### Improvements
-- 
+- Removed zero stock godowns in stock
 
 #### Bug Fixes
 - 

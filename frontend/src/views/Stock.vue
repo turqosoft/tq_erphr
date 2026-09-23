@@ -44,7 +44,7 @@
 
 			<!-- Overview Dashboard KPI Cards -->
 			<div class="px-4 pt-3.5 sm:px-5 space-y-2">
-				<div class="grid grid-cols-3 gap-2">
+				<div class="grid grid-cols-2 gap-2.5">
 					<!-- Card 1: Total Items -->
 					<div class="bg-white p-3 rounded-2xl border border-slate-200/90 shadow-sm hover:shadow-md transition-all">
 						<div class="flex items-center justify-between">
@@ -66,18 +66,6 @@
 						<div class="mt-1 flex items-baseline space-x-1">
 							<span class="text-base font-black text-slate-900 font-mono">{{ formatCount(dashboardStats.total_warehouses || warehousesList.length) }}</span>
 							<span class="text-[9px] text-slate-500 font-medium">active</span>
-						</div>
-					</div>
-
-					<!-- Card 3: Total Stock Units -->
-					<div class="bg-white p-3 rounded-2xl border border-slate-200/90 shadow-sm hover:shadow-md transition-all">
-						<div class="flex items-center justify-between">
-							<span class="text-[10px] font-bold text-emerald-800 uppercase tracking-wider">Total Units</span>
-							<span class="text-xs">📊</span>
-						</div>
-						<div class="mt-1 flex items-baseline space-x-1">
-							<span class="text-base font-black text-emerald-800 font-mono">{{ formatQty(dashboardStats.total_actual_qty) }}</span>
-							<span class="text-[9px] text-slate-500 font-medium">units</span>
 						</div>
 					</div>
 				</div>
@@ -241,10 +229,17 @@
 							<!-- Warehouse Count Badge -->
 							<div class="flex flex-col items-end flex-shrink-0">
 								<span
+									v-if="activeWarehouses(item).length > 0"
 									class="px-2 py-0.5 rounded-lg text-[9px] font-bold border truncate"
-									:class="item.warehouse_count > 1 ? 'bg-teal-50 text-teal-800 border-teal-200/80' : 'bg-slate-50 text-slate-700 border-slate-200'"
+									:class="activeWarehouses(item).length > 1 ? 'bg-teal-50 text-teal-800 border-teal-200/80' : 'bg-slate-50 text-slate-700 border-slate-200'"
 								>
-									🏢 {{ item.warehouse_count }} {{ item.warehouse_count === 1 ? 'Warehouse' : 'Warehouses' }}
+									🏢 {{ activeWarehouses(item).length }} {{ activeWarehouses(item).length === 1 ? 'Warehouse' : 'Warehouses' }}
+								</span>
+								<span
+									v-else
+									class="px-2 py-0.5 rounded-lg text-[9px] font-bold border truncate bg-slate-50 text-slate-500 border-slate-200"
+								>
+									Out of Stock
 								</span>
 							</div>
 						</div>
@@ -295,8 +290,8 @@
 							</div>
 						</div>
 
-						<!-- Warehouse Breakdown List (Compact in Card) -->
-						<div v-if="item.warehouses && item.warehouses.length > 0" class="pt-2 border-t border-slate-100 space-y-1.5">
+						<!-- Warehouse Breakdown List (Only warehouses with stock > 0) -->
+						<div v-if="activeWarehouses(item).length > 0" class="pt-2 border-t border-slate-100 space-y-1.5">
 							<div class="flex items-center justify-between text-[10px] font-bold text-slate-500 uppercase tracking-wider">
 								<span>Warehouse Breakdown</span>
 								<span class="text-[9px] font-normal lowercase text-slate-400">Actual / Available</span>
@@ -304,7 +299,7 @@
 
 							<div class="space-y-1 bg-slate-50/90 p-2.5 rounded-xl border border-slate-200/70">
 								<div
-									v-for="wh in item.warehouses"
+									v-for="wh in activeWarehouses(item)"
 									:key="wh.bin_name || wh.warehouse"
 									class="flex items-center justify-between text-xs py-0.5"
 								>
@@ -330,7 +325,12 @@
 						<!-- Action Footer -->
 						<div class="pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
 							<div class="text-[11px] text-slate-500 font-medium flex items-center gap-1.5">
-								<span>{{ item.warehouses?.length || 1 }} warehouse location{{ (item.warehouses?.length || 1) === 1 ? '' : 's' }}</span>
+								<span v-if="activeWarehouses(item).length > 0">
+									{{ activeWarehouses(item).length }} warehouse location{{ activeWarehouses(item).length === 1 ? '' : 's' }}
+								</span>
+								<span v-else class="text-slate-400">
+									No warehouse stock
+								</span>
 								<span v-if="Number(item.in_transit_qty) > 0" class="text-amber-800 font-bold text-[10px] flex items-center gap-0.5">
 									• 🚚 {{ formatQty(item.in_transit_qty) }} in transit
 								</span>
@@ -473,16 +473,16 @@
 						</div>
 					</div>
 
-					<!-- Warehouse-by-Warehouse Table -->
-					<div class="space-y-2">
+					<!-- Warehouse-by-Warehouse Table (Only warehouses with stock > 0) -->
+					<div v-if="activeWarehouses(selectedItem).length > 0" class="space-y-2">
 						<h4 class="text-xs font-bold text-slate-800 flex items-center justify-between">
 							<span>Warehouse Breakdown</span>
-							<span class="text-[10px] font-mono text-slate-400">{{ (selectedItem.warehouses || []).length }} recorded</span>
+							<span class="text-[10px] font-mono text-slate-400">{{ activeWarehouses(selectedItem).length }} with stock</span>
 						</h4>
 
 						<div class="space-y-2">
 							<div
-								v-for="wh in selectedItem.warehouses"
+								v-for="wh in activeWarehouses(selectedItem)"
 								:key="wh.bin_name || wh.warehouse"
 								class="p-3 rounded-2xl bg-slate-50 border border-slate-100 space-y-2"
 							>
@@ -569,6 +569,11 @@ const hasMore = ref(false)
 // Item Detail Modal
 const showDetailsModal = ref(false)
 const selectedItem = ref(null)
+
+function activeWarehouses(item) {
+	if (!item || !item.warehouses) return []
+	return item.warehouses.filter(wh => Number(wh.actual_qty) > 0 || Number(wh.projected_qty) > 0)
+}
 
 function formatCount(val) {
 	if (val === null || val === undefined || isNaN(val)) return "0"
