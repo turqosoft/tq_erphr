@@ -425,18 +425,39 @@
 									v-else
 									v-for="(exp, idx) in expensesList"
 									:key="exp.name || idx"
-									class="p-3.5 rounded-2xl bg-slate-50/80 border border-slate-100 flex items-center justify-between text-xs"
+									class="p-3.5 rounded-2xl bg-slate-50/80 border border-slate-100 flex items-center justify-between text-xs transition-all hover:bg-slate-100/70"
 								>
-									<div class="space-y-0.5">
-										<div class="flex items-center space-x-1.5">
+									<div class="space-y-1 min-w-0 pr-2">
+										<div class="flex items-center space-x-2 flex-wrap">
 											<span class="font-bold text-slate-900">{{ exp.expense_type }}</span>
+											<button
+												v-if="exp.attachment"
+												type="button"
+												@click="viewReceipt(exp.attachment, `${exp.expense_type} Bill - ₹${formatAmount(exp.amount)}`)"
+												class="inline-flex items-center space-x-1 px-2 py-0.5 rounded-lg bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 text-[10px] font-bold cursor-pointer transition shadow-2xs"
+												title="View Bill Receipt"
+											>
+												<span>📎</span>
+												<span>Bill</span>
+											</button>
 										</div>
 										<p v-if="exp.description" class="text-[10px] text-slate-500 truncate max-w-[200px]">
 											{{ exp.description }}
 										</p>
 									</div>
-									<div class="text-right">
+									<div class="flex items-center space-x-2.5 shrink-0">
 										<span class="font-bold font-mono text-slate-900 text-sm">₹{{ formatAmount(exp.amount) }}</span>
+										<button
+											v-if="tripStatus === 'IN_PROGRESS' || tripStatus === 'NOT_STARTED'"
+											type="button"
+											@click="deleteExpense(exp.name)"
+											class="w-7 h-7 rounded-lg bg-white hover:bg-rose-50 text-rose-500 hover:text-rose-700 border border-slate-200 hover:border-rose-300 flex items-center justify-center transition cursor-pointer"
+											title="Delete Expense"
+										>
+											<svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+											</svg>
+										</button>
 									</div>
 								</div>
 
@@ -950,6 +971,101 @@
 							class="w-full px-3.5 py-2.5 text-xs rounded-2xl bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:ring-4 focus:ring-teal-500/15 focus:border-teal-500 text-slate-900"
 						></textarea>
 					</div>
+
+					<!-- Bill / Receipt Attachment -->
+					<div class="space-y-1.5 pt-1">
+						<label class="block text-xs font-bold text-slate-700">Attach Bill / Receipt <span class="text-[10px] font-normal text-slate-400">(Optional)</span></label>
+						
+						<!-- Hidden inputs for Camera and File Picker -->
+						<input
+							ref="cameraInput"
+							type="file"
+							accept="image/*"
+							capture="environment"
+							class="hidden"
+							@change="handleExpenseFileUpload"
+						/>
+						<input
+							ref="fileInput"
+							type="file"
+							accept="image/*,application/pdf"
+							class="hidden"
+							@change="handleExpenseFileUpload"
+						/>
+
+						<!-- Uploaded State / Preview -->
+						<div
+							v-if="expenseForm.attachment"
+							class="p-3 rounded-2xl bg-emerald-50/90 border border-emerald-200 flex items-center justify-between text-xs animate-fadeIn"
+						>
+							<div class="flex items-center space-x-2.5 min-w-0 pr-2">
+								<img
+									v-if="isImageFile(expenseForm.attachment)"
+									:src="expenseForm.attachment"
+									class="w-11 h-11 rounded-xl object-cover border border-emerald-200 shrink-0 bg-white shadow-2xs"
+								/>
+								<div
+									v-else
+									class="w-11 h-11 rounded-xl bg-white border border-emerald-200 flex items-center justify-center text-xl shrink-0 shadow-2xs"
+								>
+									📄
+								</div>
+								<div class="min-w-0">
+									<p class="font-bold text-slate-900 truncate text-xs">{{ expenseForm.attachment_name || 'Bill Attached' }}</p>
+									<div class="flex items-center space-x-2 mt-0.5">
+										<button
+											type="button"
+											@click="viewReceipt(expenseForm.attachment, expenseForm.attachment_name || 'Attached Bill')"
+											class="text-[10px] font-bold text-teal-700 hover:underline"
+										>
+											Preview
+										</button>
+										<span class="text-[10px] text-slate-300">•</span>
+										<span class="text-[10px] text-emerald-700 font-semibold">Ready to save</span>
+									</div>
+								</div>
+							</div>
+							<button
+								type="button"
+								@click="removeExpenseAttachment"
+								class="w-8 h-8 rounded-xl bg-white hover:bg-rose-50 text-rose-600 border border-rose-200 flex items-center justify-center transition cursor-pointer shrink-0"
+								title="Remove Attachment"
+							>
+								<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+								</svg>
+							</button>
+						</div>
+
+						<!-- Trigger Buttons: Camera + File Upload -->
+						<div v-else class="grid grid-cols-2 gap-2">
+							<button
+								type="button"
+								@click="triggerCamera"
+								:disabled="isUploadingExpenseFile"
+								class="py-2.5 px-3 rounded-2xl bg-slate-50 hover:bg-slate-100/90 border border-slate-200 text-slate-700 font-bold text-xs flex items-center justify-center space-x-1.5 transition active:scale-95 cursor-pointer disabled:opacity-50"
+							>
+								<span class="text-sm">📷</span>
+								<span>Take Photo</span>
+							</button>
+
+							<button
+								type="button"
+								@click="triggerFilePicker"
+								:disabled="isUploadingExpenseFile"
+								class="py-2.5 px-3 rounded-2xl bg-slate-50 hover:bg-slate-100/90 border border-slate-200 text-slate-700 font-bold text-xs flex items-center justify-center space-x-1.5 transition active:scale-95 cursor-pointer disabled:opacity-50"
+							>
+								<span class="text-sm">📁</span>
+								<span>Upload PDF / Image</span>
+							</button>
+						</div>
+
+						<!-- Loading Progress -->
+						<div v-if="isUploadingExpenseFile" class="flex items-center space-x-2 text-xs text-teal-700 font-semibold py-1">
+							<div class="w-4 h-4 border-2 border-teal-600 border-t-transparent rounded-full animate-spin"></div>
+							<span>Uploading bill / receipt...</span>
+						</div>
+					</div>
 				</div>
 			</template>
 			<template #actions>
@@ -973,6 +1089,87 @@
 				</div>
 			</template>
 		</Dialog>
+
+		<!-- ========================================================= -->
+		<!-- MODAL: RECEIPT VIEWER LIGHTBOX (Teleported Standalone)   -->
+		<!-- ========================================================= -->
+		<Teleport to="body">
+			<Transition
+				enter-active-class="transition duration-200 ease-out"
+				enter-from-class="opacity-0"
+				enter-to-class="opacity-100"
+				leave-active-class="transition duration-150 ease-in"
+				leave-from-class="opacity-100"
+				leave-to-class="opacity-0"
+			>
+				<div
+					v-if="showReceiptModal"
+					class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-xs"
+					@click.self="showReceiptModal = false"
+				>
+					<div class="bg-white rounded-3xl max-w-sm w-full p-4 shadow-2xl space-y-3 overflow-hidden border border-slate-200 relative animate-scaleUp">
+						<!-- Header -->
+						<div class="flex items-center justify-between pb-2.5 border-b border-slate-100">
+							<div class="flex items-center space-x-2 min-w-0 pr-2">
+								<span class="text-base">🧾</span>
+								<h3 class="font-bold text-slate-900 text-xs truncate">{{ previewReceiptTitle || 'Expense Receipt' }}</h3>
+							</div>
+							<button
+								type="button"
+								@click="showReceiptModal = false"
+								class="w-7 h-7 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center transition cursor-pointer font-bold text-xs"
+							>
+								✕
+							</button>
+						</div>
+
+						<!-- Content Preview -->
+						<div class="space-y-3">
+							<div v-if="isImageFile(previewReceiptUrl)" class="flex justify-center bg-slate-100/60 p-2 rounded-2xl border border-slate-200/80 max-h-80 overflow-auto">
+								<img
+									:src="previewReceiptUrl"
+									class="max-h-72 w-auto rounded-xl object-contain shadow-sm"
+									alt="Receipt"
+								/>
+							</div>
+							<div v-else class="p-6 text-center bg-slate-50 rounded-2xl border border-slate-200 space-y-3">
+								<div class="text-4xl">📄</div>
+								<p class="text-xs font-semibold text-slate-700">PDF Document Attached</p>
+								<a
+									:href="previewReceiptUrl"
+									target="_blank"
+									class="inline-flex items-center space-x-1.5 px-4 py-2 rounded-xl bg-teal-600 hover:bg-teal-500 text-white text-xs font-bold shadow-sm transition"
+								>
+									<span>Open PDF in New Tab</span>
+									<svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+									</svg>
+								</a>
+							</div>
+						</div>
+
+						<!-- Footer Actions -->
+						<div class="flex items-center justify-between pt-2 border-t border-slate-100 text-xs">
+							<a
+								:href="previewReceiptUrl"
+								target="_blank"
+								download
+								class="font-bold text-teal-700 hover:underline inline-flex items-center space-x-1 text-[11px]"
+							>
+								<span>Open Full Size ↗</span>
+							</a>
+							<button
+								type="button"
+								@click="showReceiptModal = false"
+								class="px-4 py-2 text-xs font-bold text-white bg-slate-800 hover:bg-slate-700 rounded-xl cursor-pointer"
+							>
+								Close Preview
+							</button>
+						</div>
+					</div>
+				</div>
+			</Transition>
+		</Teleport>
 
 		<!-- ========================================================= -->
 		<!-- MODAL: END TRIP CONFIRMATION & DETAILS                    -->
@@ -1376,7 +1573,17 @@ const expenseForm = ref({
 	expense_type: "",
 	amount: "",
 	description: "",
+	attachment: "",
+	attachment_name: "",
 })
+
+const cameraInput = ref(null)
+const fileInput = ref(null)
+const isUploadingExpenseFile = ref(false)
+
+const showReceiptModal = ref(false)
+const previewReceiptUrl = ref("")
+const previewReceiptTitle = ref("")
 
 const endForm = ref({
 	end_odometerkm: "",
@@ -1725,11 +1932,96 @@ async function openSiteVisitModal(prefillData = null) {
 	}
 }
 
+function triggerCamera() {
+	if (cameraInput.value) {
+		cameraInput.value.value = ""
+		cameraInput.value.click()
+	}
+}
+
+function triggerFilePicker() {
+	if (fileInput.value) {
+		fileInput.value.value = ""
+		fileInput.value.click()
+	}
+}
+
+async function handleExpenseFileUpload(event) {
+	const file = event.target?.files?.[0]
+	if (!file) return
+
+	if (file.size > 15 * 1024 * 1024) {
+		toast.error("File size exceeds 15MB limit. Please choose a smaller file.", "File Too Large")
+		return
+	}
+
+	isUploadingExpenseFile.value = true
+	try {
+		const formData = new FormData()
+		formData.append("file", file, file.name)
+		formData.append("is_private", "0")
+		formData.append("doctype", "Executive Expense Manager")
+		formData.append("folder", "Home/Attachments")
+
+		const res = await fetch("/api/method/tq_erphr.pwa_api.upload_expense_attachment", {
+			method: "POST",
+			body: formData,
+			headers: {
+				"X-Frappe-CSRF-Token": window.csrf_token || "",
+			},
+		})
+
+		const json = await res.json()
+		if (json.message && json.message.file_url) {
+			expenseForm.value.attachment = json.message.file_url
+			expenseForm.value.attachment_name = json.message.file_name || file.name
+			toast.success("Bill / Receipt attached successfully!", "Attachment Ready")
+		} else {
+			throw new Error(json.exc || "Upload failed")
+		}
+	} catch (err) {
+		console.error("Attachment upload failed:", err)
+		toast.error("Failed to upload bill receipt. Please try again.", "Upload Error")
+	} finally {
+		isUploadingExpenseFile.value = false
+	}
+}
+
+function removeExpenseAttachment() {
+	expenseForm.value.attachment = ""
+	expenseForm.value.attachment_name = ""
+}
+
+function isImageFile(url) {
+	if (!url) return false
+	return /\.(jpg|jpeg|png|webp|gif|svg|avif)($|\?)/i.test(url)
+}
+
+function viewReceipt(url, title = "Expense Receipt") {
+	if (!url) return
+	previewReceiptUrl.value = url
+	previewReceiptTitle.value = title
+	showReceiptModal.value = true
+}
+
+async function deleteExpense(rowName) {
+	if (!confirm("Are you sure you want to remove this expense record?")) return
+	try {
+		await call("tq_erphr.pwa_api.delete_eem_expense", { row_name: rowName })
+		toast.success("Expense removed successfully", "Removed")
+		await todayEemResource.fetch()
+	} catch (err) {
+		toast.error(err.messages?.[0] || err.message || "Failed to remove expense", "Error")
+	}
+}
+
 function openExpenseModal() {
 	expenseForm.value = {
 		expense_type: expenseTypesList.value[0]?.name || expenseTypesList.value[0] || "",
 		amount: "",
 		description: "",
+		attachment: "",
+		attachment_name: "",
 	}
 	expenseTypesResource.fetch()
 	showExpenseModal.value = true
@@ -1854,6 +2146,7 @@ async function submitExpense() {
 			expense_type: expenseForm.value.expense_type,
 			amount: Number(expenseForm.value.amount),
 			description: expenseForm.value.description,
+			attachment: expenseForm.value.attachment || "",
 		})
 
 		showExpenseModal.value = false

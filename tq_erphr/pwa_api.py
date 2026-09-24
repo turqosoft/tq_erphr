@@ -550,7 +550,53 @@ def add_eem_site_visit(
 
 
 @frappe.whitelist()
-def add_eem_expense(expense_type: str = "Food", amount: float = 0, description: str = None) -> dict:
+def upload_expense_attachment():
+	"""
+	Uploads a bill/receipt image or PDF from Camera or File Picker
+	"""
+	current_user = frappe.session.user
+	if not current_user or current_user == "Guest":
+		frappe.throw(_("Not logged in"), frappe.AuthenticationError)
+
+	files = frappe.request.files
+	if "file" not in files:
+		frappe.throw(_("No file uploaded"))
+
+	uploaded_file = files["file"]
+	filename = uploaded_file.filename or "receipt.jpg"
+	content = uploaded_file.stream.read()
+
+	employee = frappe.db.get_value("Employee", {"user_id": current_user, "status": "Active"}, "name")
+	dt = None
+	dn = None
+	if employee:
+		eem_name = frappe.db.get_value(
+			"Executive Expense Manager",
+			{"employee": employee, "date": frappe.utils.today(), "docstatus": ["!=", 2]},
+			"name",
+		)
+		if eem_name:
+			dt = "Executive Expense Manager"
+			dn = eem_name
+
+	from frappe.utils.file_manager import save_file
+	saved_file = save_file(
+		fname=filename,
+		content=content,
+		dt=dt,
+		dn=dn,
+		folder="Home/Attachments",
+		is_private=0,
+	)
+
+	return {
+		"file_url": saved_file.file_url,
+		"file_name": saved_file.file_name,
+	}
+
+
+@frappe.whitelist()
+def add_eem_expense(expense_type: str = "Food", amount: float = 0, description: str = None, attachment: str = None) -> dict:
 	current_user = frappe.session.user
 	if not current_user or current_user == "Guest":
 		frappe.throw(_("Not logged in"), frappe.AuthenticationError)
@@ -578,9 +624,35 @@ def add_eem_expense(expense_type: str = "Food", amount: float = 0, description: 
 			"expense_type": expense_type or "Others",
 			"amount": amt,
 			"description": description or "",
+			"attachment": attachment or "",
 		},
 	)
 
+	eem_doc.calculate_totals()
+	eem_doc.save(ignore_permissions=True)
+
+	return get_today_eem()
+
+
+@frappe.whitelist()
+def delete_eem_expense(row_name: str) -> dict:
+	current_user = frappe.session.user
+	if not current_user or current_user == "Guest":
+		frappe.throw(_("Not logged in"), frappe.AuthenticationError)
+
+	employee = frappe.db.get_value("Employee", {"user_id": current_user, "status": "Active"}, "name")
+	if not employee:
+		frappe.throw(_("No active employee found for current user"))
+
+	today_date = frappe.utils.today()
+	eem_doc = get_or_create_today_eem_doc(employee, today_date)
+
+	if eem_doc.docstatus != 0:
+		frappe.throw(_("Cannot delete expense from a submitted or completed travel log."))
+
+	# Filter out the expense row
+	filtered_expenses = [row for row in eem_doc.employee_expense_tracking if row.name != row_name]
+	eem_doc.set("employee_expense_tracking", filtered_expenses)
 	eem_doc.calculate_totals()
 	eem_doc.save(ignore_permissions=True)
 

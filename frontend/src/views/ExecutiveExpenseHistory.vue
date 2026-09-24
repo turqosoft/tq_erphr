@@ -886,13 +886,25 @@
 								<div
 									v-for="(exp, idx) in detailExpenseTracking"
 									:key="exp.name || idx"
-									class="flex items-center justify-between p-2 rounded-xl bg-slate-50 border border-slate-100 text-xs"
+									class="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-100 text-xs"
 								>
-									<div>
-										<span class="font-bold text-slate-800">{{ exp.expense_type || 'Expense' }}</span>
-										<p v-if="exp.description" class="text-[10px] text-slate-500">{{ exp.description }}</p>
+									<div class="space-y-0.5 min-w-0 pr-2">
+										<div class="flex items-center space-x-1.5 flex-wrap">
+											<span class="font-bold text-slate-800">{{ exp.expense_type || 'Expense' }}</span>
+											<button
+												v-if="exp.attachment"
+												type="button"
+												@click="viewReceipt(exp.attachment, `${exp.expense_type} Bill - ₹${(exp.amount || 0).toLocaleString('en-IN')}`)"
+												class="inline-flex items-center space-x-1 px-2 py-0.5 rounded-lg bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 text-[10px] font-bold cursor-pointer transition shadow-2xs"
+												title="View Bill Receipt"
+											>
+												<span>📎</span>
+												<span>Bill</span>
+											</button>
+										</div>
+										<p v-if="exp.description" class="text-[10px] text-slate-500 truncate">{{ exp.description }}</p>
 									</div>
-									<span class="font-mono font-bold text-slate-900">₹{{ (exp.amount || 0).toLocaleString('en-IN') }}</span>
+									<span class="font-mono font-bold text-slate-900 shrink-0">₹{{ (exp.amount || 0).toLocaleString('en-IN') }}</span>
 								</div>
 							</div>
 						</div>
@@ -912,6 +924,87 @@
 				</div>
 			</template>
 		</Dialog>
+
+		<!-- ========================================================= -->
+		<!-- MODAL: RECEIPT VIEWER LIGHTBOX (Teleported Standalone)   -->
+		<!-- ========================================================= -->
+		<Teleport to="body">
+			<Transition
+				enter-active-class="transition duration-200 ease-out"
+				enter-from-class="opacity-0"
+				enter-to-class="opacity-100"
+				leave-active-class="transition duration-150 ease-in"
+				leave-from-class="opacity-100"
+				leave-to-class="opacity-0"
+			>
+				<div
+					v-if="showReceiptModal"
+					class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-xs"
+					@click.self="showReceiptModal = false"
+				>
+					<div class="bg-white rounded-3xl max-w-sm w-full p-4 shadow-2xl space-y-3 overflow-hidden border border-slate-200 relative animate-scaleUp">
+						<!-- Header -->
+						<div class="flex items-center justify-between pb-2.5 border-b border-slate-100">
+							<div class="flex items-center space-x-2 min-w-0 pr-2">
+								<span class="text-base">🧾</span>
+								<h3 class="font-bold text-slate-900 text-xs truncate">{{ previewReceiptTitle || 'Expense Receipt' }}</h3>
+							</div>
+							<button
+								type="button"
+								@click="showReceiptModal = false"
+								class="w-7 h-7 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center transition cursor-pointer font-bold text-xs"
+							>
+								✕
+							</button>
+						</div>
+
+						<!-- Content Preview -->
+						<div class="space-y-3">
+							<div v-if="isImageFile(previewReceiptUrl)" class="flex justify-center bg-slate-100/60 p-2 rounded-2xl border border-slate-200/80 max-h-80 overflow-auto">
+								<img
+									:src="previewReceiptUrl"
+									class="max-h-72 w-auto rounded-xl object-contain shadow-sm"
+									alt="Receipt"
+								/>
+							</div>
+							<div v-else class="p-6 text-center bg-slate-50 rounded-2xl border border-slate-200 space-y-3">
+								<div class="text-4xl">📄</div>
+								<p class="text-xs font-semibold text-slate-700">PDF Document Attached</p>
+								<a
+									:href="previewReceiptUrl"
+									target="_blank"
+									class="inline-flex items-center space-x-1.5 px-4 py-2 rounded-xl bg-teal-600 hover:bg-teal-500 text-white text-xs font-bold shadow-sm transition"
+								>
+									<span>Open PDF in New Tab</span>
+									<svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+									</svg>
+								</a>
+							</div>
+						</div>
+
+						<!-- Footer Actions -->
+						<div class="flex items-center justify-between pt-2 border-t border-slate-100 text-xs">
+							<a
+								:href="previewReceiptUrl"
+								target="_blank"
+								download
+								class="font-bold text-teal-700 hover:underline inline-flex items-center space-x-1 text-[11px]"
+							>
+								<span>Open Full Size ↗</span>
+							</a>
+							<button
+								type="button"
+								@click="showReceiptModal = false"
+								class="px-4 py-2 text-xs font-bold text-white bg-slate-800 hover:bg-slate-700 rounded-xl cursor-pointer"
+							>
+								Close Preview
+							</button>
+						</div>
+					</div>
+				</div>
+			</Transition>
+		</Teleport>
 
 	</div>
 </template>
@@ -946,6 +1039,22 @@ const hasMore = ref(false)
 const showDetailModal = ref(false)
 const currentDetailDoc = ref(null)
 const linkedExpenseClaim = ref(null)
+
+const showReceiptModal = ref(false)
+const previewReceiptUrl = ref("")
+const previewReceiptTitle = ref("")
+
+function isImageFile(url) {
+	if (!url) return false
+	return /\.(jpg|jpeg|png|webp|gif|svg|avif)($|\?)/i.test(url)
+}
+
+function viewReceipt(url, title = "Expense Receipt") {
+	if (!url) return
+	previewReceiptUrl.value = url
+	previewReceiptTitle.value = title
+	showReceiptModal.value = true
+}
 
 const datePresets = [
 	{ label: "All Time", value: "all" },

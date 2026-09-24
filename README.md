@@ -180,3 +180,14 @@ mit
 
 #### Bug Fixes
 - 
+
+### v1.1.7 (2026-09-24)
+
+#### New Features
+- Attach files in expenses
+
+#### Improvements
+- 
+
+#### Bug Fixes
+- 
