@@ -12,14 +12,39 @@
         print-color-adjust: exact;
     }
 
-    .report-title {
-        text-align: center;
-        font-size: 12pt;
-        font-weight: bold;
+    .report-header-banner {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
         margin-bottom: 8px;
         border: 1.5px solid #000;
-        padding: 6px 0;
+        padding: 8px 12px;
         background: #fff !important;
+    }
+
+    .company-logo-img {
+        max-height: 45px;
+        max-width: 160px;
+        object-fit: contain;
+    }
+
+    .report-title-content {
+        flex: 1;
+        text-align: center;
+    }
+
+    .company-heading {
+        font-size: 13pt;
+        font-weight: bold;
+        text-transform: uppercase;
+        margin-bottom: 2px;
+        color: #000 !important;
+    }
+
+    .report-title {
+        text-align: center;
+        font-size: 11pt;
+        font-weight: bold;
         color: #000 !important;
     }
 
@@ -49,46 +74,72 @@
         word-wrap: break-word;
     }
 
-    .col-srno     { width: 4%; }
-    .col-date     { width: 8%; text-align: center; }
-    .col-customer { width: 13%; }
-    .col-address  { width: 18%; }
-    .col-contact  { width: 9%; text-align: center; }
-    .col-agent    { width: 9%; text-align: center; }
-    .col-category { width: 9%; text-align: center; }
-    .col-remarks  { width: 30%; }
+    .date-group-header td {
+        background-color: #f2f4f7 !important;
+        font-weight: bold;
+        font-size: 9.5pt;
+        padding: 6px 10px !important;
+        border: 1px solid #000 !important;
+        color: #000 !important;
+    }
+
+    .col-srno     { width: 5%; text-align: center; }
+    .col-customer { width: 19%; }
+    .col-address  { width: 25%; }
+    .col-contact  { width: 11%; text-align: center; }
+    .col-category { width: 11%; text-align: center; }
+    .col-remarks  { width: 29%; }
 
     td.center { text-align: center; }
 </style>
 
-<div class="report-title">
-    Customer Visit Report &nbsp;&nbsp; Month of {%= filters.month %}-{%= filters.year %}
-    {% if (data && data.length > 0 && data[0].sales_agent) { %}
-        &nbsp;({%= data[0].sales_agent %})
-    {% } else if (filters.employee) { %}
-        &nbsp;({%= filters.employee %})
-    {% } %}
+{% var logo_url = (data && data.length > 0 && data[0].company_logo) || (frappe.boot && (frappe.boot.app_logo_url || frappe.boot.sysdefaults.company_logo)) || ""; %}
+{% var comp_name = (data && data.length > 0 && data[0].company_name) || (frappe.boot && frappe.boot.sysdefaults.company) || ""; %}
+
+<div class="report-header-banner">
+    <div style="width: 170px; text-align: left;">
+        {% if (logo_url) { %}
+            <img src="{%= logo_url %}" class="company-logo-img" alt="Logo">
+        {% } %}
+    </div>
+    <div class="report-title-content">
+        {% if (comp_name) { %}
+            <div class="company-heading">{%= comp_name %}</div>
+        {% } %}
+        <div class="report-title">
+            Customer Visit Report &nbsp;&nbsp;
+            {% if (filters.from_date && filters.to_date) { %}
+                Period: {%= frappe.datetime.str_to_user(filters.from_date) %} to {%= frappe.datetime.str_to_user(filters.to_date) %}
+            {% } else if (filters.month) { %}
+                Month of {%= filters.month %}-{%= filters.year %}
+            {% } %}
+            {% if (data && data.length > 0 && data[0].sales_agent) { %}
+                &nbsp;({%= data[0].sales_agent %})
+            {% } else if (filters.employee_name) { %}
+                &nbsp;({%= filters.employee_name %})
+            {% } else if (filters.employee) { %}
+                &nbsp;({%= filters.employee %})
+            {% } %}
+        </div>
+    </div>
+    <div style="width: 170px;"></div>
 </div>
 
 <table>
     <colgroup>
         <col class="col-srno">
-        <col class="col-date">
         <col class="col-customer">
         <col class="col-address">
         <col class="col-contact">
-        <col class="col-agent">
         <col class="col-category">
         <col class="col-remarks">
     </colgroup>
     <thead>
         <tr>
             <th>Srl No</th>
-            <th>Dated</th>
-            <th>Customer Name</th>
+            <th>Customer/Site</th>
             <th>Address</th>
             <th>Contact Number</th>
-            <th>Sales Agent</th>
             <th>Category</th>
             <th>Remarks</th>
         </tr>
@@ -96,20 +147,25 @@
     <tbody>
         {% for (var i = 0; i < data.length; i++) { %}
             {% var row = data[i]; %}
+            {% if (row.is_new_date || i === 0 || (i > 0 && data[i-1].raw_date !== row.raw_date)) { %}
+                <tr class="date-group-header">
+                    <td colspan="6">
+                        Dated: {%= frappe.datetime.str_to_user(row.raw_date || row.date) %}
+                    </td>
+                </tr>
+            {% } %}
             <tr>
-                <td class="center">{%= row.sr_no %}</td>
-                <td class="center">{%= frappe.datetime.str_to_user(row.date) %}</td>
+                <td class="center"><b>{%= row.sr_no %}</b></td>
                 <td>{%= (row.customer_name || "").toUpperCase() %}</td>
                 <td>{%= (row.address || "").toUpperCase() %}</td>
                 <td class="center">{%= row.contact_number || "" %}</td>
-                <td class="center">{%= (row.sales_agent || "").toUpperCase() %}</td>
                 <td class="center">{%= (row.category || "").toUpperCase() %}</td>
                 <td>{%= row.remarks || "" %}</td>
             </tr>
         {% } %}
         {% if (!data || data.length === 0) { %}
             <tr>
-                <td colspan="8" style="text-align:center; padding: 12px; font-style: italic;">
+                <td colspan="6" style="text-align:center; padding: 12px; font-style: italic;">
                     No site visits found for the selected period.
                 </td>
             </tr>
