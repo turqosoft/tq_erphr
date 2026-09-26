@@ -840,9 +840,22 @@
 													<span v-if="site.site" class="text-[10px] text-slate-500 truncate max-w-[150px]">{{ site.site }}</span>
 												</div>
 											</div>
-											<span v-if="site.actual_distance" class="text-[10px] font-mono font-bold text-teal-700 bg-teal-50 px-1.5 py-0.5 rounded border border-teal-100 shrink-0">
-												+{{ site.actual_distance }} km
-											</span>
+											<div class="text-right shrink-0 space-y-0.5">
+												<span
+													v-if="site.actual_distance !== undefined && site.actual_distance !== null"
+													class="text-[9.5px] font-mono font-bold text-teal-800 bg-teal-50 px-1.5 py-0.2 rounded border border-teal-200 block"
+													title="Actual Distance entered by Salesperson"
+												>
+													<span class="text-[8px] text-teal-600 font-semibold uppercase">Act: </span>{{ site.actual_distance }} km
+												</span>
+												<span
+													v-if="site.distance_travelled !== undefined && site.distance_travelled !== null"
+													class="text-[9px] font-mono font-medium text-slate-600 bg-slate-100 px-1.5 py-0.2 rounded border border-slate-200 block"
+													title="GPS Distance calculated by server"
+												>
+													<span class="text-[8px] text-slate-400 uppercase">GPS: </span>{{ site.distance_travelled }} km
+												</span>
+											</div>
 										</div>
 
 										<div v-if="site.contact_number || site.address" class="space-y-0.5 text-[10px]">
@@ -856,9 +869,20 @@
 											</div>
 										</div>
 
-										<div class="flex items-center space-x-2 text-[10px] text-slate-400">
+										<div class="flex items-center justify-between space-x-2 text-[10px] text-slate-400">
 											<span v-if="site.checkin_time">Time: {{ formatTime(site.checkin_time) }}</span>
-											<span v-if="site.site_lat && site.site_long" class="truncate font-mono">({{ Number(site.site_lat).toFixed(4) }}, {{ Number(site.site_long).toFixed(4) }})</span>
+											<div v-if="site.site_lat && site.site_long" class="flex items-center space-x-1.5 ml-auto">
+												<span class="inline-flex items-center space-x-0.5 text-[9px] font-bold bg-teal-50 text-teal-700 px-1.5 py-0.5 rounded border border-teal-200">
+													📍 Location Captured
+												</span>
+												<a
+													:href="`https://www.google.com/maps/search/?api=1&query=${site.site_lat},${site.site_long}`"
+													target="_blank"
+													class="inline-flex items-center text-[9px] font-bold text-teal-700 hover:text-teal-800 bg-white hover:bg-teal-50 px-1.5 py-0.5 rounded border border-teal-200"
+												>
+													Google Maps ↗
+												</a>
+											</div>
 										</div>
 
 										<p v-if="site.remarks" class="text-[11px] text-slate-600 italic bg-white p-1.5 rounded-lg border border-slate-100">
@@ -873,7 +897,7 @@
 						<div class="bg-white rounded-2xl p-3.5 border border-slate-200 space-y-3">
 							<h4 class="font-bold text-slate-900 flex items-center space-x-1.5">
 								<svg class="w-4 h-4 text-teal-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 8h6m-5 0h4a3 3 0 010 6H9l5 6M9 4h6" />
 								</svg>
 								<span>Other Expenses ({{ detailExpenseTracking.length }})</span>
 							</h4>

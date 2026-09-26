@@ -432,18 +432,6 @@
 
 							<!-- Geolocation / Device Status Info -->
 							<div class="mt-3 pt-2.5 border-t border-slate-100 flex flex-col space-y-1.5 text-[11px] text-slate-500">
-								<!-- Device captured badge -->
-								<div class="flex items-center justify-between">
-									<div class="flex items-center space-x-1.5 truncate max-w-[240px]">
-										<svg class="w-3.5 h-3.5 text-teal-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
-										</svg>
-										<span class="truncate font-medium text-slate-700">{{ deviceLabel }}</span>
-									</div>
-									<span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-slate-100 text-slate-600 uppercase">
-										{{ detectedDevice?.appMode || 'Web' }}
-									</span>
-								</div>
 
 								<!-- Geolocation & History Link -->
 								<div class="flex items-center justify-between">
@@ -491,7 +479,6 @@
 										</span>
 										<span class="font-bold text-slate-800">{{ formatLogTime(log.time) }}</span>
 									</div>
-									<span class="text-[10px] text-slate-400 font-mono">{{ log.device_id || 'PWA' }}</span>
 								</div>
 							</div>
 
@@ -753,13 +740,9 @@
 							</span>
 							<div>
 								<p class="font-bold text-slate-900">{{ formatFullDateTime(log.time) }}</p>
-								<p class="text-[10px] text-slate-400">Device: {{ log.device_id || 'PWA' }}</p>
 							</div>
 						</div>
 						<div class="text-right">
-							<span v-if="log.latitude && log.longitude" class="text-[10px] text-teal-600 font-mono block">
-								📍 {{ Number(log.latitude).toFixed(2) }}, {{ Number(log.longitude).toFixed(2) }}
-							</span>
 							<span class="text-[10px] text-slate-400 font-mono">{{ log.name }}</span>
 						</div>
 					</div>
@@ -840,10 +823,6 @@
 						<div class="flex justify-between items-center py-0.5 border-b border-slate-100">
 							<span class="text-slate-500 font-medium">Date</span>
 							<span class="font-bold text-slate-900">{{ liveDateFormatted }}</span>
-						</div>
-						<div class="flex justify-between items-center py-0.5 border-b border-slate-100">
-							<span class="text-slate-500 font-medium">Device</span>
-							<span class="font-bold text-slate-900 truncate max-w-[170px]">{{ deviceLabel }}</span>
 						</div>
 						<div class="flex justify-between items-center py-0.5">
 							<span class="text-slate-500 font-medium">GPS Location</span>
@@ -1365,10 +1344,10 @@
 
 				<div class="space-y-1">
 					<h3 class="text-sm font-bold text-slate-900">
-						{{ gpsLoadingTitle || 'Acquiring GPS Location...' }}
+						{{ gpsLoadingTitle || 'Fetching Location...' }}
 					</h3>
 					<p class="text-[11px] text-slate-500 leading-relaxed">
-						{{ gpsLoadingSubtitle || 'Locking high-accuracy satellite coordinates. Please hold on for a moment...' }}
+						{{ gpsLoadingSubtitle || 'Please hold on while we get your current location...' }}
 					</p>
 				</div>
 
@@ -1533,8 +1512,8 @@ const showCheckinRequiredModal = ref(false)
 const showActiveTripModal = ref(false)
 const isAcquiringLocation = ref(false)
 const isAcquiringGps = ref(false)
-const gpsLoadingTitle = ref("Acquiring GPS Location...")
-const gpsLoadingSubtitle = ref("Locking high-accuracy satellite coordinates. Please hold on...")
+const gpsLoadingTitle = ref("Fetching Location...")
+const gpsLoadingSubtitle = ref("Please hold on while we get your location...")
 
 function toggleDropdown() {
 	isDropdownOpen.value = !isDropdownOpen.value
@@ -1750,8 +1729,8 @@ async function promptPunchConfirmation() {
 	if (isAcquiringLocation.value || isSubmittingCheckin.value) return
 	isAcquiringLocation.value = true
 	isAcquiringGps.value = true
-	gpsLoadingTitle.value = nextAction.value === "IN" ? "Locking GPS for Check In..." : "Locking GPS for Check Out..."
-	gpsLoadingSubtitle.value = "Acquiring high-accuracy satellite coordinates. Please hold on..."
+	gpsLoadingTitle.value = "Fetching Location..."
+	gpsLoadingSubtitle.value = "Please hold on while we get your location..."
 
 	try {
 		const coords = await getCurrentLocation()
@@ -1769,8 +1748,8 @@ async function promptPunchConfirmation() {
 async function retryAcquireLocation() {
 	isAcquiringLocation.value = true
 	isAcquiringGps.value = true
-	gpsLoadingTitle.value = "Connecting to GPS Satellites..."
-	gpsLoadingSubtitle.value = "Calibrating real-time coordinates from your device..."
+	gpsLoadingTitle.value = "Fetching Location..."
+	gpsLoadingSubtitle.value = "Please hold on while we get your location..."
 
 	try {
 		const coords = await getCurrentLocation()
@@ -1820,7 +1799,7 @@ function getCurrentLocation() {
 					longitude: position.coords.longitude,
 				}
 				locationCoords.value = coords
-				locationStatusText.value = `📍 GPS: ${coords.latitude.toFixed(4)}, ${coords.longitude.toFixed(4)}`
+				locationStatusText.value = "📍 Location Acquired"
 				resolve(coords)
 			},
 			(err) => {
@@ -1839,14 +1818,14 @@ async function handleCheckinAction() {
 
 	const currentAction = nextAction.value
 	isSubmittingCheckin.value = true
-	locationStatusText.value = "Acquiring GPS location..."
+	locationStatusText.value = "Fetching location..."
 
 	try {
 		let coords = locationCoords.value
 		if (!coords || (!coords.latitude && !coords.longitude)) {
 			isAcquiringGps.value = true
-			gpsLoadingTitle.value = currentAction === "IN" ? "Locking GPS for Check In..." : "Locking GPS for Check Out..."
-			gpsLoadingSubtitle.value = "Acquiring high-accuracy satellite coordinates. Please hold on..."
+			gpsLoadingTitle.value = "Fetching Location..."
+			gpsLoadingSubtitle.value = "Please hold on while we get your location..."
 			coords = await getCurrentLocation()
 			isAcquiringGps.value = false
 		}
@@ -1953,7 +1932,7 @@ onMounted(() => {
 					latitude: pos.coords.latitude,
 					longitude: pos.coords.longitude,
 				}
-				locationStatusText.value = `📍 GPS: ${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}`
+				locationStatusText.value = "📍 Location Acquired"
 			},
 			() => {
 				locationStatusText.value = "📍 GPS Ready"

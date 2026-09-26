@@ -13,8 +13,20 @@ export const addEemSiteVisitResource = createResource({
 	url: "tq_erphr.pwa_api.add_eem_site_visit",
 })
 
+export const updateEemSiteVisitResource = createResource({
+	url: "tq_erphr.pwa_api.update_eem_site_visit",
+})
+
+export const deleteEemSiteVisitResource = createResource({
+	url: "tq_erphr.pwa_api.delete_eem_site_visit",
+})
+
 export const addEemExpenseResource = createResource({
 	url: "tq_erphr.pwa_api.add_eem_expense",
+})
+
+export const deleteEemExpenseResource = createResource({
+	url: "tq_erphr.pwa_api.delete_eem_expense",
 })
 
 export const endTripResource = createResource({

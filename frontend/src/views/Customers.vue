@@ -261,10 +261,10 @@
 									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
 									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
 								</svg>
-								<span v-if="c.latitude && c.longitude && c.latitude != 0" class="text-slate-600 font-mono text-[10px] truncate">
-									{{ Number(c.latitude).toFixed(3) }}, {{ Number(c.longitude).toFixed(3) }}
+								<span v-if="c.latitude && c.longitude && c.latitude != 0" class="text-teal-600 font-medium text-[10px] truncate">
+									Location Tagged
 								</span>
-								<span v-else class="text-slate-400 italic text-[10px]">No GPS</span>
+								<span v-else class="text-slate-400 italic text-[10px]">No Location</span>
 							</div>
 						</div>
 
@@ -308,7 +308,7 @@
 								<span>🧭</span>
 								<span>Directions</span>
 							</a>
-							<div v-else class="text-[10px] text-slate-400 italic">No GPS coordinates</div>
+							<div v-else class="text-[10px] text-slate-400 italic">No Location coordinates</div>
 
 							<div class="flex items-center space-x-1.5">
 								<!-- View Details -->
@@ -463,8 +463,8 @@
 						<div class="p-3 rounded-2xl bg-slate-50 border border-slate-100 col-span-2">
 							<span class="text-[10px] text-slate-400 font-medium block">GPS Location</span>
 							<div v-if="selectedCustomer.latitude && selectedCustomer.longitude && selectedCustomer.latitude != 0" class="flex items-center justify-between mt-0.5">
-								<span class="font-mono text-xs font-bold text-slate-800">
-									📍 {{ Number(selectedCustomer.latitude).toFixed(4) }}, {{ Number(selectedCustomer.longitude).toFixed(4) }}
+								<span class="text-xs font-bold text-slate-800">
+									📍 Location Recorded
 								</span>
 								<a
 									:href="`https://www.google.com/maps/dir/?api=1&destination=${selectedCustomer.latitude},${selectedCustomer.longitude}`"
@@ -474,7 +474,7 @@
 									Google Maps ↗
 								</a>
 							</div>
-							<span v-else class="text-slate-400 italic">No GPS coordinates recorded</span>
+							<span v-else class="text-slate-400 italic">No Location coordinates recorded</span>
 						</div>
 					</div>
 
@@ -572,10 +572,10 @@
 
 				<div class="space-y-1">
 					<h3 class="text-sm font-bold text-slate-900">
-						{{ gpsLoadingTitle || 'Acquiring GPS Location...' }}
+						{{ gpsLoadingTitle || 'Fetching Location...' }}
 					</h3>
 					<p class="text-[11px] text-slate-500 leading-relaxed">
-						{{ gpsLoadingSubtitle || 'Locking high-accuracy satellite coordinates. Please hold on for a moment...' }}
+						{{ gpsLoadingSubtitle || 'Please hold on while we get your current location...' }}
 					</p>
 				</div>
 
@@ -613,8 +613,8 @@ const selectedGroup = ref("all")
 const isNearMeActive = ref(true)
 const locationCoords = ref(null)
 const isAcquiringGps = ref(false)
-const gpsLoadingTitle = ref("Acquiring GPS Location...")
-const gpsLoadingSubtitle = ref("Calculating proximity to nearest customers around you...")
+const gpsLoadingTitle = ref("Fetching Location...")
+const gpsLoadingSubtitle = ref("Please hold on while we get your location...")
 
 // Customer List Pagination
 const customersList = ref([])
@@ -756,8 +756,8 @@ async function toggleNearMe() {
 	isNearMeActive.value = !isNearMeActive.value
 	if (isNearMeActive.value && !locationCoords.value) {
 		isAcquiringGps.value = true
-		gpsLoadingTitle.value = "Acquiring GPS Location..."
-		gpsLoadingSubtitle.value = "Calculating proximity to nearest customers around you..."
+		gpsLoadingTitle.value = "Fetching Location..."
+		gpsLoadingSubtitle.value = "Please hold on while we get your location..."
 		try {
 			await acquireUserLocation()
 		} finally {

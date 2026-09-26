@@ -285,7 +285,7 @@
 									class="py-3 px-3 rounded-2xl bg-white hover:bg-slate-50 text-slate-800 font-bold text-xs flex items-center justify-center space-x-1.5 border border-slate-200 active:scale-[0.98] transition shadow-xs"
 								>
 									<svg class="w-4 h-4 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 8h6m-5 0h4a3 3 0 010 6H9l5 6M9 4h6" />
 									</svg>
 									<span>+ Expense</span>
 								</button>
@@ -358,7 +358,7 @@
 												{{ idx + 1 }}
 											</span>
 											<div class="min-w-0">
-												<h4 class="font-bold text-slate-900 truncate max-w-[180px]">
+												<h4 class="font-bold text-slate-900 truncate max-w-[170px]">
 													{{ visit.customer || visit.site || 'Site Location' }}
 												</h4>
 												<div class="flex items-center gap-1.5 mt-0.5">
@@ -368,15 +368,56 @@
 													>
 														{{ visit.category }}
 													</span>
-													<span class="text-[10px] text-slate-500 truncate max-w-[160px]">{{ visit.site || visit.location_name }}</span>
+													<span class="text-[10px] text-slate-500 truncate max-w-[140px]">{{ visit.site || visit.location_name }}</span>
 												</div>
 											</div>
 										</div>
-										<div class="text-right shrink-0">
-											<span class="text-[10px] text-slate-500 font-mono block">{{ formatLogTime(visit.checkin_time) }}</span>
-											<span v-if="visit.actual_distance" class="text-teal-700 font-bold font-mono text-[10px] bg-teal-50 px-1.5 py-0.2 rounded border border-teal-100 inline-block mt-0.5">
-												+{{ visit.actual_distance }} km
-											</span>
+										<div class="text-right shrink-0 flex items-center space-x-1.5">
+											<div class="text-right">
+												<span class="text-[10px] text-slate-500 font-mono block mb-0.5">{{ formatLogTime(visit.checkin_time) }}</span>
+												<div class="flex flex-col items-end gap-0.5">
+													<!-- Actual Distance entered by salesperson -->
+													<span
+														v-if="visit.actual_distance !== undefined && visit.actual_distance !== null"
+														class="text-teal-800 font-bold font-mono text-[10px] bg-teal-50 px-1.5 py-0.2 rounded border border-teal-200 inline-flex items-center gap-1 shadow-2xs"
+														title="Actual Distance entered by Salesperson"
+													>
+														<span class="text-[8.5px] font-semibold text-teal-600 uppercase">Act:</span>
+														<span>{{ visit.actual_distance }} km</span>
+													</span>
+													<!-- GPS / Server Calculated Distance -->
+													<span
+														v-if="visit.distance_travelled !== undefined && visit.distance_travelled !== null"
+														class="text-slate-600 font-medium font-mono text-[9px] bg-slate-100 px-1.5 py-0.2 rounded border border-slate-200 inline-flex items-center gap-1"
+														title="Distance calculated by server using GPS coordinates"
+													>
+														<span class="text-[8.5px] text-slate-400 uppercase">GPS:</span>
+														<span>{{ visit.distance_travelled }} km</span>
+													</span>
+												</div>
+											</div>
+											<button
+												v-if="tripStatus === 'IN_PROGRESS' || tripStatus === 'NOT_STARTED'"
+												type="button"
+												@click.stop="openEditSiteVisitModal(visit)"
+												class="w-7 h-7 rounded-lg bg-white hover:bg-teal-50 text-slate-600 hover:text-teal-700 border border-slate-200 hover:border-teal-300 flex items-center justify-center transition cursor-pointer ml-1"
+												title="Edit Site Visit Details"
+											>
+												<svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+													<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+												</svg>
+											</button>
+											<button
+												v-if="tripStatus === 'IN_PROGRESS' || tripStatus === 'NOT_STARTED'"
+												type="button"
+												@click.stop="promptDeleteSiteVisit(visit)"
+												class="w-7 h-7 rounded-lg bg-white hover:bg-rose-50 text-rose-500 hover:text-rose-700 border border-slate-200 hover:border-rose-300 flex items-center justify-center transition cursor-pointer"
+												title="Delete Site Visit"
+											>
+												<svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+													<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+												</svg>
+											</button>
 										</div>
 									</div>
 
@@ -401,8 +442,18 @@
 										"{{ visit.remarks }}"
 									</p>
 
-									<div v-if="(visit.site_lat && visit.site_long) || (visit.checkin_lat && visit.checkin_long)" class="text-[9px] text-slate-400 font-mono pl-7">
-										📍 {{ Number(visit.site_lat || visit.checkin_lat).toFixed(4) }}, {{ Number(visit.site_long || visit.checkin_long).toFixed(4) }}
+									<div v-if="(visit.site_lat && visit.site_long) || (visit.checkin_lat && visit.checkin_long)" class="flex items-center space-x-2 pl-7 pt-1">
+										<span class="inline-flex items-center space-x-1 text-[9px] font-bold bg-teal-50 text-teal-700 px-2 py-0.5 rounded-md border border-teal-200/80">
+											<span>📍</span>
+											<span>Location Captured</span>
+										</span>
+										<a
+											:href="`https://www.google.com/maps/search/?api=1&query=${visit.site_lat || visit.checkin_lat},${visit.site_long || visit.checkin_long}`"
+											target="_blank"
+											class="inline-flex items-center space-x-1 text-[9px] font-bold text-teal-700 hover:text-teal-800 bg-white hover:bg-teal-50 px-2 py-0.5 rounded-md border border-teal-200 transition cursor-pointer"
+										>
+											<span>Google Maps ↗</span>
+										</a>
 									</div>
 								</div>
 							</div>
@@ -450,7 +501,7 @@
 										<button
 											v-if="tripStatus === 'IN_PROGRESS' || tripStatus === 'NOT_STARTED'"
 											type="button"
-											@click="deleteExpense(exp.name)"
+											@click.stop="promptDeleteExpense(exp)"
 											class="w-7 h-7 rounded-lg bg-white hover:bg-rose-50 text-rose-500 hover:text-rose-700 border border-slate-200 hover:border-rose-300 flex items-center justify-center transition cursor-pointer"
 											title="Delete Expense"
 										>
@@ -560,8 +611,8 @@
 						</svg>
 					</div>
 					<div>
-						<h2 class="text-base font-bold text-slate-900">Record Site Visit</h2>
-						<p class="text-[10px] text-slate-500">Adds site entry to Executive Expense Manager</p>
+						<h2 class="text-base font-bold text-slate-900">{{ editingSiteVisitRow ? 'Edit Site Visit' : 'Record Site Visit' }}</h2>
+						<p class="text-[10px] text-slate-500">{{ editingSiteVisitRow ? 'Update customer and details (Original GPS remains locked)' : 'Adds site entry to Executive Expense Manager' }}</p>
 					</div>
 				</div>
 			</template>
@@ -645,7 +696,7 @@
 									<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
 									<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
 								</svg>
-								<span>Acquiring GPS location to sort nearby customers...</span>
+								<span>Fetching Location to sort nearby customers...</span>
 							</div>
 
 							<div class="relative">
@@ -856,7 +907,15 @@
 
 					<!-- Distance in KM -->
 					<div>
-						<label class="block text-xs font-bold text-slate-700 mb-1">Distance from Previous Stop (KM)</label>
+						<div class="flex items-center justify-between mb-1">
+							<label class="block text-xs font-bold text-slate-700">Actual Distance (KM)</label>
+							<span
+								v-if="editingSiteVisitRow && siteVisitForm.distance_travelled !== undefined && siteVisitForm.distance_travelled !== null"
+								class="text-[10px] font-mono text-slate-600 bg-slate-100 px-2 py-0.5 rounded-lg border border-slate-200"
+							>
+								GPS Calc: <strong class="text-slate-800">{{ siteVisitForm.distance_travelled }} km</strong>
+							</span>
+						</div>
 						<input
 							type="number"
 							step="0.1"
@@ -864,6 +923,9 @@
 							placeholder="0.0"
 							class="w-full px-3.5 py-2.5 text-xs rounded-2xl bg-slate-50 border border-slate-200 focus:bg-white focus:outline-none focus:ring-4 focus:ring-teal-500/15 focus:border-teal-500 text-slate-900 font-mono"
 						/>
+						<p class="text-[10px] text-slate-400 mt-1">
+							Actual distance entered by salesperson for this stop.
+						</p>
 					</div>
 
 					<!-- Remarks / Purpose -->
@@ -877,8 +939,8 @@
 						></textarea>
 					</div>
 
-					<!-- GPS Indicator -->
-					<div class="p-2.5 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
+					<!-- GPS Indicator / Lock Status -->
+					<div v-if="!editingSiteVisitRow" class="p-2.5 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
 						<div class="flex items-center space-x-1.5 truncate">
 							<svg class="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
@@ -887,6 +949,15 @@
 							<span class="truncate">{{ locationStatusText }}</span>
 						</div>
 						<span class="text-[10px] font-mono text-slate-400">{{ liveTimeFormatted }}</span>
+					</div>
+					<div v-else class="p-2.5 rounded-2xl bg-teal-50/80 border border-teal-200 flex items-center justify-between text-[11px] text-teal-800">
+						<div class="flex items-center space-x-1.5 truncate font-medium">
+							<svg class="w-3.5 h-3.5 text-teal-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+							</svg>
+							<span class="truncate">GPS location locked (retains original coordinates)</span>
+						</div>
+						<span class="text-[9px] font-bold bg-teal-200/60 text-teal-900 px-2 py-0.5 rounded-md">Location Locked</span>
 					</div>
 				</div>
 			</template>
@@ -906,7 +977,7 @@
 						@click="submitSiteVisit"
 						class="px-4 py-2.5 text-xs font-bold text-white bg-teal-600 hover:bg-teal-500 rounded-2xl shadow-sm"
 					>
-						Save Visit
+						{{ editingSiteVisitRow ? 'Update Visit' : 'Save Visit' }}
 					</Button>
 				</div>
 			</template>
@@ -919,8 +990,8 @@
 			<template #body-title>
 				<div class="flex items-center space-x-2.5">
 					<div class="w-8 h-8 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-600 flex items-center justify-center flex-shrink-0">
-						<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+						<svg class="w-4 h-4 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 8h6m-5 0h4a3 3 0 010 6H9l5 6M9 4h6" />
 						</svg>
 					</div>
 					<div>
@@ -1463,10 +1534,10 @@
 
 				<div class="space-y-1">
 					<h3 class="text-sm font-bold text-slate-900">
-						{{ gpsLoadingTitle || 'Acquiring GPS Location...' }}
+						{{ gpsLoadingTitle || 'Fetching Location...' }}
 					</h3>
 					<p class="text-[11px] text-slate-500 leading-relaxed">
-						{{ gpsLoadingSubtitle || 'Locking high-accuracy satellite coordinates. Please hold on for a moment...' }}
+						{{ gpsLoadingSubtitle || 'Please hold on while we get your current location...' }}
 					</p>
 				</div>
 
@@ -1475,6 +1546,91 @@
 				</div>
 			</div>
 		</div>
+
+		<!-- ========================================================= -->
+		<!-- CONFIRMATION DIALOG (BEAUTIFULLY STYLED)                  -->
+		<!-- ========================================================= -->
+		<Teleport to="body">
+			<Transition
+				enter-active-class="transition duration-150 ease-out"
+				enter-from-class="opacity-0 scale-95"
+				enter-to-class="opacity-100 scale-100"
+				leave-active-class="transition duration-100 ease-in"
+				leave-from-class="opacity-100 scale-100"
+				leave-to-class="opacity-0 scale-95"
+			>
+				<div
+					v-if="showConfirmModal"
+					class="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs"
+					@click.self="cancelConfirmModal"
+				>
+					<div class="bg-white rounded-3xl max-w-xs sm:max-w-sm w-full p-5 shadow-2xl space-y-4 overflow-hidden border border-slate-200/90 relative animate-scaleUp text-center">
+						<!-- Icon -->
+						<div class="w-14 h-14 rounded-3xl bg-red-50 border border-red-100 flex items-center justify-center mx-auto shadow-xs" style="background-color: #fef2f2 !important; border-color: #fee2e2 !important;">
+							<svg class="w-7 h-7 text-red-600" style="color: #dc2626 !important;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+							</svg>
+						</div>
+
+						<!-- Text -->
+						<div class="space-y-1.5">
+							<h3 class="text-base font-bold text-slate-900">
+								{{ confirmModalConfig.title || 'Are you sure?' }}
+							</h3>
+							<p class="text-xs text-slate-600 leading-relaxed px-1">
+								{{ confirmModalConfig.message }}
+							</p>
+							<div
+								v-if="confirmModalConfig.details"
+								class="mt-2 p-2 rounded-xl bg-slate-50 border border-slate-100 text-[11px] text-slate-600 font-medium truncate"
+							>
+								{{ confirmModalConfig.details }}
+							</div>
+						</div>
+
+						<!-- Buttons -->
+						<div class="grid grid-cols-2 gap-2.5 pt-1">
+							<button
+								type="button"
+								:disabled="confirmModalConfig.isProcessing"
+								@click="cancelConfirmModal"
+								class="w-full py-2.5 px-4 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 rounded-2xl transition cursor-pointer disabled:opacity-50"
+							>
+								Cancel
+							</button>
+							<button
+								type="button"
+								:disabled="confirmModalConfig.isProcessing"
+								@click="executeConfirmModal"
+								class="w-full py-2.5 px-4 text-xs font-bold text-white bg-red-600 hover:bg-red-700 active:bg-red-800 rounded-2xl shadow-sm transition flex items-center justify-center space-x-1.5 cursor-pointer disabled:opacity-50"
+								style="background-color: #dc2626 !important; color: #ffffff !important;"
+							>
+								<svg
+									v-if="confirmModalConfig.isProcessing"
+									class="w-3.5 h-3.5 animate-spin mr-1 text-white"
+									fill="none"
+									viewBox="0 0 24 24"
+									stroke="currentColor"
+								>
+									<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+									<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+								</svg>
+								<svg
+									v-else
+									class="w-3.5 h-3.5 text-white mr-1"
+									fill="none"
+									viewBox="0 0 24 24"
+									stroke="currentColor"
+								>
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+								</svg>
+								<span class="font-bold text-white">{{ confirmModalConfig.isProcessing ? 'Deleting...' : (confirmModalConfig.confirmText || 'Delete') }}</span>
+							</button>
+						</div>
+					</div>
+				</div>
+			</Transition>
+		</Teleport>
 
 		<!-- Global Mobile Bottom Navigation Bar -->
 		<BottomNavBar
@@ -1498,7 +1654,10 @@ import {
 	todayEemResource,
 	startTripResource,
 	addEemSiteVisitResource,
+	updateEemSiteVisitResource,
+	deleteEemSiteVisitResource,
 	addEemExpenseResource,
+	deleteEemExpenseResource,
 	endTripResource,
 	eemHistoryResource,
 	expenseTypesResource,
@@ -1512,6 +1671,7 @@ const router = useRouter()
 // UI state
 const activeTab = ref("visits")
 const showSiteVisitModal = ref(false)
+const editingSiteVisitRow = ref(null)
 const showExpenseModal = ref(false)
 const showEndTripModal = ref(false)
 const showHistoryModal = ref(false)
@@ -1519,8 +1679,8 @@ const showLocationModal = ref(false)
 const showCheckinRequiredModal = ref(false)
 const isAcquiringLocation = ref(false)
 const isAcquiringGps = ref(false)
-const gpsLoadingTitle = ref("Acquiring GPS Location...")
-const gpsLoadingSubtitle = ref("Locking high-accuracy satellite coordinates. Please hold on...")
+const gpsLoadingTitle = ref("Fetching Location...")
+const gpsLoadingSubtitle = ref("Please hold on while we get your location...")
 const isLocatingForModal = ref(false)
 const locationModalContext = ref("start") // 'start' | 'site' | 'end'
 const pendingPrefillCustomer = ref(null)
@@ -1826,7 +1986,7 @@ function getCurrentLocation() {
 					longitude: position.coords.longitude,
 				}
 				locationCoords.value = coords
-				locationStatusText.value = `📍 GPS: ${coords.latitude.toFixed(4)}, ${coords.longitude.toFixed(4)}`
+				locationStatusText.value = "📍 Location Captured"
 				resolve(coords)
 			},
 			(err) => {
@@ -1856,8 +2016,8 @@ function goToHomeCheckin() {
 async function retryAcquireLocation() {
 	isAcquiringLocation.value = true
 	isAcquiringGps.value = true
-	gpsLoadingTitle.value = "Connecting to GPS Satellites..."
-	gpsLoadingSubtitle.value = "Calibrating real-time coordinates from your device..."
+	gpsLoadingTitle.value = "Fetching Location..."
+	gpsLoadingSubtitle.value = "Please hold on while we get your location..."
 
 	try {
 		const coords = await getCurrentLocation()
@@ -1888,6 +2048,7 @@ function openHistoryModal() {
 }
 
 async function openSiteVisitModal(prefillData = null) {
+	editingSiteVisitRow.value = null
 	siteVisitForm.value = {
 		customer: prefillData?.customer || "",
 		site: prefillData?.site || prefillData?.customer_name || "",
@@ -2004,15 +2165,111 @@ function viewReceipt(url, title = "Expense Receipt") {
 	showReceiptModal.value = true
 }
 
-async function deleteExpense(rowName) {
-	if (!confirm("Are you sure you want to remove this expense record?")) return
-	try {
-		await call("tq_erphr.pwa_api.delete_eem_expense", { row_name: rowName })
-		toast.success("Expense removed successfully", "Removed")
-		await todayEemResource.fetch()
-	} catch (err) {
-		toast.error(err.messages?.[0] || err.message || "Failed to remove expense", "Error")
+function openEditSiteVisitModal(visit) {
+	if (!visit) return
+	editingSiteVisitRow.value = visit.name
+	siteVisitForm.value = {
+		customer: visit.customer || "",
+		site: visit.site || "",
+		category: visit.category || "Client Meeting",
+		contact_number: visit.contact_number || "",
+		address: visit.address || "",
+		actual_distance: visit.actual_distance !== undefined && visit.actual_distance !== null && visit.actual_distance !== 0 ? visit.actual_distance : "",
+		distance_travelled: visit.distance_travelled !== undefined && visit.distance_travelled !== null ? visit.distance_travelled : 0,
+		remarks: visit.remarks || "",
 	}
+	customerSearchQuery.value = ""
+	if (visit.customer) {
+		selectedCustomerDetails.value = {
+			name: visit.customer,
+			customer_name: visit.site || visit.customer,
+			mobile_no: visit.contact_number,
+			address_text: visit.address,
+		}
+		isCustomerSearchOpen.value = false
+	} else {
+		selectedCustomerDetails.value = null
+		isCustomerSearchOpen.value = false
+	}
+	showSiteVisitModal.value = true
+}
+
+// Styled Confirmation Dialog State & Handlers
+const showConfirmModal = ref(false)
+const confirmModalConfig = ref({
+	title: "",
+	message: "",
+	details: "",
+	confirmText: "Delete",
+	confirmVariant: "danger",
+	onConfirm: null,
+	isProcessing: false,
+})
+
+function cancelConfirmModal() {
+	if (confirmModalConfig.value.isProcessing) return
+	showConfirmModal.value = false
+}
+
+async function executeConfirmModal() {
+	if (typeof confirmModalConfig.value.onConfirm === "function") {
+		await confirmModalConfig.value.onConfirm()
+	}
+}
+
+function promptDeleteSiteVisit(visit) {
+	if (!visit) return
+	const name = visit.customer || visit.site || "this site visit"
+	confirmModalConfig.value = {
+		title: "Delete Site Visit",
+		message: `Are you sure you want to remove the visit record for "${name}"?`,
+		details: visit.category ? `Category: ${visit.category}` : "",
+		confirmText: "Delete Visit",
+		confirmVariant: "danger",
+		isProcessing: false,
+		onConfirm: async () => {
+			confirmModalConfig.value.isProcessing = true
+			try {
+				await deleteEemSiteVisitResource.submit({ row_name: visit.name })
+				toast.success("Site visit removed successfully.", "Visit Deleted")
+				showConfirmModal.value = false
+				await todayEemResource.fetch()
+			} catch (err) {
+				console.error("Error deleting site visit:", err)
+				toast.error(err.messages?.[0] || err.message || "Failed to delete site visit.", "Delete Error")
+			} finally {
+				confirmModalConfig.value.isProcessing = false
+			}
+		},
+	}
+	showConfirmModal.value = true
+}
+
+function promptDeleteExpense(exp) {
+	if (!exp) return
+	confirmModalConfig.value = {
+		title: "Delete Expense",
+		message: `Are you sure you want to remove this ₹${formatAmount(exp.amount)} expense record?`,
+		details: `${exp.expense_type}${exp.description ? ' • ' + exp.description : ''}`,
+		confirmText: "Delete Expense",
+		confirmVariant: "danger",
+		isProcessing: false,
+		onConfirm: async () => {
+			confirmModalConfig.value.isProcessing = true
+			try {
+				await deleteEemExpenseResource.submit({ row_name: exp.name })
+				toast.success("Expense removed successfully.", "Expense Deleted")
+				showConfirmModal.value = false
+				await todayEemResource.fetch()
+			} catch (err) {
+				console.error("Error deleting expense:", err)
+				toast.error(err.messages?.[0] || err.message || "Failed to remove expense.", "Delete Error")
+			} finally {
+				confirmModalConfig.value.isProcessing = false
+			}
+		},
+	}
+	showConfirmModal.value = true
 }
 
 function openExpenseModal() {
@@ -2051,8 +2308,8 @@ async function submitStartTrip() {
 
 	isSubmittingStart.value = true
 	isAcquiringGps.value = true
-	gpsLoadingTitle.value = "Acquiring GPS to Start Trip..."
-	gpsLoadingSubtitle.value = "Locking your starting origin coordinates..."
+	gpsLoadingTitle.value = "Fetching Location..."
+	gpsLoadingSubtitle.value = "Please hold on while we get your location..."
 
 	try {
 		const coords = await getCurrentLocation()
@@ -2094,9 +2351,38 @@ async function submitSiteVisit() {
 	}
 
 	isSubmittingSiteVisit.value = true
+
+	// If editing an existing site visit: update without modifying GPS coordinates!
+	if (editingSiteVisitRow.value) {
+		try {
+			await updateEemSiteVisitResource.submit({
+				row_name: editingSiteVisitRow.value,
+				customer: siteVisitForm.value.customer,
+				site: siteVisitForm.value.site,
+				category: siteVisitForm.value.category,
+				contact_number: siteVisitForm.value.contact_number,
+				address: siteVisitForm.value.address,
+				remarks: siteVisitForm.value.remarks,
+				actual_distance: siteVisitForm.value.actual_distance !== "" ? Number(siteVisitForm.value.actual_distance) : null,
+			})
+
+			showSiteVisitModal.value = false
+			editingSiteVisitRow.value = null
+			toast.success("Site visit details updated successfully! Location preserved.", "Visit Updated")
+			await todayEemResource.fetch()
+		} catch (err) {
+			console.error("Error updating site visit:", err)
+			toast.error(err.messages?.[0] || err.message || "Failed to update site visit.", "Update Error")
+		} finally {
+			isSubmittingSiteVisit.value = false
+		}
+		return
+	}
+
+	// New site visit: acquire GPS coordinates
 	isAcquiringGps.value = true
-	gpsLoadingTitle.value = "Acquiring GPS for Site Visit..."
-	gpsLoadingSubtitle.value = "Locking satellite coordinates for this site location..."
+	gpsLoadingTitle.value = "Fetching Location..."
+	gpsLoadingSubtitle.value = "Please hold on while we get your location..."
 
 	try {
 		const coords = await getCurrentLocation()
@@ -2176,8 +2462,8 @@ async function submitEndTrip() {
 
 	isSubmittingEnd.value = true
 	isAcquiringGps.value = true
-	gpsLoadingTitle.value = "Acquiring GPS to End Trip..."
-	gpsLoadingSubtitle.value = "Locking your destination coordinates..."
+	gpsLoadingTitle.value = "Fetching Location..."
+	gpsLoadingSubtitle.value = "Please hold on while we get your location..."
 
 	try {
 		const coords = await getCurrentLocation()

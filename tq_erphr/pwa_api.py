@@ -550,6 +550,97 @@ def add_eem_site_visit(
 
 
 @frappe.whitelist()
+def update_eem_site_visit(
+	row_name: str,
+	customer: str = None,
+	site: str = None,
+	category: str = None,
+	contact_number: str = None,
+	address: str = None,
+	remarks: str = None,
+	actual_distance: float = None,
+) -> dict:
+	current_user = frappe.session.user
+	if not current_user or current_user == "Guest":
+		frappe.throw(_("Not logged in"), frappe.AuthenticationError)
+
+	employee = frappe.db.get_value("Employee", {"user_id": current_user, "status": "Active"}, "name")
+	if not employee:
+		frappe.throw(_("No active employee found for current user"))
+
+	today_date = frappe.utils.today()
+	eem_doc = get_or_create_today_eem_doc(employee, today_date)
+
+	if eem_doc.docstatus != 0:
+		frappe.throw(_("Cannot edit site visit on a submitted or completed travel log."))
+
+	matched_row = None
+	for row in eem_doc.employee_site_tracking:
+		if row.name == row_name:
+			matched_row = row
+			break
+
+	if not matched_row:
+		frappe.throw(_("Site visit record not found."))
+
+	# Update fields while strictly preserving original GPS coordinates
+	if customer is not None:
+		matched_row.customer = customer or ""
+	if site is not None:
+		matched_row.site = site or ""
+	if category is not None:
+		matched_row.category = category or ""
+	if contact_number is not None:
+		matched_row.contact_number = contact_number or ""
+	if address is not None:
+		matched_row.address = address or ""
+	if remarks is not None:
+		matched_row.remarks = remarks or ""
+	if actual_distance is not None and str(actual_distance).strip() != "":
+		try:
+			matched_row.actual_distance = float(actual_distance)
+		except (ValueError, TypeError):
+			pass
+
+	matched_row.location_name = matched_row.site or (matched_row.customer or "Site Location")
+
+	eem_doc.calculate_site_distances()
+	eem_doc.calculate_totals()
+	eem_doc.build_route_polyline()
+	eem_doc.fill_location_names()
+	eem_doc.save(ignore_permissions=True)
+
+	return get_today_eem()
+
+
+@frappe.whitelist()
+def delete_eem_site_visit(row_name: str) -> dict:
+	current_user = frappe.session.user
+	if not current_user or current_user == "Guest":
+		frappe.throw(_("Not logged in"), frappe.AuthenticationError)
+
+	employee = frappe.db.get_value("Employee", {"user_id": current_user, "status": "Active"}, "name")
+	if not employee:
+		frappe.throw(_("No active employee found for current user"))
+
+	today_date = frappe.utils.today()
+	eem_doc = get_or_create_today_eem_doc(employee, today_date)
+
+	if eem_doc.docstatus != 0:
+		frappe.throw(_("Cannot delete site visit on a submitted or completed travel log."))
+
+	filtered = [r for r in eem_doc.employee_site_tracking if r.name != row_name]
+	eem_doc.set("employee_site_tracking", filtered)
+	eem_doc.calculate_site_distances()
+	eem_doc.calculate_totals()
+	eem_doc.build_route_polyline()
+	eem_doc.fill_location_names()
+	eem_doc.save(ignore_permissions=True)
+
+	return get_today_eem()
+
+
+@frappe.whitelist()
 def upload_expense_attachment():
 	"""
 	Uploads a bill/receipt image or PDF from Camera or File Picker
@@ -1263,26 +1354,70 @@ def get_subordinate_sales_persons(current_user: str = None) -> list:
 	if not subordinate_sp_names:
 		return []
 
+	sp_fields = ["name", "sales_person_name", "employee", "parent_sales_person"]
+	sp_meta = frappe.get_meta("Sales Person")
+	if sp_meta.has_field("mobile_no"):
+		sp_fields.append("mobile_no")
+	if sp_meta.has_field("cell_number"):
+		sp_fields.append("cell_number")
+	if sp_meta.has_field("phone"):
+		sp_fields.append("phone")
+
 	records = frappe.get_all(
 		"Sales Person",
 		filters={"name": ["in", list(subordinate_sp_names)], "enabled": 1},
-		fields=["name", "sales_person_name", "employee", "parent_sales_person"],
+		fields=sp_fields,
 		order_by="sales_person_name asc",
 	)
 
 	emp_ids = [r.employee for r in records if r.employee]
 	emp_map = {}
+	user_map = {}
 	if emp_ids:
+		emp_fields = ["name", "employee_name", "designation", "department", "image", "cell_number", "company_email", "user_id"]
+		emp_meta = frappe.get_meta("Employee")
+		if emp_meta.has_field("mobile_no"):
+			emp_fields.append("mobile_no")
+		if emp_meta.has_field("emergency_phone_number"):
+			emp_fields.append("emergency_phone_number")
+
 		emp_list = frappe.get_all(
 			"Employee",
 			filters={"name": ["in", emp_ids]},
-			fields=["name", "employee_name", "designation", "department", "image", "cell_number", "company_email"],
+			fields=emp_fields,
 		)
 		emp_map = {e.name: e for e in emp_list}
+
+		user_ids = [e.user_id for e in emp_list if e.get("user_id")]
+		if user_ids:
+			user_fields = ["name", "mobile_no", "phone"]
+			user_list = frappe.get_all(
+				"User",
+				filters={"name": ["in", user_ids]},
+				fields=user_fields,
+			)
+			user_map = {u.name: u for u in user_list}
 
 	res = []
 	for r in records:
 		emp_data = emp_map.get(r.employee, {})
+		user_data = user_map.get(emp_data.get("user_id"), {})
+
+		# Fallback chain for phone number:
+		# 1. Sales Person (mobile_no / cell_number / phone)
+		# 2. Employee (cell_number / mobile_no / emergency_phone_number)
+		# 3. User (mobile_no / phone)
+		contact_num = (
+			r.get("mobile_no")
+			or r.get("cell_number")
+			or r.get("phone")
+			or emp_data.get("cell_number")
+			or emp_data.get("mobile_no")
+			or emp_data.get("emergency_phone_number")
+			or user_data.get("mobile_no")
+			or user_data.get("phone")
+		)
+
 		res.append({
 			"sales_person": r.name,
 			"sales_person_name": r.sales_person_name or r.name,
@@ -1291,8 +1426,8 @@ def get_subordinate_sales_persons(current_user: str = None) -> list:
 			"designation": emp_data.get("designation") or "Sales Executive",
 			"department": emp_data.get("department") or "Sales",
 			"image": emp_data.get("image"),
-			"cell_number": emp_data.get("cell_number"),
-			"company_email": emp_data.get("company_email"),
+			"cell_number": contact_num,
+			"company_email": emp_data.get("company_email") or user_data.get("email"),
 			"parent_sales_person": r.parent_sales_person,
 		})
 

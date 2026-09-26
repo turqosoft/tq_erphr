@@ -191,3 +191,15 @@ mit
 
 #### Bug Fixes
 - 
+
+### v1.1.9 (2026-09-26)
+
+#### New Features
+- Edit site visits
+
+#### Improvements
+- Removed display of geolocation
+- UI improvements
+
+#### Bug Fixes
+- 

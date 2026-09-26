@@ -1,4 +1,5 @@
 import frappeUIPreset from "frappe-ui/src/tailwind/preset"
+import colors from "tailwindcss/colors"
 
 const turquoise = {
 	50: '#f0fdfc',
@@ -28,6 +29,10 @@ export default {
 			colors: {
 				brand: turquoise,
 				teal: turquoise,
+				rose: colors.rose,
+				slate: colors.slate,
+				emerald: colors.emerald,
+				red: colors.red,
 				surface: {
 					bg: '#f4f5f7',
 					card: '#ffffff',

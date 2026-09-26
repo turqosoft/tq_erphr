@@ -61,19 +61,17 @@ export function detectDeviceDetails() {
 	const deviceUid = getOrCreateDeviceId()
 	const appMode = isPWA ? "PWA" : "Web"
 	
-	// Formatted concise device_id suitable for DocType field (e.g. "Android • Chrome (PWA) [DEV-A1B2]")
-	const shortDeviceId = `${os} • ${browser} (${appMode}) [${deviceUid.slice(0, 10)}]`
-
-	// Extended remark details
-	const remarks = `Device: ${os} | Browser: ${browser} | Mode: ${appMode} | Screen: ${window.screen.width}x${window.screen.height} | UID: ${deviceUid}`
+	const shortDeviceId = isPWA ? "MobiBiz PWA" : "MobiBiz Web"
+	const remarks = `App Mode: ${appMode}`
 
 	return {
 		deviceUid,
-		os,
-		browser,
+		os: "Mobile",
+		browser: "Browser",
 		isPWA,
 		appMode,
 		shortDeviceId,
 		remarks,
 	}
 }
+
