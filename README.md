@@ -203,3 +203,14 @@ mit
 
 #### Bug Fixes
 - 
+
+### v1.1.10 (2026-09-30)
+
+#### New Features
+- 
+
+#### Improvements
+- Increased field width of Remarks field in employee site tracking
+
+#### Bug Fixes
+- 
