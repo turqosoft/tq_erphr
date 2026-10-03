@@ -214,3 +214,14 @@ mit
 
 #### Bug Fixes
 - 
+
+### v1.1.11 (2026-10-03)
+
+#### New Features
+- Executive Live Tracker
+
+#### Improvements
+- 
+
+#### Bug Fixes
+- 
