@@ -17,7 +17,8 @@
         "two_wheeler_rate_per_km",
         "four_wheeler_rate_per_km",
         "other_rate_per_km",
-        "travel_expense_type"
+        "travel_expense_type",
+        "executive_tracker_on"
     ],
     "fields": [
         {
@@ -95,6 +96,13 @@
             "fieldtype": "Link",
             "options": "Expense Claim Type",
             "label": "Travel Expense Type"
+        },
+        {
+            "fieldname": "executive_tracker_on",
+            "fieldtype": "Check",
+            "label": "Executive Tracker On",
+            "default": 0,
+            "description": "Enable this option to activate the Executive Tracker feature."
         }
     ],
     "icon": "fa fa-cog",

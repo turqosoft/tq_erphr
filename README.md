@@ -225,3 +225,13 @@ mit
 
 #### Bug Fixes
 - 
+### v1.1.12 (2026-10-06)
+
+#### New Features
+- Executive Live Tracker, enable,disable from server
+
+#### Improvements
+- 
+
+#### Bug Fixes
+- 
