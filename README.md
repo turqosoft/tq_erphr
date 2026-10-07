@@ -235,3 +235,14 @@ mit
 
 #### Bug Fixes
 - 
+
+### v1.1.13 (2026-10-06)
+
+#### New Features
+- 
+
+#### Improvements
+- Slight modification in Executive expense manager site visit report.
+
+#### Bug Fixes
+- 

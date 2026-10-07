@@ -6,6 +6,19 @@ import math
 from frappe.model.document import Document
 from tq_erphr.geo import street_distance, reverse_geocode
 
+
+def format_clean_travel_label(label, default="Site"):
+    raw = (label or default).strip()
+    lower = raw.lower()
+    if lower in ["start", "travel to start"]:
+        return "Start"
+    if lower in ["end", "end location", "travel to end", "travel to end location"]:
+        return "End"
+    if lower.startswith("travel to "):
+        return raw[10:].strip()
+    return raw
+
+
 class ExecutiveExpenseManager(Document):
     def validate(self):
         self.calculate_site_distances()        
@@ -162,7 +175,7 @@ class ExecutiveExpenseManager(Document):
                 distance = site.actual_distance or 0
                 if distance <= 0:
                     continue
-                segment_label = site.customer or site.site or site.location_name or f"Site {idx}"
+                segment_label = format_clean_travel_label(site.customer or site.site or site.location_name, f"Site {idx}")
                 expense_claim.append("expenses", {
                     "expense_type": self.travel_expense_type,
                     "expense_date": self.date,
@@ -171,7 +184,7 @@ class ExecutiveExpenseManager(Document):
                     "sanctioned_amount": distance * rate,
                     "description": (
                         f"Vehicle Type: {self.vehicle_type}, "
-                        f"Travel to {segment_label}: {distance} km "
+                        f"{segment_label}: {distance} km "
                         f"@ {rate} per km"
                     )
                 })
@@ -179,7 +192,7 @@ class ExecutiveExpenseManager(Document):
             # End leg
             end_distance = self.actual_end_distance or 0
             if end_distance > 0:
-                end_label = self.end_narration or "End location"
+                end_label = format_clean_travel_label(self.end_narration, "End")
                 expense_claim.append("expenses", {
                     "expense_type": self.travel_expense_type,
                     "expense_date": self.date,
@@ -188,7 +201,7 @@ class ExecutiveExpenseManager(Document):
                     "sanctioned_amount": end_distance * rate,
                     "description": (
                         f"Vehicle Type: {self.vehicle_type}, "
-                        f"Travel to {end_label}: {end_distance} km "
+                        f"{end_label}: {end_distance} km "
                         f"@ {rate} per km"
                     )
                 })

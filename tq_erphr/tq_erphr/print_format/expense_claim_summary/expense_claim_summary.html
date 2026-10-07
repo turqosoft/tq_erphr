@@ -463,8 +463,19 @@
             {% for site in eem.employee_site_tracking %}
                 {% set distance = site.actual_distance or 0 %}
                 {% if distance > 0 %}
-                    {% set segment_label = site.customer or site.site or site.location_name or "Site" %}
-                    {% set desc = "Travel to " ~ segment_label ~ ": " ~ distance ~ " km @ " ~ rate %}
+                    {% set raw_label = (site.customer or site.site or site.location_name or "Site").strip() %}
+                    {% set lower_label = raw_label.lower() %}
+                    {% if lower_label in ["start", "travel to start"] %}
+                        {% set segment_label = "Start" %}
+                    {% elif lower_label in ["end", "end location", "travel to end", "travel to end location"] %}
+                        {% set segment_label = "End" %}
+                    {% else %}
+                        {% set segment_label = raw_label %}
+                        {% if segment_label.lower().startswith("travel to ") %}
+                            {% set segment_label = segment_label[10:].strip() %}
+                        {% endif %}
+                    {% endif %}
+                    {% set desc = segment_label ~ ": " ~ distance ~ " km @ " ~ rate %}
                     {% set _ = day_items.append({"detail": desc, "amount": distance * rate}) %}
                 {% endif %}
             {% endfor %}
@@ -472,8 +483,17 @@
             {# End leg #}
             {% set end_distance = eem.actual_end_distance or 0 %}
             {% if end_distance > 0 %}
-                {% set end_label = eem.end_narration or "End location" %}
-                {% set desc = "Travel to " ~ end_label ~ ": " ~ end_distance ~ " km @ " ~ rate %}
+                {% set raw_end = (eem.end_narration or "End location").strip() %}
+                {% set lower_end = raw_end.lower() %}
+                {% if lower_end in ["end", "end location", "travel to end", "travel to end location"] %}
+                    {% set end_label = "End" %}
+                {% else %}
+                    {% set end_label = raw_end %}
+                    {% if end_label.lower().startswith("travel to ") %}
+                        {% set end_label = end_label[10:].strip() %}
+                    {% endif %}
+                {% endif %}
+                {% set desc = end_label ~ ": " ~ end_distance ~ " km @ " ~ rate %}
                 {% set _ = day_items.append({"detail": desc, "amount": end_distance * rate}) %}
             {% endif %}
 
@@ -577,11 +597,24 @@
                     {% for i in range(6) %}
                         {% set item = week_data[i][row_idx] if week_data[i]|length > row_idx else None %}
                         {% if item %}
+                            {% set display_detail = item.detail or "" %}
+                            {% if display_detail.lower().startswith("travel to start:") %}
+                                {% set display_detail = "Start:" ~ display_detail[16:] %}
+                            {% elif display_detail.lower().startswith("travel to start :") %}
+                                {% set display_detail = "Start:" ~ display_detail[17:] %}
+                            {% elif display_detail.lower().startswith("travel to end location:") %}
+                                {% set display_detail = "End:" ~ display_detail[23:] %}
+                            {% elif display_detail.lower().startswith("travel to end:") %}
+                                {% set display_detail = "End:" ~ display_detail[14:] %}
+                            {% elif display_detail.lower().startswith("travel to ") %}
+                                {% set display_detail = display_detail[10:] %}
+                            {% endif %}
+
                             {% if item.get('is_total') %}
-                                <td class="cell-detail cell-travel-total">{{ item.detail }}</td>
+                                <td class="cell-detail cell-travel-total">{{ display_detail }}</td>
                                 <td class="cell-amount cell-travel-total">{{ "{:,.2f}".format(item.amount) if (item.amount is not none and item.amount != "") else "" }}</td>
                             {% else %}
-                                <td class="cell-detail">{{ item.detail }}</td>
+                                <td class="cell-detail">{{ display_detail }}</td>
                                 <td class="cell-amount">{{ "{:,.2f}".format(item.amount) if (item.amount is not none and item.amount != "") else "" }}</td>
                             {% endif %}
                         {% else %}
