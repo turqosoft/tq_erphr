@@ -79,15 +79,73 @@ class ExecutiveExpenseManager(Document):
         )
     
     def add_travel_expensetype_and_rate(self):
-    
+        rate = 0.0
+        travel_expense_type = None
+
+        # 1. Check Sales Person (highest priority)
+        sp_name = None
+        if self.employee:
+            sp_name = frappe.db.get_value("Sales Person", {"employee": self.employee, "enabled": 1}, "name")
+            if not sp_name:
+                emp_name = frappe.db.get_value("Employee", self.employee, "employee_name")
+                if emp_name:
+                    sp_name = frappe.db.get_value("Sales Person", {"sales_person_name": emp_name, "enabled": 1}, "name")
+
+        if sp_name:
+            sp_data = frappe.db.get_value(
+                "Sales Person",
+                sp_name,
+                ["two_wheeler_rate_per_km", "four_wheeler_rate_per_km", "other_rate_per_km", "travel_expense_type"],
+                as_dict=True
+            )
+            if sp_data:
+                if self.vehicle_type == "Two Wheeler" and sp_data.get("two_wheeler_rate_per_km"):
+                    rate = float(sp_data.two_wheeler_rate_per_km)
+                elif self.vehicle_type == "Four Wheeler" and sp_data.get("four_wheeler_rate_per_km"):
+                    rate = float(sp_data.four_wheeler_rate_per_km)
+                elif self.vehicle_type == "Other" and sp_data.get("other_rate_per_km"):
+                    rate = float(sp_data.other_rate_per_km)
+
+                if sp_data.get("travel_expense_type"):
+                    travel_expense_type = sp_data.travel_expense_type
+
+        # 2. Check Designation (second priority)
+        designation = frappe.db.get_value("Employee", self.employee, "designation") if self.employee else None
+        if designation:
+            desig_data = frappe.db.get_value(
+                "Designation",
+                designation,
+                ["two_wheeler_rate_per_km", "four_wheeler_rate_per_km", "other_rate_per_km", "travel_expense_type"],
+                as_dict=True
+            )
+            if desig_data:
+                if rate <= 0:
+                    if self.vehicle_type == "Two Wheeler" and desig_data.get("two_wheeler_rate_per_km"):
+                        rate = float(desig_data.two_wheeler_rate_per_km)
+                    elif self.vehicle_type == "Four Wheeler" and desig_data.get("four_wheeler_rate_per_km"):
+                        rate = float(desig_data.four_wheeler_rate_per_km)
+                    elif self.vehicle_type == "Other" and desig_data.get("other_rate_per_km"):
+                        rate = float(desig_data.other_rate_per_km)
+
+                if not travel_expense_type and desig_data.get("travel_expense_type"):
+                    travel_expense_type = desig_data.travel_expense_type
+
+        # 3. Fallback to TQ ERPHRHR Settings (lowest priority)
+        if frappe.db.exists("DocType", "TQ ERPHRHR Settings"):
             hr_settings = frappe.get_single("TQ ERPHRHR Settings")
-            self.travel_expense_type = hr_settings.travel_expense_type
-            if self.vehicle_type == "Two Wheeler":
-                self.rate_per_km = hr_settings.two_wheeler_rate_per_km
-            elif self.vehicle_type == "Four Wheeler":
-                self.rate_per_km = hr_settings.four_wheeler_rate_per_km
-            elif self.vehicle_type == "Other":
-                self.rate_per_km = hr_settings.other_rate_per_km
+            if rate <= 0:
+                if self.vehicle_type == "Two Wheeler":
+                    rate = float(hr_settings.two_wheeler_rate_per_km or 0)
+                elif self.vehicle_type == "Four Wheeler":
+                    rate = float(hr_settings.four_wheeler_rate_per_km or 0)
+                elif self.vehicle_type == "Other":
+                    rate = float(hr_settings.other_rate_per_km or 0)
+
+            if not travel_expense_type:
+                travel_expense_type = hr_settings.travel_expense_type
+
+        self.rate_per_km = rate
+        self.travel_expense_type = travel_expense_type
 
     def fetch_site_location(self):
             """Fetch employee check-in/out entries and populate Employee Site Tracking child table."""

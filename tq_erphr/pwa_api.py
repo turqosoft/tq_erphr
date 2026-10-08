@@ -299,9 +299,9 @@ def get_or_create_today_eem_doc(employee: str, date=None):
 		if doc.docstatus != 2:
 			return doc
 
-	hr_settings = frappe.get_single("TQ ERPHRHR Settings") if frappe.db.exists("DocType", "TQ ERPHRHR Settings") else None
-	travel_expense_type = hr_settings.travel_expense_type if hr_settings else "Travel"
-	rate_per_km = hr_settings.two_wheeler_rate_per_km if hr_settings else 4.0
+	rate_info = get_employee_travel_rates(employee)
+	travel_expense_type = rate_info["travel_expense_type"]
+	rate_per_km = rate_info["rates"]["Two Wheeler"]
 
 	doc = frappe.get_doc(
 		{
@@ -315,6 +315,83 @@ def get_or_create_today_eem_doc(employee: str, date=None):
 	)
 	doc.insert(ignore_permissions=True)
 	return doc
+
+
+def get_employee_travel_rates(employee: str) -> dict:
+	rates = {"Two Wheeler": 0.0, "Four Wheeler": 0.0, "Other": 0.0}
+	travel_expense_type = None
+
+	# 1. Check Sales Person
+	sp_name = None
+	if employee:
+		sp_name = frappe.db.get_value("Sales Person", {"employee": employee, "enabled": 1}, "name")
+		if not sp_name:
+			emp_name = frappe.db.get_value("Employee", employee, "employee_name")
+			if emp_name:
+				sp_name = frappe.db.get_value("Sales Person", {"sales_person_name": emp_name, "enabled": 1}, "name")
+
+	if sp_name:
+		sp_data = frappe.db.get_value(
+			"Sales Person",
+			sp_name,
+			["two_wheeler_rate_per_km", "four_wheeler_rate_per_km", "other_rate_per_km", "travel_expense_type"],
+			as_dict=True
+		)
+		if sp_data:
+			if sp_data.get("two_wheeler_rate_per_km"):
+				rates["Two Wheeler"] = float(sp_data.two_wheeler_rate_per_km)
+			if sp_data.get("four_wheeler_rate_per_km"):
+				rates["Four Wheeler"] = float(sp_data.four_wheeler_rate_per_km)
+			if sp_data.get("other_rate_per_km"):
+				rates["Other"] = float(sp_data.other_rate_per_km)
+			if sp_data.get("travel_expense_type"):
+				travel_expense_type = sp_data.travel_expense_type
+
+	# 2. Check Designation
+	designation = frappe.db.get_value("Employee", employee, "designation") if employee else None
+	if designation:
+		desig_data = frappe.db.get_value(
+			"Designation",
+			designation,
+			["two_wheeler_rate_per_km", "four_wheeler_rate_per_km", "other_rate_per_km", "travel_expense_type"],
+			as_dict=True
+		)
+		if desig_data:
+			if not rates["Two Wheeler"] and desig_data.get("two_wheeler_rate_per_km"):
+				rates["Two Wheeler"] = float(desig_data.two_wheeler_rate_per_km)
+			if not rates["Four Wheeler"] and desig_data.get("four_wheeler_rate_per_km"):
+				rates["Four Wheeler"] = float(desig_data.four_wheeler_rate_per_km)
+			if not rates["Other"] and desig_data.get("other_rate_per_km"):
+				rates["Other"] = float(desig_data.other_rate_per_km)
+			if not travel_expense_type and desig_data.get("travel_expense_type"):
+				travel_expense_type = desig_data.travel_expense_type
+
+	# 3. Fallback to TQ ERPHRHR Settings
+	if frappe.db.exists("DocType", "TQ ERPHRHR Settings"):
+		hr_settings = frappe.get_single("TQ ERPHRHR Settings")
+		if not rates["Two Wheeler"] and hr_settings.two_wheeler_rate_per_km:
+			rates["Two Wheeler"] = float(hr_settings.two_wheeler_rate_per_km)
+		if not rates["Four Wheeler"] and hr_settings.four_wheeler_rate_per_km:
+			rates["Four Wheeler"] = float(hr_settings.four_wheeler_rate_per_km)
+		if not rates["Other"] and hr_settings.other_rate_per_km:
+			rates["Other"] = float(hr_settings.other_rate_per_km)
+		if not travel_expense_type and hr_settings.travel_expense_type:
+			travel_expense_type = hr_settings.travel_expense_type
+
+	# Default fallbacks
+	if not rates["Two Wheeler"]:
+		rates["Two Wheeler"] = 4.0
+	if not rates["Four Wheeler"]:
+		rates["Four Wheeler"] = 8.0
+	if not rates["Other"]:
+		rates["Other"] = 5.0
+	if not travel_expense_type:
+		travel_expense_type = "Travel"
+
+	return {
+		"rates": rates,
+		"travel_expense_type": travel_expense_type
+	}
 
 
 @frappe.whitelist()
@@ -338,15 +415,8 @@ def get_today_eem() -> dict:
 		order_by="creation desc",
 	)
 
-	rates = {"Two Wheeler": 4.0, "Four Wheeler": 8.0, "Other": 5.0}
-	if frappe.db.exists("DocType", "TQ ERPHRHR Settings"):
-		hr_settings = frappe.get_single("TQ ERPHRHR Settings")
-		if hr_settings.two_wheeler_rate_per_km:
-			rates["Two Wheeler"] = float(hr_settings.two_wheeler_rate_per_km)
-		if hr_settings.four_wheeler_rate_per_km:
-			rates["Four Wheeler"] = float(hr_settings.four_wheeler_rate_per_km)
-		if hr_settings.other_rate_per_km:
-			rates["Other"] = float(hr_settings.other_rate_per_km)
+	rate_info = get_employee_travel_rates(employee)
+	rates = rate_info["rates"]
 
 	if not eem_name:
 		return {

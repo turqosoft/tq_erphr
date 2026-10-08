@@ -246,3 +246,14 @@ mit
 
 #### Bug Fixes
 - 
+
+### v1.1.14 (2026-10-08)
+
+#### New Features
+- Designation wise and sales person wise expense rate settings.
+
+#### Improvements
+- 
+
+#### Bug Fixes
+- 
