@@ -103,6 +103,28 @@
             "label": "Executive Tracker On",
             "default": 0,
             "description": "Enable this option to activate the Executive Tracker feature."
+        },
+        {
+            "fieldname": "tracker_timing_section",
+            "fieldtype": "Section Break",
+            "label": "Tracker Timing",
+            "depends_on": "eval:doc.executive_tracker_on"
+        },
+        {
+            "fieldname": "tracker_start_time",
+            "fieldtype": "Time",
+            "label": "Tracker Start Time",
+            "default": "08:00:00"
+        },
+        {
+            "fieldname": "tt_cb",
+            "fieldtype": "Column Break"
+        },
+        {
+            "fieldname": "tracker_end_time",
+            "fieldtype": "Time",
+            "label": " Tracker End Time",
+            "default": "18:00:00"
         }
     ],
     "icon": "fa fa-cog",

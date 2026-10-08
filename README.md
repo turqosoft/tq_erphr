@@ -253,7 +253,7 @@ mit
 - Designation wise and sales person wise expense rate settings.
 
 #### Improvements
-- 
+- Set time interval for tracking executives
 
 #### Bug Fixes
 - 
