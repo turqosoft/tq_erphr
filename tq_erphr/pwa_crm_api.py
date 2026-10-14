@@ -457,77 +457,77 @@ def submit_installation_note(data) -> dict:
 
 
 # ------------------------------------------------------------- supervisor
-
 @frappe.whitelist()
 def get_supervisor_service_dashboard(date: str = None) -> dict:
-	me = _require_team()
-	subs = _subordinate_teams(me.name)
-	if not (me.is_group or subs):
-		frappe.throw(_("Supervisor access required"), frappe.PermissionError)
-
-	date = str(getdate(date or nowdate()))
-	if not subs:
-		return {"date": date, "totals": {"assigned": 0, "completed": 0, "pending": 0}, "engineers": []}
-
-	teams = frappe.get_all("CRM Service Team", filters={"name": ["in", subs]}, fields=["name", "employee", "mobile_no"])
-	emp_ids = [t.employee for t in teams if t.employee]
-	employees = {
-		e.name: e
-		for e in frappe.get_all(
-			"Employee",
-			filters={"name": ["in", emp_ids]},
-			fields=["name", "employee_name", "designation", "cell_number", "user_id"],
-		)
-	} if emp_ids else {}
-	user_ids = [e.user_id for e in employees.values() if e.user_id]
-	user_mobiles = {
-		u.name: u.mobile_no
-		for u in frappe.get_all("User", filters={"name": ["in", user_ids]}, fields=["name", "mobile_no"])
-	} if user_ids else {}
-
-	counts = {}
-	for doctype in TASK_DOCTYPES:
-		rows = frappe.get_all(
-			doctype,
-			filters={"docstatus": 1, "service_engineer": ["in", subs], "scheduled_date": date},
-			fields=["service_engineer", "completion_status", "count(name) as cnt"],
-			group_by="service_engineer, completion_status",
-		)
-		for r in rows:
-			c = counts.setdefault(r.service_engineer, {"assigned": 0, "completed": 0, "pending": 0})
-			c["assigned"] += r.cnt
-			c["completed" if r.completion_status == "Fully Completed" else "pending"] += r.cnt
-
-	last = {}
-	if emp_ids:
-		for c in frappe.get_all(
-			"Employee Checkin",
-			filters={"employee": ["in", emp_ids], "time": ["between", [date, date]]},
-			fields=["employee", "log_type", "customer", "time"],
-			order_by="time desc",
-		):
-			last.setdefault(c.employee, c)
-
-	engineers, totals = [], {"assigned": 0, "completed": 0, "pending": 0}
-	for t in teams:
-		emp = employees.get(t.employee) or {}
-		c = counts.get(t.name, {"assigned": 0, "completed": 0, "pending": 0})
-		ck = last.get(t.employee)
-		if not ck or ck.log_type != "IN":
-			status = "Off Duty"
-		else:
-			status = "On Site" if ck.customer else "In Transit"
-		for k in totals:
-			totals[k] += c[k]
-		engineers.append({
-			"team": t.name,
-			"employee_name": emp.get("employee_name") or t.name,
-			"designation": emp.get("designation"),
-			"phone": t.mobile_no or emp.get("cell_number") or user_mobiles.get(emp.get("user_id")),
-			"status": status,
-			**c,
-		})
-	return {"date": date, "totals": totals, "engineers": engineers}
+    me = _require_team()
+    subs = _subordinate_teams(me.name)
+    if not (me.is_group or subs):
+        frappe.throw(_("Supervisor access required"), frappe.PermissionError)
+ 
+    date = str(getdate(date or nowdate()))
+    if not subs:
+        return {"date": date, "totals": {"assigned": 0, "completed": 0, "pending": 0}, "engineers": []}
+ 
+    teams = frappe.get_all("CRM Service Team", filters={"name": ["in", subs]}, fields=["name", "employee", "mobile_no"])
+    emp_ids = [t.employee for t in teams if t.employee]
+    employees = {
+        e.name: e
+        for e in frappe.get_all(
+            "Employee",
+            filters={"name": ["in", emp_ids]},
+            fields=["name", "employee_name", "designation", "cell_number", "user_id"],
+        )
+    } if emp_ids else {}
+    user_ids = [e.user_id for e in employees.values() if e.user_id]
+    user_mobiles = {
+        u.name: u.mobile_no
+        for u in frappe.get_all("User", filters={"name": ["in", user_ids]}, fields=["name", "mobile_no"])
+    } if user_ids else {}
+ 
+    counts = {}
+    for doctype in TASK_DOCTYPES:
+        rows = frappe.get_all(
+            doctype,
+            filters={"docstatus": 1, "service_engineer": ["in", subs], "scheduled_date": date},
+            fields=["service_engineer", "completion_status", {"COUNT": "*", "as": "cnt"}],
+            group_by="service_engineer, completion_status",
+        )
+        for r in rows:
+            c = counts.setdefault(r.service_engineer, {"assigned": 0, "completed": 0, "pending": 0})
+            c["assigned"] += r.cnt
+            c["completed" if r.completion_status == "Fully Completed" else "pending"] += r.cnt
+ 
+    last = {}
+    if emp_ids:
+        for c in frappe.get_all(
+            "Employee Checkin",
+            filters={"employee": ["in", emp_ids], "time": ["between", [date, date]]},
+            fields=["employee", "log_type", "customer", "time"],
+            order_by="time desc",
+        ):
+            last.setdefault(c.employee, c)
+ 
+    engineers, totals = [], {"assigned": 0, "completed": 0, "pending": 0}
+    for t in teams:
+        emp = employees.get(t.employee) or {}
+        c = counts.get(t.name, {"assigned": 0, "completed": 0, "pending": 0})
+        ck = last.get(t.employee)
+        if not ck or ck.log_type != "IN":
+            status = "Off Duty"
+        else:
+            status = "On Site" if ck.customer else "In Transit"
+        for k in totals:
+            totals[k] += c[k]
+        engineers.append({
+            "team": t.name,
+            "employee_name": emp.get("employee_name") or t.name,
+            "designation": emp.get("designation"),
+            "phone": t.mobile_no or emp.get("cell_number") or user_mobiles.get(emp.get("user_id")),
+            "status": status,
+            **c,
+        })
+    return {"date": date, "totals": totals, "engineers": engineers}
+ 
 
 
 @frappe.whitelist(methods=["POST"])
