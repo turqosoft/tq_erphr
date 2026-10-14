@@ -57,80 +57,95 @@ def change_user_password(old_password: str, new_password: str) -> dict:
 
 @frappe.whitelist()
 def get_current_employee_info() -> dict:
-	current_user = frappe.session.user
-	if not current_user or current_user == "Guest":
-		return None
-
-	employee = frappe.db.get_value(
-		"Employee",
-		{"user_id": current_user, "status": "Active"},
-		[
-			"name",
-			"first_name",
-			"last_name",
-			"employee_name",
-			"designation",
-			"department",
-			"company",
-			"reports_to",
-			"user_id",
-			"image",
-			"date_of_joining",
-			"cell_number",
-			"company_email",
-			"personal_email",
-		],
-		as_dict=True,
-	)
-	if not employee:
-		return None
-
-	# User is considered a Sales Person ONLY if their Employee ID or Name is linked to an enabled record in the Sales Person DocType
-	sales_person = frappe.db.get_value(
-		"Sales Person",
-		{"employee": employee["name"], "enabled": 1},
-		["name", "sales_person_name"],
-		as_dict=True,
-	)
-	if not sales_person and employee.get("employee_name"):
-		sales_person = frappe.db.get_value(
-			"Sales Person",
-			{"sales_person_name": employee["employee_name"], "enabled": 1},
-			["name", "sales_person_name"],
-			as_dict=True,
-		)
-
-	employee["is_sales_person"] = bool(sales_person)
-	employee["sales_person_name"] = sales_person["name"] if sales_person else None
-
-	# Fetch Company Name and Logo
-	company_name = employee.get("company") or frappe.defaults.get_global_default("company")
-	company_doc = None
-	if company_name:
-		company_doc = frappe.db.get_value(
-			"Company",
-			company_name,
-			["name", "company_name", "company_logo"],
-			as_dict=True,
-		)
-
-	employee["company_name"] = (company_doc.get("company_name") if company_doc else company_name) or "Total Quality"
-	employee["company_logo"] = company_doc.get("company_logo") if company_doc else None
-	if not employee.get("company") and company_name:
-		employee["company"] = company_name
-
-	website_app_logo = frappe.db.get_single_value("Website Settings", "app_logo") if frappe.db.exists("DocType", "Website Settings") else None
-	employee["app_logo"] = employee["company_logo"] or website_app_logo
-
-	view_all_pref = frappe.defaults.get_user_default("mobibiz_view_all_customers", current_user)
-	employee["view_all_customers"] = bool(view_all_pref and str(view_all_pref).lower() in ("1", "true", "yes"))
-
-	# Check Supervisor status & Subordinates count
-	subordinates = get_subordinate_sales_persons(current_user)
-	employee["is_supervisor"] = bool(subordinates)
-	employee["subordinates_count"] = len(subordinates)
-
-	return employee
+    current_user = frappe.session.user
+    if not current_user or current_user == "Guest":
+        return None
+ 
+    employee = frappe.db.get_value(
+        "Employee",
+        {"user_id": current_user, "status": "Active"},
+        [
+            "name",
+            "first_name",
+            "last_name",
+            "employee_name",
+            "designation",
+            "department",
+            "company",
+            "reports_to",
+            "user_id",
+            "image",
+            "date_of_joining",
+            "cell_number",
+            "company_email",
+            "personal_email",
+        ],
+        as_dict=True,
+    )
+    if not employee:
+        return None
+ 
+    # User is considered a Sales Person ONLY if their Employee ID or Name is linked to an enabled record in the Sales Person DocType
+    sales_person = frappe.db.get_value(
+        "Sales Person",
+        {"employee": employee["name"], "enabled": 1},
+        ["name", "sales_person_name"],
+        as_dict=True,
+    )
+    if not sales_person and employee.get("employee_name"):
+        sales_person = frappe.db.get_value(
+            "Sales Person",
+            {"sales_person_name": employee["employee_name"], "enabled": 1},
+            ["name", "sales_person_name"],
+            as_dict=True,
+        )
+ 
+    employee["is_sales_person"] = bool(sales_person)
+    employee["sales_person_name"] = sales_person["name"] if sales_person else None
+ 
+    # Fetch Company Name and Logo
+    company_name = employee.get("company") or frappe.defaults.get_global_default("company")
+    company_doc = None
+    if company_name:
+        company_doc = frappe.db.get_value(
+            "Company",
+            company_name,
+            ["name", "company_name", "company_logo"],
+            as_dict=True,
+        )
+ 
+    employee["company_name"] = (company_doc.get("company_name") if company_doc else company_name) or "Total Quality"
+    employee["company_logo"] = company_doc.get("company_logo") if company_doc else None
+    if not employee.get("company") and company_name:
+        employee["company"] = company_name
+ 
+    website_app_logo = frappe.db.get_single_value("Website Settings", "app_logo") if frappe.db.exists("DocType", "Website Settings") else None
+    employee["app_logo"] = employee["company_logo"] or website_app_logo
+ 
+    view_all_pref = frappe.defaults.get_user_default("mobibiz_view_all_customers", current_user)
+    employee["view_all_customers"] = bool(view_all_pref and str(view_all_pref).lower() in ("1", "true", "yes"))
+ 
+    # Check Supervisor status & Subordinates count
+    subordinates = get_subordinate_sales_persons(current_user)
+    employee["is_supervisor"] = bool(subordinates)
+    employee["subordinates_count"] = len(subordinates)
+ 
+    # CRM Support role
+    from tq_erphr.pwa_crm_api import get_user_service_team
+    svc = get_user_service_team()
+    employee["is_service_engineer"] = svc["is_service_engineer"]
+    employee["is_service_supervisor"] = svc["is_service_supervisor"]
+    employee["service_team"] = svc["team"]
+ 
+    modes = []
+    if svc["is_service_engineer"]:
+        modes.append("support")
+    if employee["is_sales_person"]:
+        modes.append("sales")
+    employee["available_modes"] = modes or ["sales"]
+    employee["default_mode"] = employee["available_modes"][0]  # support first if both
+ 
+    return employee
 
 
 @frappe.whitelist(methods=["POST"])
@@ -2058,11 +2073,3 @@ def get_stock_meta_filters() -> dict:
 		"item_groups": item_groups,
 		"stats": stats,
 	}
-
-
-
-
-
-
-
-

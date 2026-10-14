@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from "vue-router"
 import { session } from "@/data/session"
 import { employeeResource } from "@/data/employee"
+import { availableModes, ensureMode } from "@/data/mode"
 
 const routes = [
 	{
@@ -46,6 +47,11 @@ const routes = [
 		name: "Login",
 		component: () => import("@/views/Login.vue"),
 	},
+
+	{ path: "/service", name: "ServiceHome", component: () => import("@/views/ServiceHome.vue") },
+	{ path: "/service/visits", name: "ServiceVisits", component: () => import("@/views/ServiceVisits.vue") },
+	{ path: "/service/team", name: "ServiceTeam", component: () => import("@/views/SupervisorService.vue") },
+
 	{
 		path: "/:catchAll(.*)",
 		redirect: "/",
@@ -71,6 +77,26 @@ router.beforeEach(async (to, from, next) => {
 		if (to.name === "Login") {
 			return next({ name: "Home" })
 		}
+		// Old cached employee data may not have the new mode fields yet
+		if (employeeResource.data && !employeeResource.data.available_modes) {
+			await employeeResource.reload()
+		}
+		if (employeeResource.data) {
+			const canSupport = availableModes().includes("support")
+			const current = ensureMode()
+			const isService = to.path.startsWith("/service")
+
+			if (isService && !canSupport) return next({ name: "Home" })
+			if (!isService && to.name !== "Stock" && current === "support") {
+				return next({ path: "/service", query: to.query })
+			}
+			if (isService && current === "sales") return next({ name: "Home" })
+		}
+
+		if (to.name === "ServiceTeam" && employeeResource.data && !employeeResource.data.is_service_supervisor) {
+			return next({ name: "ServiceHome" })
+		}
+
 		if (
 			(to.name === "ExecutiveExpenseManager" || to.name === "ExecutiveExpenseHistory") &&
 			employeeResource.data &&
@@ -88,4 +114,3 @@ router.afterEach(() => {
 })
 
 export default router
-

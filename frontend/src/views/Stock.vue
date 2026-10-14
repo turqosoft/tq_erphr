@@ -367,7 +367,9 @@
 			</main>
 
 			<!-- Bottom Navigation -->
+			<ServiceBottomNav v-if="mode === 'support'" active-tab="stock" />
 			<BottomNavBar
+				v-else
 				active-tab="stock"
 				:show-eem="!!employee?.is_sales_person"
 				:is-trip-active="isTripActive"
@@ -533,6 +535,8 @@ import { ref, computed, onMounted } from "vue"
 import { useRouter } from "vue-router"
 import { Dialog, Button, call } from "frappe-ui"
 import BottomNavBar from "@/components/BottomNavBar.vue"
+import ServiceBottomNav from "@/components/ServiceBottomNav.vue"
+import { mode } from "@/data/mode"
 import { employeeResource } from "@/data/employee"
 import { todayEemResource } from "@/data/eem"
 import { toast } from "@/utils/toast"

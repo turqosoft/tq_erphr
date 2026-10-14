@@ -35,6 +35,8 @@
 						</div>
 					</div>
 
+					<ModeSwitcher />
+
 					<!-- Header Actions -->
 					<div class="flex items-center space-x-2">
 						<!-- Refresh Button -->
@@ -1373,6 +1375,7 @@ import { ref, computed, onMounted, onUnmounted } from "vue"
 import { useRouter, useRoute } from "vue-router"
 import { Dialog, Button, call } from "frappe-ui"
 import BottomNavBar from "@/components/BottomNavBar.vue"
+import ModeSwitcher from "@/components/ModeSwitcher.vue"
 import mobibizIcon from "@/assets/mobibiz_icon.png"
 import { session } from "@/data/session"
 import { employeeResource } from "@/data/employee"

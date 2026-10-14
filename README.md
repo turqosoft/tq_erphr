@@ -257,3 +257,14 @@ mit
 
 #### Bug Fixes
 - 
+
+### v1.1.15 (2026-10-14)
+
+#### New Features
+- Installation and service visit features
+
+#### Improvements
+- 
+
+#### Bug Fixes
+- 
