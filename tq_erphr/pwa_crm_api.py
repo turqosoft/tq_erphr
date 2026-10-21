@@ -354,61 +354,62 @@ def search_spare_items(txt: str = "", limit: int = 15) -> dict:
 
 
 # ------------------------------------------------------ maintenance visit
-
 @frappe.whitelist(methods=["POST"])
 def submit_maintenance_visit(data) -> dict:
-	from tq_crm_support.api.maintenance_schedule_api import make_maintenance_visit_from_task
-
-	data = _parse(data)
-	task = _get_my_task(MST, data.get("task"))
-
-	resolution = data.get("resolution_status") or "Fully Resolved"
-	fully = resolution == "Fully Resolved"
-	note = (data.get("work_done") or "").strip()
-	work_done = f"{resolution}: {note}" if note else resolution
-	lat, lon = _coords(data)
-
-	mv = _as_admin(make_maintenance_visit_from_task, task.name)
-	mv.company = (
-		mv.company
-		or frappe.db.get_value("CRM Maintenance Schedule", task.maintenance_schedule, "company")
-		or frappe.defaults.get_global_default("company")
-	)
-	mv.mntc_date = nowdate()
-	mv.mntc_time = nowtime()
-	mv.completion_status = "Fully Completed" if fully else "Partially Completed"
-	mv.customer_feedback = data.get("feedback")
-	_set_if_field(mv, "checkin_lat", lat)
-	_set_if_field(mv, "checkin_long", lon)
-	_set_if_field(mv, "resolution_status", resolution)
-	if mv.purposes:
-		mv.purposes[0].work_done = work_done
-
-	default_wh = frappe.db.get_single_value("Stock Settings", "default_warehouse")
-	for m in data.get("materials") or []:
-		qty = flt(m.get("qty"))
-		if qty <= 0:
-			continue
-		rate = flt(m.get("rate"))
-		mv.append("consumed_materials", {
-			"item_code": m.get("item_code"),
-			"warehouse": m.get("warehouse") or default_wh,
-			"qty": qty,
-			"uom": m.get("uom"),
-			"rate": rate,
-			"amount": qty * rate,
-			"billing_type": m.get("billing_type") or "Free",
-			"serial_no": m.get("serial_no"),
-			"batch_no": m.get("batch_no"),
-		})
-
-	mv.insert(ignore_permissions=True)
-	signature_url = _save_signature(mv.doctype, mv.name, data.get("signature"))
-	mv.submit()  # existing hooks: stock checks, task status, optional invoice
-
-	task.db_set("work_done", work_done, update_modified=False)
-	return {"name": mv.name, "signature": signature_url, "completion_status": mv.completion_status}
-
+    from tq_crm_support.api.maintenance_schedule_api import make_maintenance_visit_from_task
+ 
+    data = _parse(data)
+    task = _get_my_task(MST, data.get("task"))
+ 
+    resolution = data.get("resolution_status") or "Fully Resolved"
+    fully = resolution == "Fully Resolved"
+    note = (data.get("work_done") or "").strip()
+    work_done = f"{resolution}: {note}" if note else resolution
+    lat, lon = _coords(data)
+ 
+    mv = _as_admin(make_maintenance_visit_from_task, task.name)
+    mv.naming_series = "MAT-MVS-.YYYY.-"          
+    if mv.customer:                               
+        mv.customer_name = frappe.db.get_value("Customer", mv.customer, "customer_name")   
+    mv.company = (
+        mv.company
+        or frappe.db.get_value("CRM Maintenance Schedule", task.maintenance_schedule, "company")
+        or frappe.defaults.get_global_default("company")
+    )
+    mv.mntc_date = nowdate()
+    mv.mntc_time = nowtime()
+    mv.completion_status = "Fully Completed" if fully else "Partially Completed"
+    mv.customer_feedback = data.get("feedback")
+    _set_if_field(mv, "checkin_lat", lat)
+    _set_if_field(mv, "checkin_long", lon)
+    _set_if_field(mv, "resolution_status", resolution)
+    if mv.purposes:
+        mv.purposes[0].work_done = work_done
+ 
+    default_wh = frappe.db.get_single_value("Stock Settings", "default_warehouse")
+    for m in data.get("materials") or []:
+        qty = flt(m.get("qty"))
+        if qty <= 0:
+            continue
+        rate = flt(m.get("rate"))
+        mv.append("consumed_materials", {
+            "item_code": m.get("item_code"),
+            "warehouse": m.get("warehouse") or default_wh,
+            "qty": qty,
+            "uom": m.get("uom"),
+            "rate": rate,
+            "amount": qty * rate,
+            "billing_type": m.get("billing_type") or "Free",
+            "serial_no": m.get("serial_no"),
+            "batch_no": m.get("batch_no"),
+        })
+ 
+    mv.insert(ignore_permissions=True)
+    signature_url = _save_signature(mv.doctype, mv.name, data.get("signature"))
+    mv.submit()  # existing hooks: stock checks, task status, optional invoice
+ 
+    task.db_set("work_done", work_done, update_modified=False)
+    return {"name": mv.name, "signature": signature_url, "completion_status": mv.completion_status}
 
 # -------------------------------------------------------- installation note
 

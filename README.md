@@ -268,3 +268,14 @@ mit
 
 #### Bug Fixes
 - 
+
+### v1.1.16 (2026-10-21)
+
+#### New Features
+- 
+
+#### Improvements
+- 
+
+#### Bug Fixes
+- Fixed the Naming series issue, now the maintenance visit will work with the correct naming series -> MAT-MVS-.YYYY.-
