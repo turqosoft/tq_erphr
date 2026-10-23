@@ -279,3 +279,16 @@ mit
 
 #### Bug Fixes
 - Fixed the Naming series issue, now the maintenance visit will work with the correct naming series -> MAT-MVS-.YYYY.-
+
+### v1.1.17 (2026-10-23)
+
+#### New Features
+- Added a serial number picker for spare parts. Service engineers can select serial numbers available in the selected warehouse. For items without serial numbers, no serial number field is displayed, and engineers can select spare parts that are in stock. This works for both Maintenance Visit and Installation Note.
+- If no default warehouse is configured in stock settings, the service engineer can select a warehouse directly from the mobile app when choosing spare parts.
+
+#### Improvements
+- Fixed the Maintenance Visit series from the mobile app. visits now save as MAT-MVS-2026-00001.
+
+
+#### Bug Fixes
+- 

@@ -62,7 +62,14 @@
 						<option value="" disabled>Select warehouse</option>
 						<option v-for="w in warehouses" :key="w">{{ w }}</option>
 					</select>
-					<input v-if="r.has_serial_no" v-model="r.serial_no" placeholder="Serial no(s), one per line or comma separated" class="w-full rounded-lg border border-slate-200 p-1.5 text-xs" />
+					<SerialPicker
+						v-if="r.has_serial_no"
+						v-model="r.serial_nos"
+						:item-code="r.item_code"
+						:warehouse="r.warehouse"
+						:qty="r.qty"
+						:has-serial="r.has_serial_no"
+					/>
 					<input v-if="r.has_batch_no" v-model="r.batch_no" placeholder="Batch no" class="w-full rounded-lg border border-slate-200 p-1.5 text-xs" />
 					<p class="text-right text-[11px] font-semibold text-slate-600">{{ formatInr(r.qty * r.rate) }}</p>
 				</div>
@@ -84,6 +91,7 @@
 				{{ submitVisitResource.loading ? "Submitting..." : "Submit Visit" }}
 			</button>
 			<p v-if="!coords || !signature" class="text-[11px] text-center text-slate-400">Location and customer signature are required.</p>
+			<p v-if="!serialsOk" class="text-[11px] text-center text-amber-600">Select serial no(s) for every spare part.</p>
 		</div>
 	</div>
 </template>
@@ -93,6 +101,7 @@ import { ref, computed, watch } from "vue"
 import { call } from "frappe-ui"
 import LocationStatus from "@/components/LocationStatus.vue"
 import SignaturePad from "@/components/SignaturePad.vue"
+import SerialPicker from "@/components/SerialPicker.vue"
 import { getCurrentLocation } from "@/utils/location"
 import { toast } from "@/utils/toast"
 import { submitVisitResource, SPARES_API, formatInr, errorText } from "@/data/crm_support"
@@ -116,7 +125,12 @@ const warehouses = ref([])
 const defaultWarehouse = ref("")
 
 const total = computed(() => rows.value.reduce((s, r) => s + (Number(r.qty) || 0) * (Number(r.rate) || 0), 0))
-const canSubmit = computed(() => !!coords.value && !!signature.value && !submitVisitResource.loading)
+const serialsOk = computed(() =>
+	rows.value.every((r) => !r.has_serial_no || (r.serial_nos || []).length === Number(r.qty))
+)
+const canSubmit = computed(
+	() => !!coords.value && !!signature.value && serialsOk.value && !submitVisitResource.loading
+)
 
 async function capture() {
 	locating.value = true
@@ -156,6 +170,7 @@ function addItem(it) {
 			warehouse: defaultWarehouse.value,
 			billing_type: "Free",
 			serial_no: "",
+			serial_nos: [],
 			batch_no: "",
 			has_serial_no: !!it.has_serial_no,
 			has_batch_no: !!it.has_batch_no,
@@ -184,7 +199,7 @@ async function submit() {
 				materials: rows.value.map((r) => ({
 					item_code: r.item_code, qty: r.qty, rate: r.rate, uom: r.uom,
 					warehouse: r.warehouse, billing_type: r.billing_type,
-					serial_no: r.serial_no, batch_no: r.batch_no,
+					serial_no: (r.serial_nos || []).join("\n"),batch_no: r.batch_no,
 				})),
 			},
 		})

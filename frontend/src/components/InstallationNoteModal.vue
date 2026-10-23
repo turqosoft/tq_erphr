@@ -36,6 +36,9 @@
 				</label>
 			</div>
 
+			<!-- NEW: consumed materials -->
+			<SparePartsPicker v-model="materials" />
+
 			<textarea v-model="notes" rows="2" placeholder="Handover notes" :class="inputCls"></textarea>
 
 			<div class="space-y-1">
@@ -60,6 +63,7 @@
 import { ref, computed, watch } from "vue"
 import LocationStatus from "@/components/LocationStatus.vue"
 import SignaturePad from "@/components/SignaturePad.vue"
+import SparePartsPicker from "@/components/SparePartsPicker.vue"
 import { getCurrentLocation } from "@/utils/location"
 import { toast } from "@/utils/toast"
 import { submitInstallationNoteResource, errorText } from "@/data/crm_support"
@@ -84,14 +88,19 @@ const serialNo = ref("")
 const notes = ref("")
 const signature = ref(null)
 const checklist = ref([])
+const materials = ref([]) // NEW
 
 const checklistOk = computed(() => status.value !== "Fully Completed" || checklist.value.every((c) => c.checked))
+const serialsOk = computed(() =>
+	materials.value.every((r) => !r.has_serial_no || (r.serial_nos || []).length === Number(r.qty))
+)
 const canSubmit = computed(
-	() => !!coords.value && !!signature.value && checklistOk.value && !submitInstallationNoteResource.loading
+	() => !!coords.value && !!signature.value && checklistOk.value && serialsOk.value && !submitInstallationNoteResource.loading
 )
 const hint = computed(() => {
 	if (!coords.value) return "Location is required."
 	if (!checklistOk.value) return "Tick every checklist item to mark as Fully Completed."
+	if (!serialsOk.value) return "Select serial no(s) for every spare part."
 	if (!signature.value) return "Customer signature is required."
 	return ""
 })
@@ -120,6 +129,12 @@ async function submit() {
 				latitude: coords.value.latitude,
 				longitude: coords.value.longitude,
 				signature: signature.value,
+				// NEW: consumed materials
+				materials: materials.value.map((r) => ({
+					item_code: r.item_code, qty: r.qty, rate: r.rate, uom: r.uom,
+					warehouse: r.warehouse, billing_type: r.billing_type,
+					serial_no: r.serial_no, batch_no: r.batch_no,
+				})),
 			},
 		})
 		toast.success("Installation note submitted", "Installation Saved")
@@ -137,10 +152,15 @@ watch(
 		coords.value = null
 		status.value = "Fully Completed"
 		qty.value = Number(props.task?.installed_qty) || 1
-		serialNo.value = props.task?.serial_no || ""
+		serialNo.value = (props.task?.serial_no || "")
+		.split(/[\n,]+/)
+		.map((s) => s.trim())
+		.filter(Boolean)
+		.join(", ")
 		notes.value = ""
 		signature.value = null
 		checklist.value = CHECKLIST.map((label) => ({ label, checked: false }))
+		materials.value = [] // NEW
 		capture()
 	}
 )

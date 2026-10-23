@@ -82,6 +82,62 @@ def _get_my_task(doctype: str, name: str):
 def _parse(data):
 	return frappe.parse_json(data) if isinstance(data, str) else (data or {})
 
+def _default_warehouse():
+	return frappe.get_cached_doc("Stock Settings").get("default_warehouse") or None
+
+def _split_serials(value):
+	"""Accept a list or a string (newline/comma separated) and return a clean list."""
+	if not value:
+		return []
+	if isinstance(value, str):
+		value = value.replace(",", "\n").splitlines()
+	return [s.strip() for s in value if s and s.strip()]
+
+
+def _validate_spare_serials(item_code, warehouse, qty, serials):
+	if not frappe.db.get_value("Item", item_code, "has_serial_no"):
+		return
+	if len(serials) != int(qty):
+		frappe.throw(_("{0}: select exactly {1} serial no(s)").format(item_code, int(qty)))
+	valid = frappe.get_all(
+		"Serial No",
+		filters={
+			"name": ["in", serials],
+			"item_code": item_code,
+			"warehouse": warehouse,
+			"status": "Active",
+		},
+		pluck="name",
+	)
+	invalid = set(serials) - set(valid)
+	if invalid:
+		frappe.throw(_("Not available in {0}: {1}").format(warehouse, ", ".join(invalid)))
+
+
+def _append_consumed_materials(doc, materials):
+	default_wh = _default_warehouse()
+	for m in materials or []:
+		qty = flt(m.get("qty"))
+		if qty <= 0:
+			continue
+		rate = flt(m.get("rate"))
+		warehouse = m.get("warehouse") or default_wh
+		serials = _split_serials(m.get("serial_nos") or m.get("serial_no"))
+
+		_validate_spare_serials(m.get("item_code"), warehouse, qty, serials)
+
+		doc.append("consumed_materials", {
+			"item_code": m.get("item_code"),
+			"warehouse": warehouse,
+			"qty": qty,
+			"uom": m.get("uom"),
+			"rate": rate,
+			"amount": qty * rate,
+			"billing_type": m.get("billing_type") or "Free",
+			"serial_no": "\n".join(serials),
+			"batch_no": m.get("batch_no"),
+		})
+
 def _as_admin(fn, *args, **kwargs):
 	"""Run one trusted call with full rights, then restore the engineer's session."""
 	user = frappe.session.user
@@ -266,22 +322,60 @@ def get_user_service_team() -> dict:
 
 # ----------------------------------------------------------------- tasks
 
+
 @frappe.whitelist()
 def get_engineer_tasks(date: str = None, include_overdue: int = 1, engineer: str = None) -> dict:
-	me = _require_team()
-	date = str(getdate(date or nowdate()))
-	target = engineer or me.name
-	if target != me.name and target not in _subordinate_teams(me.name):
-		frappe.throw(_("You can only view tasks of your own team"), frappe.PermissionError)
+    me = _require_team()
+    date = str(getdate(date or nowdate()))
+    target = engineer or me.name
 
-	tasks = _fetch_tasks([target], date, bool(cint(include_overdue)))
-	completed = sum(1 for t in tasks if t.completion_status == "Fully Completed")
-	return {
-		"date": date,
-		"team": target,
-		"summary": {"assigned": len(tasks), "completed": completed, "pending": len(tasks) - completed},
-		"tasks": tasks,
-	}
+    if target != me.name and target not in _subordinate_teams(me.name):
+        frappe.throw(
+            _("You can only view tasks of your own team"),
+            frappe.PermissionError
+        )
+
+    tasks = _fetch_tasks([target], date, bool(cint(include_overdue)))
+
+    # Count all completed maintenance tasks across all dates
+    completed_maintenance = frappe.db.count(
+        MST,
+        filters={
+            "docstatus": 1,
+            "service_engineer": target,
+            "completion_status": "Fully Completed"
+        }
+    )
+
+    # Count all completed installation tasks across all dates
+    completed_installation = frappe.db.count(
+        IST,
+        filters={
+            "docstatus": 1,
+            "service_engineer": target,
+            "completion_status": "Fully Completed"
+        }
+    )
+
+    # Total completed tasks across all dates
+    completed = completed_maintenance + completed_installation
+
+    # Keep pending count based on the existing task list
+    pending = len(tasks) - sum(
+        1 for t in tasks
+        if t.completion_status == "Fully Completed"
+    )
+
+    return {
+        "date": date,
+        "team": target,
+        "summary": {
+            "assigned": len(tasks),
+            "completed": completed,
+            "pending": pending
+        },
+        "tasks": tasks
+    }
 
 
 @frappe.whitelist()
@@ -348,68 +442,72 @@ def search_spare_items(txt: str = "", limit: int = 15) -> dict:
 		i["rate"] = rates.get(i.item_code, 0)
 	return {
 		"items": items,
-		"default_warehouse": frappe.db.get_single_value("Stock Settings", "default_warehouse"),
+		# "default_warehouse": frappe.db.get_single_value("Stock Settings", "default_warehouse"),
+		"default_warehouse": _default_warehouse(),
 		"warehouses": frappe.get_all("Warehouse", filters={"disabled": 0, "is_group": 0}, pluck="name"),
 	}
 
+@frappe.whitelist()
+def get_available_serial_nos(item_code: str, warehouse: str, search: str = None, limit: int = 50) -> dict:
+	_require_team()
+	if not frappe.db.get_value("Item", item_code, "has_serial_no"):
+		return {"has_serial_no": 0, "serial_nos": []}
 
+	filters = {"item_code": item_code, "warehouse": warehouse, "status": "Active"}
+	if search:
+		filters["name"] = ["like", f"%{search}%"]
+
+	serials = frappe.get_all(
+		"Serial No",
+		filters=filters,
+		pluck="name",
+		order_by="creation asc",
+		limit=min(cint(limit) or 50, 200),
+	)
+	return {"has_serial_no": 1, "serial_nos": serials}
 # ------------------------------------------------------ maintenance visit
+
 @frappe.whitelist(methods=["POST"])
 def submit_maintenance_visit(data) -> dict:
-    from tq_crm_support.api.maintenance_schedule_api import make_maintenance_visit_from_task
- 
-    data = _parse(data)
-    task = _get_my_task(MST, data.get("task"))
- 
-    resolution = data.get("resolution_status") or "Fully Resolved"
-    fully = resolution == "Fully Resolved"
-    note = (data.get("work_done") or "").strip()
-    work_done = f"{resolution}: {note}" if note else resolution
-    lat, lon = _coords(data)
- 
-    mv = _as_admin(make_maintenance_visit_from_task, task.name)
-    mv.naming_series = "MAT-MVS-.YYYY.-"          
-    if mv.customer:                               
-        mv.customer_name = frappe.db.get_value("Customer", mv.customer, "customer_name")   
-    mv.company = (
-        mv.company
-        or frappe.db.get_value("CRM Maintenance Schedule", task.maintenance_schedule, "company")
-        or frappe.defaults.get_global_default("company")
-    )
-    mv.mntc_date = nowdate()
-    mv.mntc_time = nowtime()
-    mv.completion_status = "Fully Completed" if fully else "Partially Completed"
-    mv.customer_feedback = data.get("feedback")
-    _set_if_field(mv, "checkin_lat", lat)
-    _set_if_field(mv, "checkin_long", lon)
-    _set_if_field(mv, "resolution_status", resolution)
-    if mv.purposes:
-        mv.purposes[0].work_done = work_done
- 
-    default_wh = frappe.db.get_single_value("Stock Settings", "default_warehouse")
-    for m in data.get("materials") or []:
-        qty = flt(m.get("qty"))
-        if qty <= 0:
-            continue
-        rate = flt(m.get("rate"))
-        mv.append("consumed_materials", {
-            "item_code": m.get("item_code"),
-            "warehouse": m.get("warehouse") or default_wh,
-            "qty": qty,
-            "uom": m.get("uom"),
-            "rate": rate,
-            "amount": qty * rate,
-            "billing_type": m.get("billing_type") or "Free",
-            "serial_no": m.get("serial_no"),
-            "batch_no": m.get("batch_no"),
-        })
- 
-    mv.insert(ignore_permissions=True)
-    signature_url = _save_signature(mv.doctype, mv.name, data.get("signature"))
-    mv.submit()  # existing hooks: stock checks, task status, optional invoice
- 
-    task.db_set("work_done", work_done, update_modified=False)
-    return {"name": mv.name, "signature": signature_url, "completion_status": mv.completion_status}
+	from tq_crm_support.api.maintenance_schedule_api import make_maintenance_visit_from_task
+
+	data = _parse(data)
+	task = _get_my_task(MST, data.get("task"))
+
+	resolution = data.get("resolution_status") or "Fully Resolved"
+	fully = resolution == "Fully Resolved"
+	note = (data.get("work_done") or "").strip()
+	work_done = f"{resolution}: {note}" if note else resolution
+	lat, lon = _coords(data)
+
+	mv = _as_admin(make_maintenance_visit_from_task, task.name)
+	mv.naming_series = "MAT-MVS-.YYYY.-"          
+	if mv.customer:                               
+		mv.customer_name = frappe.db.get_value("Customer", mv.customer, "customer_name")  
+	mv.company = (
+		mv.company
+		or frappe.db.get_value("CRM Maintenance Schedule", task.maintenance_schedule, "company")
+		or frappe.defaults.get_global_default("company")
+	)
+	mv.mntc_date = nowdate()
+	mv.mntc_time = nowtime()
+	mv.completion_status = "Fully Completed" if fully else "Partially Completed"
+	mv.customer_feedback = data.get("feedback")
+	_set_if_field(mv, "checkin_lat", lat)
+	_set_if_field(mv, "checkin_long", lon)
+	_set_if_field(mv, "resolution_status", resolution)
+	if mv.purposes:
+		mv.purposes[0].work_done = work_done
+
+	_append_consumed_materials(mv, data.get("materials"))
+
+	mv.insert(ignore_permissions=True)
+	signature_url = _save_signature(mv.doctype, mv.name, data.get("signature"))
+	mv.submit()  # existing hooks: stock checks, task status, optional invoice
+
+	task.db_set("work_done", work_done, update_modified=False)
+	return {"name": mv.name, "signature": signature_url, "completion_status": mv.completion_status}
+
 
 # -------------------------------------------------------- installation note
 
@@ -433,17 +531,28 @@ def submit_installation_note(data) -> dict:
 	note.inst_time = nowtime()
 	note.completion_status = "Fully Completed" if fully else "Partially Completed"
 	note.remarks = "\n".join(lines)
+	if not note.territory:
+		note.territory = (
+			task.territory
+			or frappe.db.get_value("Customer", task.customer, "territory")
+			or frappe.db.get_single_value("Selling Settings", "territory")
+			or "All Territories"
+		)
 	_set_if_field(note, "checkin_lat", lat)
 	_set_if_field(note, "checkin_long", lon)
+	
 	if note.items:
 		note.items[0].qty = qty
 		has_serial = frappe.db.get_value("Item", task.item_code, "has_serial_no")
 		if has_serial:
-			if data.get("serial_no"):
-				note.items[0].serial_no = data["serial_no"]
+			serials = _split_serials(data.get("serial_no"))
+			if len(serials) != int(qty):
+				frappe.throw(_("Enter {0} serial no(s) for the installed unit").format(int(qty)))
+			note.items[0].serial_no = "\n".join(serials)
 		else:
 			note.items[0].serial_no = None
 
+	_append_consumed_materials(note, data.get("materials"))
 	note.save(ignore_permissions=True)
 	signature_url = _save_signature("Installation Note", note.name, data.get("signature"))
 	note.submit()  # existing hook updates task + Installation Detail
@@ -458,6 +567,7 @@ def submit_installation_note(data) -> dict:
 
 
 # ------------------------------------------------------------- supervisor
+
 @frappe.whitelist()
 def get_supervisor_service_dashboard(date: str = None) -> dict:
     me = _require_team()
@@ -528,8 +638,6 @@ def get_supervisor_service_dashboard(date: str = None) -> dict:
             **c,
         })
     return {"date": date, "totals": totals, "engineers": engineers}
- 
-
 
 @frappe.whitelist(methods=["POST"])
 def reassign_task(doctype: str, task: str, new_engineer: str) -> dict:

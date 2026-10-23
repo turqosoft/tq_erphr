@@ -25,6 +25,7 @@ export const submitInstallationNoteResource = createResource({ url: `${API}.subm
 export const reassignTaskResource = createResource({ url: `${API}.reassign_task` })
 
 export const SPARES_API = `${API}.search_spare_items`
+export const SERIALS_API = `${API}.get_available_serial_nos`
 export const ENGINEER_TASKS_API = `${API}.get_engineer_tasks`
 
 export function mapsUrl(address) {
