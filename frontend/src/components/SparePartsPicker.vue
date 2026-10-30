@@ -12,6 +12,7 @@
 			>
 				<span class="font-semibold">{{ it.item_name }}</span>
 				<span class="text-slate-400"> · {{ it.item_code }} · {{ formatInr(it.rate) }}</span>
+				<span v-if="defaultWarehouse" class="text-slate-500"> · Stock: {{ it.stock_qty }}</span>
 			</button>
 		</div>
 
@@ -35,10 +36,17 @@
 					<option>Payable</option>
 				</select>
 			</div>
-			<select v-model="r.warehouse" class="w-full rounded-lg border border-slate-200 p-1.5 text-xs bg-white">
+			<select v-model="r.warehouse" @change="onWarehouseChange(r)" class="w-full rounded-lg border border-slate-200 p-1.5 text-xs bg-white">
 				<option value="" disabled>Select warehouse</option>
 				<option v-for="w in warehouses" :key="w">{{ w }}</option>
 			</select>
+			<p
+				v-if="r.warehouse && r.stock_qty != null"
+				class="text-[11px]"
+				:class="r.qty > r.stock_qty ? 'text-red-600 font-semibold' : 'text-slate-500'"
+			>
+				Available in {{ r.warehouse }}: {{ r.stock_qty }}
+			</p>
 			<SerialPicker
 				v-if="r.has_serial_no"
 				:model-value="r.serial_nos"
@@ -59,7 +67,7 @@
 import { ref, computed, watch, onMounted } from "vue"
 import { call } from "frappe-ui"
 import SerialPicker from "@/components/SerialPicker.vue"
-import { SPARES_API, formatInr } from "@/data/crm_support"
+import { SPARES_API, SPARE_STOCK_API, formatInr } from "@/data/crm_support"
 
 const rows = defineModel({ default: () => [] })
 const inputCls = "w-full rounded-xl border border-slate-200 p-2.5 text-sm bg-white"
@@ -101,6 +109,7 @@ function addItem(it) {
 			qty: 1,
 			rate: it.rate || 0,
 			warehouse: defaultWarehouse.value,
+			stock_qty: defaultWarehouse.value ? (it.stock_qty ?? 0) : null,
 			billing_type: "Free",
 			serial_no: "",
 			serial_nos: [],
@@ -111,6 +120,27 @@ function addItem(it) {
 	}
 	search.value = ""
 	results.value = []
+}
+
+async function onWarehouseChange(r) {
+	// serials belong to a warehouse, so clear them when it changes
+	r.serial_nos = []
+	r.serial_no = ""
+	await refreshStock(r)
+}
+
+async function refreshStock(r) {
+	const wh = r.warehouse
+	if (!wh) {
+		r.stock_qty = null
+		return
+	}
+	try {
+		const res = await call(SPARE_STOCK_API, { item_code: r.item_code, warehouse: wh })
+		if (r.warehouse === wh) r.stock_qty = res.stock_qty // ignore late replies
+	} catch {
+		r.stock_qty = null
+	}
 }
 
 onMounted(() => loadSpares("")) // fills warehouses and the default warehouse

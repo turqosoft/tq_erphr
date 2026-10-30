@@ -83,7 +83,23 @@ def _parse(data):
 	return frappe.parse_json(data) if isinstance(data, str) else (data or {})
 
 def _default_warehouse():
-	return frappe.get_cached_doc("Stock Settings").get("default_warehouse") or None
+	"""Default warehouse from CRM Support Settings, or None if not set."""
+	return frappe.db.get_single_value(
+		"CRM Support Settings", "default_consumable_warehouse"
+	) or None
+
+def _stock_map(item_codes, warehouse):
+	"""{item_code: actual_qty} for the given warehouse."""
+	if not item_codes or not warehouse:
+		return {}
+	return {
+		b.item_code: flt(b.actual_qty)
+		for b in frappe.get_all(
+			"Bin",
+			filters={"item_code": ["in", item_codes], "warehouse": warehouse},
+			fields=["item_code", "actual_qty"],
+		)
+	}                                                                          
 
 def _split_serials(value):
 	"""Accept a list or a string (newline/comma separated) and return a clean list."""
@@ -122,6 +138,9 @@ def _append_consumed_materials(doc, materials):
 			continue
 		rate = flt(m.get("rate"))
 		warehouse = m.get("warehouse") or default_wh
+		if not warehouse:
+			frappe.throw(_("Select a warehouse for {0}").format(m.get("item_code")))
+		serials = _split_serials(m.get("serial_nos") or m.get("serial_no"))
 		serials = _split_serials(m.get("serial_nos") or m.get("serial_no"))
 
 		_validate_spare_serials(m.get("item_code"), warehouse, qty, serials)
@@ -438,12 +457,14 @@ def search_spare_items(txt: str = "", limit: int = 15) -> dict:
 			fields=["item_code", "price_list_rate"],
 		):
 			rates.setdefault(p.item_code, flt(p.price_list_rate))
+	default_wh = _default_warehouse()
+	stock = _stock_map([i.item_code for i in items], default_wh)
 	for i in items:
 		i["rate"] = rates.get(i.item_code, 0)
+		i["stock_qty"] = stock.get(i.item_code, 0)
 	return {
 		"items": items,
-		# "default_warehouse": frappe.db.get_single_value("Stock Settings", "default_warehouse"),
-		"default_warehouse": _default_warehouse(),
+		"default_warehouse": default_wh,
 		"warehouses": frappe.get_all("Warehouse", filters={"disabled": 0, "is_group": 0}, pluck="name"),
 	}
 
@@ -465,6 +486,17 @@ def get_available_serial_nos(item_code: str, warehouse: str, search: str = None,
 		limit=min(cint(limit) or 50, 200),
 	)
 	return {"has_serial_no": 1, "serial_nos": serials}
+
+@frappe.whitelist()
+def get_spare_stock(item_code: str, warehouse: str = None) -> dict:
+	_require_team()
+	warehouse = warehouse or _default_warehouse()
+	if not warehouse:
+		return {"warehouse": None, "stock_qty": 0}
+	return {
+		"warehouse": warehouse,
+		"stock_qty": _stock_map([item_code], warehouse).get(item_code, 0),
+	}                                                         
 # ------------------------------------------------------ maintenance visit
 
 @frappe.whitelist(methods=["POST"])
@@ -607,6 +639,23 @@ def get_supervisor_service_dashboard(date: str = None) -> dict:
             c = counts.setdefault(r.service_engineer, {"assigned": 0, "completed": 0, "pending": 0})
             c["assigned"] += r.cnt
             c["completed" if r.completion_status == "Fully Completed" else "pending"] += r.cnt
+
+        # NEW: overdue tasks from earlier dates that are not fully completed
+        overdue = frappe.get_all(
+            doctype,
+            filters={
+                "docstatus": 1,
+                "service_engineer": ["in", subs],
+                "scheduled_date": ["<", date],
+                "completion_status": ["!=", "Fully Completed"],
+            },
+            fields=["service_engineer", {"COUNT": "*", "as": "cnt"}],
+            group_by="service_engineer",
+        )
+        for r in overdue:
+            c = counts.setdefault(r.service_engineer, {"assigned": 0, "completed": 0, "pending": 0})
+            c["assigned"] += r.cnt
+            c["pending"] += r.cnt
  
     last = {}
     if emp_ids:

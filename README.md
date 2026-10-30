@@ -292,3 +292,15 @@ mit
 
 #### Bug Fixes
 - 
+
+### v1.1.18 (2026-10-29)
+
+#### New Features
+- 
+
+#### Improvements
+- The default warehouse configured in CRM Support Settings will be shown in the mobile app. If no default warehouse is configured, or if there is insufficient stock in the default warehouse, the service engineer can select another warehouse.
+
+
+#### Bug Fixes
+- 
