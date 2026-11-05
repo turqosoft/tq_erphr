@@ -50,6 +50,8 @@ const routes = [
 
 	{ path: "/service", name: "ServiceHome", component: () => import("@/views/ServiceHome.vue") },
 	{ path: "/service/visits", name: "ServiceVisits", component: () => import("@/views/ServiceVisits.vue") },
+	{ path: "/service/my-visits", name: "ServiceMyVisits", component: () => import("@/views/ServiceMyVisits.vue") },
+	{ path: "/service/my-installations", name: "ServiceMyInstallations", component: () => import("@/views/ServiceMyInstallations.vue") },
 	{ path: "/service/team", name: "ServiceTeam", component: () => import("@/views/SupervisorService.vue") },
 
 	{

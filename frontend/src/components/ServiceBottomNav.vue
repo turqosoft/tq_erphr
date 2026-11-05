@@ -28,7 +28,7 @@ const router = useRouter()
 const tabs = computed(() =>
 	[
 		{ key: "home", label: "Home", icon: Home, to: "/service" },
-		{ key: "visits", label: "Visits", icon: ClipboardList, to: "/service/visits" },
+		{ key: "visits", label: "Tasks", icon: ClipboardList, to: "/service/visits" },
 		employeeResource.data?.is_service_supervisor && { key: "team", label: "Team", icon: Users, to: "/service/team" },
 		{ key: "stock", label: "Spares", icon: Package, to: "/stock" },
 		// Profile opens the dialog on the service home page

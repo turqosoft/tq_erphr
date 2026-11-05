@@ -4,6 +4,7 @@
 			<div class="min-w-0">
 				<p class="text-sm font-bold truncate">{{ task.customer_name }}</p>
 				<p class="text-[11px] text-slate-500 truncate">{{ task.item_name }}</p>
+				<p class="text-[11px] font-semibold text-slate-600 truncate">🧩 Task: {{ task.name }}</p>
 			</div>
 			<div class="flex flex-col items-end gap-1 flex-shrink-0">
 				<span class="text-[10px] font-bold px-2 py-0.5 rounded-full" :class="task.kind === 'installation' ? 'bg-violet-50 text-violet-700' : 'bg-amber-50 text-amber-700'">
@@ -33,6 +34,7 @@
 			<span>Visit period: {{ formatDate(task.start_date) }} – {{ formatDate(task.end_date) }}</span>
 		</div>
 		<p v-if="task.sales_invoice" class="text-[11px] font-semibold text-slate-600">🧾 Invoice: {{ task.sales_invoice }}</p>
+		<p v-if="task.has_serial_no && task.serial_no" class="text-[11px] font-semibold text-slate-600 whitespace-pre-line">🔢 Serial No: {{ task.serial_no }}</p>
 
 		<div class="flex items-center gap-2 pt-1">
 			<a v-if="task.phone" :href="`tel:${task.phone}`" class="flex-1 text-center text-xs font-semibold py-2 rounded-xl bg-emerald-50 text-emerald-700">📞 Call Customer</a>

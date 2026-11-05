@@ -4,9 +4,13 @@
 			<div class="flex items-start justify-between">
 				<div class="min-w-0">
 					<h2 class="text-base font-bold truncate">{{ task?.customer_name }}</h2>
-					<p class="text-[11px] text-slate-500 truncate">{{ task?.item_name }} · {{ task?.name }}</p>
 				</div>
 				<button type="button" @click="close" class="p-1 text-slate-400 text-xl leading-none">✕</button>
+			</div>
+
+			<div class="-mt-2 rounded-xl bg-slate-50 border border-slate-200 px-3 py-2">
+				<p class="text-xs font-semibold">{{ task?.item_name }}</p>
+				<p class="text-[11px] text-slate-500">{{ task?.name }}</p>
 			</div>
 
 			<LocationStatus :coords="coords" :locating="locating" @retry="capture" />

@@ -15,12 +15,25 @@ export const serviceVisitsResources = Object.fromEntries(
 	])
 )
 
+export const myVisitsResources = Object.fromEntries(
+	["all", "partial","completed", "combined"].map((s) => [
+		s,
+		createResource({ url: `${API}.get_my_maintenance_visits`, cache: `tq_erphr:my_visits_${s}` }),
+	])
+)
+
+export const myInstallationsResource = createResource({
+	url: `${API}.get_my_installations`,
+	cache: "tq_erphr:my_installations",
+})
+
 export const supervisorDashboardResource = createResource({
 	url: `${API}.get_supervisor_service_dashboard`,
 	cache: "tq_erphr:service_supervisor",
 })
 
 export const submitVisitResource = createResource({ url: `${API}.submit_maintenance_visit` })
+export const submitCombinedVisitResource = createResource({ url: `${API}.submit_combined_maintenance_visit` })
 export const submitInstallationNoteResource = createResource({ url: `${API}.submit_installation_note` })
 export const reassignTaskResource = createResource({ url: `${API}.reassign_task` })
 

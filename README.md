@@ -304,3 +304,14 @@ mit
 
 #### Bug Fixes
 - 
+
+### v1.1.19 (2026-11-05)
+
+#### New Features
+- 
+
+#### Improvements
+- CRM app enhancements
+
+#### Bug Fixes
+- 

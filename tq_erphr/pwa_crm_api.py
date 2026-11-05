@@ -141,7 +141,6 @@ def _append_consumed_materials(doc, materials):
 		if not warehouse:
 			frappe.throw(_("Select a warehouse for {0}").format(m.get("item_code")))
 		serials = _split_serials(m.get("serial_nos") or m.get("serial_no"))
-		serials = _split_serials(m.get("serial_nos") or m.get("serial_no"))
 
 		_validate_spare_serials(m.get("item_code"), warehouse, qty, serials)
 
@@ -177,6 +176,13 @@ def _coords(data):
 def _set_if_field(doc, fieldname, value):
 	if value not in (None, "") and doc.meta.has_field(fieldname):
 		doc.set(fieldname, value)
+
+def _default_naming_series(doctype):
+	field = frappe.get_meta(doctype).get_field("naming_series")
+	if not field:
+		return None
+	options = [o.strip() for o in (field.options or "").split("\n") if o.strip()]
+	return field.default or (options[0] if options else None)
 
 
 def _save_signature(doctype: str, name: str, data_url: str):
@@ -232,6 +238,7 @@ def _decorate(rows: list) -> list:
 	)
 	items = {i.name: i.item_name for i in item_rows}
 	serial_items = {i.name for i in item_rows if i.has_serial_no}
+
 	visit_counts = {}
 	mst_names = [r.name for r in rows if r["kind"] == "maintenance"]
 	if mst_names:
@@ -241,6 +248,28 @@ def _decorate(rows: list) -> list:
 			pluck="maintenance_schedule_task",
 		):
 			visit_counts[t] = visit_counts.get(t, 0) + 1
+
+		purposes = frappe.get_all(
+			"CRM Maintenance Visit Purpose",
+			filters={
+				"parenttype": "CRM Maintenance Visit",
+				"prevdoc_doctype": MST,
+				"prevdoc_docname": ["in", mst_names],
+			},
+			fields=["parent", "prevdoc_docname"],
+		)
+		submitted = set(frappe.get_all(
+			"CRM Maintenance Visit",
+			filters={
+				"name": ["in", [p.parent for p in purposes]],
+				"docstatus": 1,
+				"is_combined_visit": 1,
+			},
+			pluck="name",
+		))
+		for p in purposes:
+			if p.parent in submitted:
+				visit_counts[p.prevdoc_docname] = visit_counts.get(p.prevdoc_docname, 0) + 1
 	
 	schedule_names = list({r.get("maintenance_schedule") for r in rows if r.get("maintenance_schedule")})
 	invoices, visit_pos = {}, {}
@@ -436,6 +465,95 @@ def get_service_visits(status: str = "pending", days: int = 30, limit: int = 20)
 	return {"status": status, "tasks": _decorate(rows)}
 
 @frappe.whitelist()
+def get_my_maintenance_visits(status: str = "all", limit: int = 20) -> dict:
+	"""status: all | partial | combined"""
+	me = _require_team()
+	VISIT = "CRM Maintenance Visit"
+	PURPOSE = "CRM Maintenance Visit Purpose"
+
+	my_tasks = frappe.get_all(MST, filters={"docstatus": 1, "service_engineer": me.name}, pluck="name")
+	if not my_tasks:
+		return {"visits": []}
+
+	visit_names = set(frappe.get_all(
+		PURPOSE,
+		filters={"parenttype": VISIT, "parentfield": "purposes",
+		         "prevdoc_doctype": MST, "prevdoc_docname": ["in", my_tasks]},
+		pluck="parent",
+	))
+	visit_names |= set(frappe.get_all(
+		VISIT, filters={"maintenance_schedule_task": ["in", my_tasks]}, pluck="name"
+	))
+	if not visit_names:
+		return {"visits": []}
+
+	filters = {"name": ["in", list(visit_names)], "docstatus": ["<", 2]}
+	if status == "partial":
+		filters["completion_status"] = "Partially Completed"
+	elif status == "completed":
+		filters["completion_status"] = "Fully Completed"
+	elif status == "combined":
+		filters["is_combined_visit"] = 1
+
+	visits = frappe.get_all(
+		VISIT,
+		filters=filters,
+		fields=["name", "customer_name", "mntc_date", "mntc_time", "completion_status",
+		        "is_combined_visit", "maintenance_schedule", "maintenance_schedule_task", "docstatus"],
+		order_by="mntc_date desc, creation desc",
+		limit=min(cint(limit) or 20, 500),
+	)
+	if not visits:
+		return {"visits": []}
+
+	names = [v.name for v in visits]
+	purpose_fields = ["parent", "prevdoc_docname", "item_name", "serial_no"]
+	if frappe.get_meta(PURPOSE).has_field("task_completion_status"):
+		purpose_fields.append("task_completion_status")
+	purposes = frappe.get_all(
+		PURPOSE,
+		filters={"parenttype": VISIT, "parentfield": "purposes", "parent": ["in", names]},
+		fields=purpose_fields,
+		order_by="idx asc",
+	)
+	mat_doctype = frappe.get_meta(VISIT).get_field("consumed_materials").options
+	materials = frappe.get_all(
+		mat_doctype,
+		filters={"parenttype": VISIT, "parent": ["in", names]},
+		fields=["parent", "item_code", "qty", "uom", "serial_no"],
+		order_by="idx asc",
+	)
+	schedules = list({v.maintenance_schedule for v in visits if v.maintenance_schedule})
+	invoices = {
+		s.name: s.sales_invoice
+		for s in frappe.get_all(
+			"CRM Maintenance Schedule",
+			filters={"name": ["in", schedules]},
+			fields=["name", "sales_invoice"],
+		)
+	} if schedules else {}
+
+	tasks_by, mats_by = {}, {}
+	for p in purposes:
+		tasks_by.setdefault(p.parent, []).append(p)
+	for m in materials:
+		mats_by.setdefault(m.parent, []).append(m)
+
+	for v in visits:
+		v["tasks"] = [
+			{
+				"task": p.prevdoc_docname or v.maintenance_schedule_task,
+				"item_name": p.item_name,
+				"serial_no": p.serial_no,
+				"status": p.get("task_completion_status") or v.completion_status,
+			}
+			for p in tasks_by.get(v.name, [])
+		]
+		v["materials"] = mats_by.get(v.name, [])
+		v["sales_invoice"] = invoices.get(v.maintenance_schedule)
+	return {"status": status, "visits": visits}
+
+@frappe.whitelist()
 def search_spare_items(txt: str = "", limit: int = 15) -> dict:
 	_require_team()
 	or_filters = None
@@ -513,7 +631,9 @@ def submit_maintenance_visit(data) -> dict:
 	lat, lon = _coords(data)
 
 	mv = _as_admin(make_maintenance_visit_from_task, task.name)
-	mv.naming_series = "MAT-MVS-.YYYY.-"          
+	series = _default_naming_series(mv.doctype)
+	if series:
+		mv.naming_series = series      
 	if mv.customer:                               
 		mv.customer_name = frappe.db.get_value("Customer", mv.customer, "customer_name")  
 	mv.company = (
@@ -540,6 +660,50 @@ def submit_maintenance_visit(data) -> dict:
 	task.db_set("work_done", work_done, update_modified=False)
 	return {"name": mv.name, "signature": signature_url, "completion_status": mv.completion_status}
 
+# -------------------------------------------------------- Combined_Maintenance_Visit
+@frappe.whitelist(methods=["POST"])
+def submit_combined_maintenance_visit(data) -> dict:
+	from tq_crm_support.api.combined_maintenance_visit_api import create_combined_maintenance_visit
+
+	data = _parse(data)
+	names = list(dict.fromkeys(data.get("tasks") or []))
+	if len(names) < 2:
+		frappe.throw(_("Select at least two tasks"))
+	for n in names:
+		_get_my_task(MST, n)
+
+	user = frappe.session.user
+	res = _as_admin(create_combined_maintenance_visit, names)
+	frappe.db.set_value("CRM Maintenance Visit", res["name"], "owner", user)
+	mv = frappe.get_doc("CRM Maintenance Visit", res["name"])
+
+	resolution = data.get("resolution_status") or "Fully Resolved"
+	fully = resolution == "Fully Resolved"
+	note = (data.get("work_done") or "").strip()
+	work_done = f"{resolution}: {note}" if note else resolution
+	status = "Fully Completed" if fully else "Partially Completed"
+	lat, lon = _coords(data)
+
+	mv.mntc_date = nowdate()
+	mv.mntc_time = nowtime()
+	mv.completion_status = status
+	mv.customer_feedback = data.get("feedback")
+	_set_if_field(mv, "checkin_lat", lat)
+	_set_if_field(mv, "checkin_long", lon)
+	_set_if_field(mv, "resolution_status", resolution)
+	for p in mv.purposes:
+		p.work_done = work_done
+		p.task_completion_status = status
+
+	_append_consumed_materials(mv, data.get("materials"))
+	mv.save(ignore_permissions=True)
+	signature_url = _save_signature(mv.doctype, mv.name, data.get("signature"))
+	mv.submit()
+
+	for n in names:
+		frappe.db.set_value(MST, n, "work_done", work_done, update_modified=False)
+	return {"name": mv.name, "signature": signature_url,
+	        "completion_status": status, "task_count": len(names)}
 
 # -------------------------------------------------------- installation note
 
@@ -597,7 +761,27 @@ def submit_installation_note(data) -> dict:
 	task.db_set(updates, update_modified=False)
 	return {"name": note.name, "signature": signature_url}
 
-
+@frappe.whitelist()
+def get_my_installations(limit=20):
+	limit = int(limit)
+	notes = frappe.get_all(
+		"Installation Note",
+		filters={"docstatus": 1, "owner": frappe.session.user},
+		fields=["name", "customer_name", "inst_date", "completion_status"],
+		order_by="inst_date desc, creation desc",
+		limit=limit,
+	)
+	for n in notes:
+		rows = frappe.get_all(
+			"Installation Note Item",
+			filters={"parent": n["name"]},
+			fields=["item_code", "description", "qty", "serial_no"],
+			order_by="idx",
+		)
+		for r in rows:
+			r["item_name"] = frappe.db.get_value("Item", r["item_code"], "item_name") or r["item_code"]
+		n["items"] = rows
+	return {"installations": notes}
 # ------------------------------------------------------------- supervisor
 
 @frappe.whitelist()

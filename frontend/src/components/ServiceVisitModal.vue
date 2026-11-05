@@ -4,9 +4,21 @@
 			<div class="flex items-start justify-between">
 				<div class="min-w-0">
 					<h2 class="text-base font-bold truncate">{{ task?.customer_name }}</h2>
-					<p class="text-[11px] text-slate-500 truncate">{{ task?.item_name }} · {{ task?.name }}</p>
+					<p v-if="isCombined" class="text-[11px] font-semibold text-teal-700">
+						Combined visit · {{ taskList.length }} tasks
+					</p>
 				</div>
 				<button type="button" @click="close" class="p-1 text-slate-400 text-xl leading-none">✕</button>
+			</div>
+
+			<div class="-mt-2 rounded-xl bg-slate-50 border border-slate-200 divide-y">
+				<div v-for="t in taskList" :key="t.name" class="px-3 py-2">
+					<p class="text-xs font-semibold">{{ t.item_name }}</p>
+					<p class="text-[11px] text-slate-500">{{ t.name }}</p>
+					<p v-if="t.has_serial_no && t.serial_no" class="text-[11px] text-slate-700 whitespace-pre-line">
+						Serial No: <span class="font-semibold">{{ t.serial_no }}</span>
+					</p>
+				</div>
 			</div>
 
 			<LocationStatus :coords="coords" :locating="locating" @retry="capture" />
@@ -98,7 +110,7 @@
 				@click="submit"
 				class="w-full py-3 rounded-2xl text-sm font-bold text-white bg-teal-600 disabled:opacity-50 active:scale-95"
 			>
-				{{ submitVisitResource.loading ? "Submitting..." : "Submit Visit" }}
+				{{ submitting ? "Submitting..." : isCombined ? "Submit Combined Visit" : "Submit Visit" }}
 			</button>
 			<p v-if="!coords || !signature" class="text-[11px] text-center text-slate-400">Location and customer signature are required.</p>
 			<p v-if="!serialsOk" class="text-[11px] text-center text-amber-600">Select serial no(s) for every spare part.</p>
@@ -114,10 +126,14 @@ import SignaturePad from "@/components/SignaturePad.vue"
 import SerialPicker from "@/components/SerialPicker.vue"
 import { getCurrentLocation } from "@/utils/location"
 import { toast } from "@/utils/toast"
-import {submitVisitResource, SPARES_API, SPARE_STOCK_API, formatInr, errorText,} from "@/data/crm_support"
+import {submitVisitResource, submitCombinedVisitResource, SPARES_API, SPARE_STOCK_API, formatInr, errorText,} from "@/data/crm_support"
 
-const props = defineProps({ modelValue: Boolean, task: Object })
+const props = defineProps({ modelValue: Boolean, task: Object, tasks: { type: Array, default: () => [] } })
 const emit = defineEmits(["update:modelValue", "done"])
+
+const isCombined = computed(() => props.tasks.length > 1)
+const taskList = computed(() => (isCombined.value ? props.tasks : [props.task].filter(Boolean)))
+const submitting = computed(() => submitVisitResource.loading || submitCombinedVisitResource.loading)
 
 const RESOLUTIONS = ["Fully Resolved", "Temporary Fix", "Pending Spare Parts", "Requires Factory Repair"]
 const inputCls = "w-full rounded-xl border border-slate-200 p-2.5 text-sm bg-white"
@@ -138,8 +154,9 @@ const total = computed(() => rows.value.reduce((s, r) => s + (Number(r.qty) || 0
 const serialsOk = computed(() =>
 	rows.value.every((r) => !r.has_serial_no || (r.serial_nos || []).length === Number(r.qty))
 )
+
 const canSubmit = computed(
-	() => !!coords.value && !!signature.value && serialsOk.value && !submitVisitResource.loading
+	() => !!coords.value && !!signature.value && serialsOk.value && !submitting.value
 )
 
 async function capture() {
@@ -226,23 +243,30 @@ function close() {
 async function submit() {
 	if (!canSubmit.value) return
 	try {
-		await submitVisitResource.submit({
-			data: {
-				task: props.task.name,
-				resolution_status: resolution.value,
-				work_done: workDone.value,
-				feedback: feedback.value,
-				latitude: coords.value.latitude,
-				longitude: coords.value.longitude,
-				signature: signature.value,
-				materials: rows.value.map((r) => ({
-					item_code: r.item_code, qty: r.qty, rate: r.rate, uom: r.uom,
-					warehouse: r.warehouse, billing_type: r.billing_type,
-					serial_no: (r.serial_nos || []).join("\n"),batch_no: r.batch_no,
-				})),
-			},
-		})
-		toast.success("Maintenance visit submitted", "Visit Saved")
+		const payload = {
+			resolution_status: resolution.value,
+			work_done: workDone.value,
+			feedback: feedback.value,
+			latitude: coords.value.latitude,
+			longitude: coords.value.longitude,
+			signature: signature.value,
+			materials: rows.value.map((r) => ({
+				item_code: r.item_code, qty: r.qty, rate: r.rate, uom: r.uom,
+				warehouse: r.warehouse, billing_type: r.billing_type,
+				serial_no: (r.serial_nos || []).join("\n"), batch_no: r.batch_no,
+			})),
+		}
+		if (isCombined.value) {
+			await submitCombinedVisitResource.submit({
+				data: { ...payload, tasks: props.tasks.map((t) => t.name) },
+			})
+		} else {
+			await submitVisitResource.submit({ data: { ...payload, task: props.task.name } })
+		}
+		toast.success(
+			isCombined.value ? "Combined visit submitted" : "Maintenance visit submitted",
+			"Visit Saved"
+		)
 		emit("done")
 		close()
 	} catch (err) {
