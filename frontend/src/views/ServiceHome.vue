@@ -20,22 +20,20 @@
 
 				<CheckinCard @punched="load" />
 
-				<div>
-					<div class="grid grid-cols-2 gap-2">
-						<button
-							v-for="s in quickServices"
-							:key="s.label"
-							type="button"
-							@click="router.push(s.to)"
-							class="bg-white rounded-2xl p-3 text-left shadow-sm border border-slate-100 active:scale-95"
-						>
-							<div class="w-8 h-8 rounded-full bg-teal-50 text-teal-600 flex items-center justify-center mb-2">
-								<component :is="s.icon" class="w-4 h-4" />
-							</div>
-							<p class="text-xs font-bold text-slate-800">{{ s.label }}</p>
-							<p class="text-[10px] text-slate-500">{{ s.hint }}</p>
-						</button>
-					</div>
+				<div class="grid grid-cols-2 gap-2">
+					<button
+						v-for="s in quickServices"
+						:key="s.label"
+						type="button"
+						@click="router.push(s.to)"
+						class="bg-white rounded-2xl p-3 text-left shadow-sm border border-slate-100 active:scale-95"
+					>
+						<div class="w-8 h-8 rounded-full bg-teal-50 text-teal-600 flex items-center justify-center mb-2">
+							<component :is="s.icon" class="w-4 h-4" />
+						</div>
+						<p class="text-xs font-bold text-slate-800">{{ s.label }}</p>
+						<p class="text-[10px] text-slate-500">{{ s.hint }}</p>
+					</button>
 				</div>
 
 				<div class="flex items-center justify-between">
@@ -106,12 +104,12 @@ import ServiceVisitModal from "@/components/ServiceVisitModal.vue"
 import InstallationNoteModal from "@/components/InstallationNoteModal.vue"
 import CheckinCard from "@/components/CheckinCard.vue"
 import { employeeResource } from "@/data/employee"
+import { Hammer, ClipboardCheck } from "lucide-vue-next"
 import { session } from "@/data/session"
 import { checkinStatusResource } from "@/data/checkin"
 import { serviceTasksResource } from "@/data/crm_support"
 import ServiceProfileModal from "@/components/ServiceProfileModal.vue"
 import ServiceProfileMenu from "@/components/ServiceProfileMenu.vue"
-import { Hammer, ClipboardCheck } from "lucide-vue-next"
 
 const route = useRoute()
 const router = useRouter()
@@ -126,7 +124,6 @@ const quickServices = [
 	{ label: "Installations", hint: "Status & history", to: "/service/my-installations", icon: Hammer },
 	{ label: "Visits", hint: "Status & history", to: "/service/my-visits", icon: ClipboardCheck },
 ]
-
 const showProfile = ref(false)
 const showVisit = ref(false)
 const showInstall = ref(false)

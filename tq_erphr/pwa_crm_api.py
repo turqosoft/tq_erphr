@@ -426,22 +426,51 @@ def get_engineer_tasks(date: str = None, include_overdue: int = 1, engineer: str
     }
 
 
+def _search_tasks(rows, text):
+	"""Keep rows matching customer, item, task number or serial number."""
+	like = f"%{text}%"
+	t = text.lower()
+	cust_ids = set(frappe.get_all(
+		"Customer",
+		or_filters=[["name", "like", like], ["customer_name", "like", like]],
+		pluck="name",
+	))
+	item_ids = set(frappe.get_all(
+		"Item",
+		or_filters=[["name", "like", like], ["item_name", "like", like]],
+		pluck="name",
+	))
+	return [
+		r for r in rows
+		if r.customer in cust_ids
+		or r.item_code in item_ids
+		or t in (r.name or "").lower()
+		or t in (r.get("serial_no") or "").lower()
+	]
+
+
 @frappe.whitelist()
-def get_service_visits(status: str = "pending", days: int = 30, limit: int = 20) -> dict:
-	"""status: pending | completed | spares  (last N days plus the next 7)."""
+def get_service_visits(status: str = "pending", days: int = 30, limit: int = 10,
+                       search: str = None, from_date: str = None, to_date: str = None) -> dict:
+	"""status: pending | upcoming | overdue | completed | spares"""
 	me = _require_team()
 	today = getdate(nowdate())
-	start, end = add_days(today, -cint(days)), add_days(today, 7)
+
+	date_filter = None
+	if from_date and to_date:
+		date_filter = ["between", [from_date, to_date]]
+	elif from_date:
+		date_filter = [">=", from_date]
+	elif to_date:
+		date_filter = ["<=", to_date]
+
 	rows = []
 	for doctype, fields in TASK_FIELDS.items():
+		filters = {"docstatus": 1, "service_engineer": me.name}
+		if date_filter:
+			filters["scheduled_date"] = date_filter
 		found = frappe.get_all(
-			doctype,
-			# filters={"docstatus": 1, "service_engineer": me.name, "scheduled_date": ["between", [start, end]]},
-					
-		filters={
-			"docstatus": 1,"service_engineer": me.name,},
-			fields=fields + ["creation"],
-			order_by="creation asc",
+			doctype, filters=filters, fields=fields + ["creation"], order_by="creation asc"
 		)
 		for r in found:
 			r["doctype"] = doctype
@@ -455,17 +484,25 @@ def get_service_visits(status: str = "pending", days: int = 30, limit: int = 20)
 	if status == "completed":
 		rows = [r for r in rows if r.completion_status == "Fully Completed"]
 		rows.sort(key=lambda r: str(r.scheduled_date or ""), reverse=True)
-		rows = rows[: cint(limit) or 20]
-	elif status == "spares":
-		rows = [r for r in rows if r.completion_status != "Fully Completed" and needs_spares(r)]
 	else:
 		rows = [r for r in rows if r.completion_status != "Fully Completed"]
-	if status != "completed":
+		if status == "spares":
+			rows = [r for r in rows if needs_spares(r)]
+		elif status == "upcoming":
+			rows = [r for r in rows if not r["is_overdue"]]
+		elif status == "overdue":
+			rows = [r for r in rows if r["is_overdue"]]
 		rows.sort(key=lambda r: (str(r.creation), str(r.scheduled_date or "")), reverse=True)
-	return {"status": status, "tasks": _decorate(rows)}
+
+	if search and search.strip():
+		rows = _search_tasks(rows, search.strip())
+
+	total = len(rows)
+	rows = rows[: (cint(limit) or 10)]
+	return {"status": status, "tasks": _decorate(rows), "total": total}
 
 @frappe.whitelist()
-def get_my_maintenance_visits(status: str = "all", limit: int = 20) -> dict:
+def get_my_maintenance_visits(status: str = "all", limit: int = 10, search: str = None, from_date: str = None, to_date: str = None) -> dict:
 	"""status: all | partial | combined"""
 	me = _require_team()
 	VISIT = "CRM Maintenance Visit"
@@ -494,17 +531,40 @@ def get_my_maintenance_visits(status: str = "all", limit: int = 20) -> dict:
 		filters["completion_status"] = "Fully Completed"
 	elif status == "combined":
 		filters["is_combined_visit"] = 1
+	if from_date and to_date:
+		filters["mntc_date"] = ["between", [from_date, to_date]]
+	elif from_date:
+		filters["mntc_date"] = [">=", from_date]
+	elif to_date:
+		filters["mntc_date"] = ["<=", to_date]
+
+	or_filters = None
+	if search and search.strip():
+		like = f"%{search.strip()}%"
+		matched = frappe.get_all(
+			PURPOSE,
+			filters={"parenttype": VISIT, "parentfield": "purposes", "parent": ["in", list(visit_names)]},
+			or_filters=[["item_name", "like", like], ["serial_no", "like", like], ["prevdoc_docname", "like", like]],
+			pluck="parent",
+		)
+		or_filters = [
+			["name", "like", like],
+			["customer_name", "like", like],
+			["name", "in", matched or ["__none__"]],
+		]
 
 	visits = frappe.get_all(
 		VISIT,
 		filters=filters,
+		or_filters=or_filters,
 		fields=["name", "customer_name", "mntc_date", "mntc_time", "completion_status",
 		        "is_combined_visit", "maintenance_schedule", "maintenance_schedule_task", "docstatus"],
 		order_by="mntc_date desc, creation desc",
-		limit=min(cint(limit) or 20, 500),
+		limit=cint(limit) or 10,
 	)
+	total = len(frappe.get_all(VISIT, filters=filters, or_filters=or_filters, pluck="name"))
 	if not visits:
-		return {"visits": []}
+		return {"visits": [], "total": 0}
 
 	names = [v.name for v in visits]
 	purpose_fields = ["parent", "prevdoc_docname", "item_name", "serial_no"]
@@ -551,7 +611,7 @@ def get_my_maintenance_visits(status: str = "all", limit: int = 20) -> dict:
 		]
 		v["materials"] = mats_by.get(v.name, [])
 		v["sales_invoice"] = invoices.get(v.maintenance_schedule)
-	return {"status": status, "visits": visits}
+	return {"status": status, "visits": visits, "total": total}
 
 @frappe.whitelist()
 def search_spare_items(txt: str = "", limit: int = 15) -> dict:
@@ -762,11 +822,34 @@ def submit_installation_note(data) -> dict:
 	return {"name": note.name, "signature": signature_url}
 
 @frappe.whitelist()
-def get_my_installations(limit=20):
-	limit = int(limit)
+def get_my_installations(limit=10, search=None, from_date=None, to_date=None):
+	limit = cint(limit) or 10
+	filters = {"docstatus": 1, "owner": frappe.session.user}
+	if from_date and to_date:
+		filters["inst_date"] = ["between", [from_date, to_date]]
+	elif from_date:
+		filters["inst_date"] = [">=", from_date]
+	elif to_date:
+		filters["inst_date"] = ["<=", to_date]
+
+	or_filters = None
+	if search and search.strip():
+		like = f"%{search.strip()}%"
+		parents = frappe.get_all(
+			"Installation Note Item",
+			or_filters=[["serial_no", "like", like], ["item_code", "like", like], ["description", "like", like]],
+			pluck="parent",
+		)
+		or_filters = [
+			["name", "like", like],
+			["customer_name", "like", like],
+			["name", "in", parents or ["__none__"]],
+		]
+
 	notes = frappe.get_all(
 		"Installation Note",
-		filters={"docstatus": 1, "owner": frappe.session.user},
+		filters=filters,
+		or_filters=or_filters,
 		fields=["name", "customer_name", "inst_date", "completion_status"],
 		order_by="inst_date desc, creation desc",
 		limit=limit,
@@ -778,10 +861,8 @@ def get_my_installations(limit=20):
 			fields=["item_code", "description", "qty", "serial_no"],
 			order_by="idx",
 		)
-		for r in rows:
-			r["item_name"] = frappe.db.get_value("Item", r["item_code"], "item_name") or r["item_code"]
-		n["items"] = rows
-	return {"installations": notes}
+	total = len(frappe.get_all("Installation Note", filters=filters, or_filters=or_filters, pluck="name"))
+	return {"installations": notes, "total": total}
 # ------------------------------------------------------------- supervisor
 
 @frappe.whitelist()

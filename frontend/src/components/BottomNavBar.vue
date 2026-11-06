@@ -101,33 +101,21 @@
 </template>
 
 <script setup>
+import { computed } from "vue"
 import { useRouter } from "vue-router"
+import { Home, ClipboardList, Users, Package, User } from "lucide-vue-next"
+import { employeeResource } from "@/data/employee"
 
-const props = defineProps({
-	activeTab: {
-		type: String,
-		default: "home",
-	},
-	isTripActive: {
-		type: Boolean,
-		default: false,
-	},
-	showEem: {
-		type: Boolean,
-		default: true,
-	},
-})
-
-const emit = defineEmits(["openHistory", "openProfile"])
+defineProps({ activeTab: { type: String, default: "home" } })
 const router = useRouter()
 
-function navigate(tab) {
-	if (tab === "home") {
-		router.push("/")
-	} else if (tab === "eem") {
-		router.push("/eem")
-	} else if (tab === "customers") {
-		router.push("/customers")
-	}
-}
+const tabs = computed(() =>
+	[
+		{ key: "home", label: "Home", icon: Home, to: "/service" },
+		{ key: "visits", label: "Tasks", icon: ClipboardList, to: "/service/visits" },
+		employeeResource.data?.is_service_supervisor && { key: "team", label: "Team", icon: Users, to: "/service/team" },
+		{ key: "stock", label: "Spares", icon: Package, to: "/stock" },
+		{ key: "profile", label: "Profile", icon: User, to: { path: "/service", query: { openProfile: 1 } } },
+	].filter(Boolean)
+)
 </script>

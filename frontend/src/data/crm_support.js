@@ -9,7 +9,7 @@ export const serviceTasksResource = createResource({
 })
 
 export const serviceVisitsResources = Object.fromEntries(
-	["pending", "completed", "spares"].map((s) => [
+	["pending", "upcoming", "overdue", "completed", "spares"].map((s) => [
 		s,
 		createResource({ url: `${API}.get_service_visits`, cache: `tq_erphr:service_visits_${s}` }),
 	])

@@ -315,3 +315,14 @@ mit
 
 #### Bug Fixes
 - 
+
+### v1.1.20 (2026-11-06)
+
+#### New Features
+- Added search bars for Installations and Visits on the Home page. The search filters records by customer, installation/visit, and serial number.
+
+#### Improvements
+- Added incremental pagination. Initially, only 10 records are loaded, and the limit increases by 10 each time the user loads more records.
+
+#### Bug Fixes
+- 

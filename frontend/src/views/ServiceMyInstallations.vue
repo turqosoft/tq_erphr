@@ -7,8 +7,24 @@
 			</TopNavBar>
 
 			<div class="p-4 space-y-3">
+				<div class="space-y-2">
+					<input
+						v-model="search"
+						type="search"
+						placeholder="Search customer, installation, item, serial..."
+						class="w-full rounded-xl border border-slate-200 p-2.5 text-sm bg-white"
+					/>
+					<div class="flex items-center gap-2">
+						<input v-model="fromDate" type="date" :max="toDate || undefined" class="flex-1 min-w-0 rounded-xl border border-slate-200 p-2 text-xs bg-white" />
+						<span class="text-[11px] text-slate-400">to</span>
+						<input v-model="toDate" type="date" :min="fromDate || undefined" class="flex-1 min-w-0 rounded-xl border border-slate-200 p-2 text-xs bg-white" />
+						<button v-if="hasFilters" type="button" @click="clearFilters" class="text-[11px] font-semibold text-teal-700 px-1">Clear</button>
+					</div>
+					<p class="text-[10px] text-slate-400">Date range filters by installation date.</p>
+				</div>
+
 				<p v-if="!installations.length && !myInstallationsResource.loading" class="text-xs text-slate-500 text-center py-10">
-					No installations yet.
+					{{ hasFilters ? "No installations match your search." : "No installations yet." }}
 				</p>
 
 				<div v-for="n in installations" :key="n.name" class="rounded-2xl bg-white border border-slate-100 p-3.5 space-y-2 shadow-sm">
@@ -52,7 +68,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from "vue"
+import { ref, computed, watch, onMounted } from "vue"
 import TopNavBar from "@/components/TopNavBar.vue"
 import ServiceBottomNav from "@/components/ServiceBottomNav.vue"
 import ModeSwitcher from "@/components/ModeSwitcher.vue"
@@ -60,10 +76,16 @@ import ServiceProfileMenu from "@/components/ServiceProfileMenu.vue"
 import { myInstallationsResource } from "@/data/crm_support"
 
 const installations = computed(() => myInstallationsResource.data?.installations || [])
+const total = computed(() => myInstallationsResource.data?.total || 0)
 
-const PAGE = 20
+// ---- search, date range and paging (10 at a time) ----
+const search = ref("")
+const fromDate = ref("")
+const toDate = ref("")
+const PAGE = 10
 const limit = ref(PAGE)
-const canLoadMore = computed(() => installations.value.length >= limit.value)
+const canLoadMore = computed(() => installations.value.length < total.value)
+const hasFilters = computed(() => !!(search.value || fromDate.value || toDate.value))
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
 function formatDate(s) {
@@ -74,12 +96,33 @@ function formatDate(s) {
 }
 
 function load() {
-	myInstallationsResource.fetch({ limit: limit.value })
+	myInstallationsResource.fetch({
+		limit: limit.value,
+		search: search.value.trim() || undefined,
+		from_date: fromDate.value || undefined,
+		to_date: toDate.value || undefined,
+	})
+}
+function reload() {
+	limit.value = PAGE
+	load()
 }
 function loadMore() {
 	limit.value += PAGE
 	load()
 }
+function clearFilters() {
+	search.value = ""
+	fromDate.value = ""
+	toDate.value = ""
+}
+
+let timer
+watch(search, () => {
+	clearTimeout(timer)
+	timer = setTimeout(reload, 400)
+})
+watch([fromDate, toDate], reload)
 
 onMounted(load)
 </script>

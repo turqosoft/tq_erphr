@@ -20,7 +20,25 @@
 					</button>
 				</div>
 
-				<p v-if="!visits.length && !current.loading" class="text-xs text-slate-500 text-center py-10">No visits yet.</p>
+				<div class="space-y-2">
+					<input
+						v-model="search"
+						type="search"
+						placeholder="Search customer, visit, task, serial..."
+						class="w-full rounded-xl border border-slate-200 p-2.5 text-sm bg-white"
+					/>
+					<div class="flex items-center gap-2">
+						<input v-model="fromDate" type="date" :max="toDate || undefined" class="flex-1 min-w-0 rounded-xl border border-slate-200 p-2 text-xs bg-white" />
+						<span class="text-[11px] text-slate-400">to</span>
+						<input v-model="toDate" type="date" :min="fromDate || undefined" class="flex-1 min-w-0 rounded-xl border border-slate-200 p-2 text-xs bg-white" />
+						<button v-if="hasFilters" type="button" @click="clearFilters" class="text-[11px] font-semibold text-teal-700 px-1">Clear</button>
+					</div>
+					<p class="text-[10px] text-slate-400">Date range filters by visit date.</p>
+				</div>
+
+				<p v-if="!visits.length && !current.loading" class="text-xs text-slate-500 text-center py-10">
+					{{ hasFilters ? "No visits match your search." : "No visits yet." }}
+				</p>
 
 				<div v-for="v in visits" :key="v.name" class="rounded-2xl bg-white border border-slate-100 p-3.5 space-y-2 shadow-sm">
 					<div class="flex items-start justify-between gap-2">
@@ -82,7 +100,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from "vue"
+import { ref, computed, watch, onMounted } from "vue"
 import TopNavBar from "@/components/TopNavBar.vue"
 import ServiceBottomNav from "@/components/ServiceBottomNav.vue"
 import ModeSwitcher from "@/components/ModeSwitcher.vue"
@@ -98,10 +116,16 @@ const FILTERS = [
 const filter = ref("all")
 const current = computed(() => myVisitsResources[filter.value])
 const visits = computed(() => current.value.data?.visits || [])
+const total = computed(() => current.value.data?.total || 0)
 
-const PAGE = 20
+// ---- search, date range and paging (10 at a time) ----
+const search = ref("")
+const fromDate = ref("")
+const toDate = ref("")
+const PAGE = 10
 const limit = ref(PAGE)
-const canLoadMore = computed(() => visits.value.length >= limit.value)
+const canLoadMore = computed(() => visits.value.length < total.value)
+const hasFilters = computed(() => !!(search.value || fromDate.value || toDate.value))
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
 function formatDate(s) {
@@ -112,7 +136,17 @@ function formatDate(s) {
 }
 
 function load() {
-	current.value.fetch({ status: filter.value, limit: limit.value })
+	current.value.fetch({
+		status: filter.value,
+		limit: limit.value,
+		search: search.value.trim() || undefined,
+		from_date: fromDate.value || undefined,
+		to_date: toDate.value || undefined,
+	})
+}
+function reload() {
+	limit.value = PAGE
+	load()
 }
 function loadMore() {
 	limit.value += PAGE
@@ -120,9 +154,20 @@ function loadMore() {
 }
 function setFilter(k) {
 	filter.value = k
-	limit.value = PAGE
-	load()
+	reload()
 }
+function clearFilters() {
+	search.value = ""
+	fromDate.value = ""
+	toDate.value = ""
+}
+
+let timer
+watch(search, () => {
+	clearTimeout(timer)
+	timer = setTimeout(reload, 400)
+})
+watch([fromDate, toDate], reload)
 
 onMounted(load)
 </script>
