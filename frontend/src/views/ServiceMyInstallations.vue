@@ -11,7 +11,7 @@
 					<input
 						v-model="search"
 						type="search"
-						placeholder="Search customer, installation, item, serial..."
+						placeholder="Search customer, installation, task, item, serial..."
 						class="w-full rounded-xl border border-slate-200 p-2.5 text-sm bg-white"
 					/>
 					<div class="flex items-center gap-2">
@@ -42,11 +42,23 @@
 					</div>
 
 					<p class="text-[11px] font-semibold text-slate-600">📅 {{ formatDate(n.inst_date) }}</p>
+					<p v-if="n.installation_task" class="text-[11px] font-semibold text-slate-600">🧩 Task: {{ n.installation_task }}</p>
 
 					<div class="rounded-xl bg-slate-50 divide-y">
-						<div v-for="(i, idx) in n.items" :key="idx" class="px-3 py-2">
-							<p class="text-xs font-semibold truncate">{{ i.item_name }} × {{ i.qty }}</p>
+						<p class="px-3 pt-2 text-[10px] font-bold uppercase tracking-wide text-slate-400">
+							Installed (Qty {{ n.installed_qty }})
+						</p>
+						<div v-for="(i, idx) in n.items" :key="'i' + idx" class="px-3 py-2">
+							<p class="text-xs font-semibold truncate">{{ i.description || i.item_code }} × {{ i.qty }}</p>
 							<p v-if="i.serial_no" class="text-[11px] text-slate-600 whitespace-pre-line">🔢 Serial No: {{ i.serial_no }}</p>
+						</div>
+					</div>
+
+					<div v-if="n.materials?.length" class="rounded-xl bg-amber-50/60 divide-y">
+						<p class="px-3 pt-2 text-[10px] font-bold uppercase tracking-wide text-amber-700">Spare parts used</p>
+						<div v-for="(m, idx) in n.materials" :key="'m' + idx" class="px-3 py-2">
+							<p class="text-xs font-semibold truncate">{{ m.item_code }} × {{ m.qty }} {{ m.uom || "" }}</p>
+							<p v-if="m.serial_no" class="text-[11px] text-slate-600 whitespace-pre-line">🔢 Serial No: {{ m.serial_no }}</p>
 						</div>
 					</div>
 				</div>

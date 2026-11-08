@@ -823,46 +823,73 @@ def submit_installation_note(data) -> dict:
 
 @frappe.whitelist()
 def get_my_installations(limit=10, search=None, from_date=None, to_date=None):
-	limit = cint(limit) or 10
-	filters = {"docstatus": 1, "owner": frappe.session.user}
-	if from_date and to_date:
-		filters["inst_date"] = ["between", [from_date, to_date]]
-	elif from_date:
-		filters["inst_date"] = [">=", from_date]
-	elif to_date:
-		filters["inst_date"] = ["<=", to_date]
-
-	or_filters = None
-	if search and search.strip():
-		like = f"%{search.strip()}%"
-		parents = frappe.get_all(
-			"Installation Note Item",
-			or_filters=[["serial_no", "like", like], ["item_code", "like", like], ["description", "like", like]],
-			pluck="parent",
-		)
-		or_filters = [
-			["name", "like", like],
-			["customer_name", "like", like],
-			["name", "in", parents or ["__none__"]],
-		]
-
-	notes = frappe.get_all(
-		"Installation Note",
-		filters=filters,
-		or_filters=or_filters,
-		fields=["name", "customer_name", "inst_date", "completion_status"],
-		order_by="inst_date desc, creation desc",
-		limit=limit,
-	)
-	for n in notes:
-		rows = frappe.get_all(
-			"Installation Note Item",
-			filters={"parent": n["name"]},
-			fields=["item_code", "description", "qty", "serial_no"],
-			order_by="idx",
-		)
-	total = len(frappe.get_all("Installation Note", filters=filters, or_filters=or_filters, pluck="name"))
-	return {"installations": notes, "total": total}
+    limit = cint(limit) or 10
+    filters = {"docstatus": 1, "owner": frappe.session.user}
+    if from_date and to_date:
+        filters["inst_date"] = ["between", [from_date, to_date]]
+    elif from_date:
+        filters["inst_date"] = [">=", from_date]
+    elif to_date:
+        filters["inst_date"] = ["<=", to_date]
+ 
+    or_filters = None
+    if search and search.strip():
+        like = f"%{search.strip()}%"
+        parents = frappe.get_all(
+            "Installation Note Item",
+            or_filters=[["serial_no", "like", like], ["item_code", "like", like], ["description", "like", like]],
+            pluck="parent",
+        )
+        or_filters = [
+            ["name", "like", like],
+            ["customer_name", "like", like],
+            ["installation_task", "like", like],
+            ["name", "in", parents or ["__none__"]],
+        ]
+ 
+    notes = frappe.get_all(
+        "Installation Note",
+        filters=filters,
+        or_filters=or_filters,
+        fields=["name", "customer_name", "inst_date", "completion_status", "installation_task"],
+        order_by="inst_date desc, creation desc",
+        limit=limit,
+    )
+    total = len(frappe.get_all("Installation Note", filters=filters, or_filters=or_filters, pluck="name"))
+    if not notes:
+        return {"installations": [], "total": 0}
+ 
+    names = [n.name for n in notes]
+ 
+    items = frappe.get_all(
+        "Installation Note Item",
+        filters={"parent": ["in", names], "parenttype": "Installation Note"},
+        fields=["parent", "item_code", "description", "qty", "serial_no"],
+        order_by="idx asc",
+    )
+ 
+    mat_field = frappe.get_meta("Installation Note").get_field("consumed_materials")
+    materials = []
+    if mat_field:
+        materials = frappe.get_all(
+            mat_field.options,
+            filters={"parent": ["in", names], "parenttype": "Installation Note"},
+            fields=["parent", "item_code", "qty", "uom", "serial_no"],
+            order_by="idx asc",
+        )
+ 
+    items_by, mats_by = {}, {}
+    for i in items:
+        items_by.setdefault(i.parent, []).append(i)
+    for m in materials:
+        mats_by.setdefault(m.parent, []).append(m)
+ 
+    for n in notes:
+        n["items"] = items_by.get(n.name, [])
+        n["installed_qty"] = sum(flt(i.qty) for i in n["items"])
+        n["materials"] = mats_by.get(n.name, [])
+ 
+    return {"installations": notes, "total": total}
 # ------------------------------------------------------------- supervisor
 
 @frappe.whitelist()

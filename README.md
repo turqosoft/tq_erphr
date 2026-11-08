@@ -326,3 +326,14 @@ mit
 
 #### Bug Fixes
 - 
+
+### v1.1.21 (2026-11-07)
+
+#### New Features
+- 
+
+#### Improvements
+- Enhanced UI
+
+#### Bug Fixes
+- Earlier Service engineer was not able see completed installation notes using task number, no its fixed.

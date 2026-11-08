@@ -75,11 +75,12 @@
 						</div>
 					</div>
 
-					<div v-if="v.materials.length" class="text-[11px] text-slate-600 space-y-0.5">
-						<p class="font-semibold text-slate-700">Spare parts used</p>
-						<p v-for="(m, i) in v.materials" :key="i" class="whitespace-pre-line">
-							{{ m.item_code }} × {{ m.qty }}<span v-if="m.serial_no"> · {{ m.serial_no }}</span>
-						</p>
+					<div v-if="v.materials?.length" class="rounded-xl bg-amber-50/60 divide-y">
+						<p class="px-3 pt-2 text-[10px] font-bold uppercase tracking-wide text-amber-700">Spare parts used</p>
+						<div v-for="(m, idx) in v.materials" :key="'m' + idx" class="px-3 py-2">
+							<p class="text-xs font-semibold truncate">{{ m.item_code }} × {{ m.qty }} {{ m.uom || "" }}</p>
+							<p v-if="m.serial_no" class="text-[11px] text-slate-600 whitespace-pre-line">🔢 Serial No: {{ m.serial_no }}</p>
+						</div>
 					</div>
 				</div>
 
