@@ -880,6 +880,7 @@ def get_my_installations(limit=10, search=None, from_date=None, to_date=None):
  
     items_by, mats_by = {}, {}
     for i in items:
+        i["description"] = frappe.utils.strip_html(i.description or "").strip()
         items_by.setdefault(i.parent, []).append(i)
     for m in materials:
         mats_by.setdefault(m.parent, []).append(m)

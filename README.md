@@ -337,3 +337,14 @@ mit
 
 #### Bug Fixes
 - Earlier Service engineer was not able see completed installation notes using task number, no its fixed.
+
+### v1.1.22 (2026-11-09)
+
+#### New Features
+- 
+
+#### Improvements
+- The item descriptions for some items were saved with HTML tags, while others were stored as plain text and displayed correctly. Added a strip_html() function to remove the HTML tags, which fixed the issue.
+
+#### Bug Fixes
+-
