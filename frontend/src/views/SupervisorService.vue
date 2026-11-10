@@ -35,13 +35,34 @@
 
 					<div v-if="open === e.team" class="space-y-2 pt-1">
 						<p v-if="loadingTasks" class="text-[11px] text-slate-400">Loading...</p>
-						<p v-else-if="!openTasks.length" class="text-[11px] text-slate-400">No open tasks.</p>
+						<p v-else-if="!openTasks.length" class="text-[11px] text-slate-400">No tasks.</p>
 						<div v-for="t in openTasks" :key="t.name" class="rounded-xl border border-slate-100 p-2.5 flex items-center justify-between gap-2">
 							<div class="min-w-0">
 								<p class="text-xs font-semibold truncate">{{ t.customer_name }}</p>
-								<p class="text-[10px] text-slate-500 truncate">{{ t.item_name }} · {{ t.completion_status }}</p>
+								<p class="text-[10px] text-slate-500 truncate">{{ t.item_name }} · {{ t.name }}</p>
+								<div class="flex flex-wrap gap-1 mt-1">
+									<span class="text-[9px] font-bold px-1.5 py-0.5 rounded-full" :class="t.kind === 'installation' ? 'bg-indigo-50 text-indigo-700' : 'bg-sky-50 text-sky-700'">
+										{{ t.kind === "installation" ? "Installation" : "Maintenance" }}
+									</span>
+									<span class="text-[9px] font-bold px-1.5 py-0.5 rounded-full" :class="taskStatusClass(t)">
+										{{ t.is_overdue ? "Overdue" : t.completion_status }}
+									</span>
+								</div>
 							</div>
-							<button type="button" @click="startReassign(t)" class="text-[11px] font-bold px-2.5 py-1.5 rounded-lg bg-amber-50 text-amber-700 flex-shrink-0">Re-assign</button>
+								<div class="flex items-center gap-1.5 flex-shrink-0">
+								<div class="relative group">
+									<button type="button" @click="viewing = t" class="w-8 h-8 flex items-center justify-center rounded-lg bg-teal-50 text-teal-700 active:bg-teal-100" aria-label="View details">
+										<svg xmlns="http://www.w3.org/2000/svg" class="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+											<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z" />
+											<circle cx="12" cy="12" r="3" />
+										</svg>
+									</button>
+									<span class="pointer-events-none absolute bottom-full right-0 mb-1 hidden group-hover:block whitespace-nowrap rounded-md bg-slate-800 px-2 py-1 text-[10px] font-medium text-white shadow">
+										View details
+									</span>
+								</div>
+								<button v-if="t.completion_status !== 'Fully Completed'" type="button" @click="startReassign(t)" class="text-[11px] font-bold px-2.5 py-1.5 rounded-lg bg-amber-50 text-amber-700">Re-assign</button>
+							</div>
 						</div>
 					</div>
 				</div>
@@ -63,7 +84,34 @@
 				</div>
 			</div>
 		</div>
+		<!-- Task details popup -->
+		<div v-if="viewing" class="fixed inset-0 z-50 bg-slate-900/50 flex items-end sm:items-center justify-center" @click.self="viewing = null">
+			<div class="bg-white w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl p-4 space-y-3 max-h-[85vh] overflow-y-auto">
+				<div class="flex items-start justify-between gap-2">
+					<div class="min-w-0">
+						<h3 class="text-sm font-bold truncate">{{ viewing.customer_name }}</h3>
+						<div class="flex flex-wrap gap-1 mt-1">
+							<span class="text-[9px] font-bold px-1.5 py-0.5 rounded-full" :class="viewing.kind === 'installation' ? 'bg-indigo-50 text-indigo-700' : 'bg-sky-50 text-sky-700'">
+								{{ viewing.kind === "installation" ? "Installation" : "Maintenance" }}
+							</span>
+							<span class="text-[9px] font-bold px-1.5 py-0.5 rounded-full" :class="taskStatusClass(viewing)">
+								{{ viewing.is_overdue ? "Overdue" : viewing.completion_status }}
+							</span>
+						</div>
+					</div>
+				<button type="button" @click="viewing = null" class="text-slate-400 text-lg leading-none" aria-label="Close">✕</button>
+				</div>
 
+				<div class="divide-y divide-slate-100">
+					<div v-for="r in detailRows" :key="r[0]" class="flex justify-between gap-3 py-1.5 text-xs">
+						<span class="text-slate-500 flex-shrink-0">{{ r[0] }}</span>
+						<span class="font-medium text-right break-words min-w-0">{{ r[1] }}</span>
+					</div>
+				</div>
+
+				<button type="button" @click="viewing = null" class="w-full py-2.5 rounded-xl bg-slate-100 text-sm font-semibold">Close</button>
+			</div>
+		</div>
 		<ServiceBottomNav active-tab="team" />
 	</div>
 </template>
@@ -90,11 +138,36 @@ const openTasks = ref([])
 const loadingTasks = ref(false)
 const reassigning = ref(null)
 const target = ref("")
+const viewing = ref(null)
 const otherEngineers = computed(() => engineers.value.filter((e) => e.team !== reassigning.value?.service_engineer))
 
 const statusClass = (s) =>
 	s === "On Site" ? "bg-emerald-50 text-emerald-700" : s === "In Transit" ? "bg-amber-50 text-amber-700" : "bg-slate-100 text-slate-500"
 
+const taskStatusClass = (t) =>
+	t.is_overdue ? "bg-red-50 text-red-700"
+	: t.completion_status === "Fully Completed" ? "bg-emerald-50 text-emerald-700"
+	: "bg-amber-50 text-amber-700"
+const detailRows = computed(() => {
+	const t = viewing.value
+	if (!t) return []
+	return [
+		["Task", t.name],
+		["Item", t.item_name],
+		["Serial no", (t.serial_no || "").split(/[\s,]+/).filter(Boolean).join(", ")],
+		["Scheduled", t.scheduled_date],
+		["Started", t.start_date],
+		["Ended", t.end_date],
+		["Visit", t.visit_no ? `${t.visit_no} of ${t.visit_total}` : null],
+		["Installed qty", t.installed_qty],
+		["Phone", t.phone],
+		["Email", t.email],
+		["Address", t.address],
+		["Territory", t.territory],
+		["Sales invoice", t.sales_invoice],
+		["Work done", t.work_done],
+	].filter((r) => r[1])
+})
 function load() {
 	supervisorDashboardResource.fetch()
 	if (open.value) loadTasks(open.value)
@@ -104,7 +177,7 @@ async function loadTasks(team) {
 	loadingTasks.value = true
 	try {
 		const res = await call(ENGINEER_TASKS_API, { engineer: team })
-		openTasks.value = (res.tasks || []).filter((t) => t.completion_status !== "Fully Completed")
+		openTasks.value = res.tasks || []
 	} catch (err) {
 		toast.error(errorText(err), "Could not load tasks")
 	} finally {

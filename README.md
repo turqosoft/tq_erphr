@@ -348,3 +348,16 @@ mit
 
 #### Bug Fixes
 -
+
+## v1.1.23 (2026-11-10)
+
+#### New Features
+- 
+
+#### Improvements
+- Added an eye icon to view task details.
+- Restricted the Re-assign button to incomplete tasks.
+- Enhanced the supervisor dashboard UI with task dropdowns, task type and status badges, and a details popup.
+
+#### Bug Fixes
+-
