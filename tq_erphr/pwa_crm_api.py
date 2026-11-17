@@ -908,13 +908,13 @@ def get_my_maintenance_visits(
     me = _require_team()
     VISIT = "CRM Maintenance Visit"
     PURPOSE = "CRM Maintenance Visit Purpose"
-
+ 
     my_tasks = frappe.get_all(
         MST, filters={"docstatus": 1, "service_engineer": me.name}, pluck="name"
     )
     if not my_tasks:
         return {"visits": []}
-
+ 
     visit_names = set(
         frappe.get_all(
             PURPOSE,
@@ -934,7 +934,7 @@ def get_my_maintenance_visits(
     )
     if not visit_names:
         return {"visits": []}
-
+ 
     filters = {"name": ["in", list(visit_names)], "docstatus": ["<", 2]}
     if status == "partial":
         filters["completion_status"] = "Partially Completed"
@@ -948,7 +948,7 @@ def get_my_maintenance_visits(
         filters["mntc_date"] = [">=", from_date]
     elif to_date:
         filters["mntc_date"] = ["<=", to_date]
-
+ 
     or_filters = None
     if search and search.strip():
         like = f"%{search.strip()}%"
@@ -971,7 +971,7 @@ def get_my_maintenance_visits(
             ["customer_name","customer" "like", like],
             ["name", "in", matched or ["__none__"]],
         ]
-
+ 
     visits = frappe.get_all(
         VISIT,
         filters=filters,
@@ -996,7 +996,7 @@ def get_my_maintenance_visits(
     )
     if not visits:
         return {"visits": [], "total": 0}
-
+ 
     names = [v.name for v in visits]
     purpose_fields = ["parent", "prevdoc_docname", "item_name", "serial_no"]
     if frappe.get_meta(PURPOSE).has_field("task_completion_status"):
@@ -1031,13 +1031,13 @@ def get_my_maintenance_visits(
         if schedules
         else {}
     )
-
+ 
     tasks_by, mats_by = {}, {}
     for p in purposes:
         tasks_by.setdefault(p.parent, []).append(p)
     for m in materials:
         mats_by.setdefault(m.parent, []).append(m)
-
+ 
     for v in visits:
         v["tasks"] = [
             {

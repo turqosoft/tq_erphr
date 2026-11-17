@@ -402,4 +402,4 @@ Fixed it by Updating the task filtering logic to hide fully completed tasks from
 #### Improvements
 - Integrated latest changes of employee expense manager with crm support
 #### Bug Fixes
--
+- Visits created from ERPNext for service engineers were displaying only the maintenance visit id in the mobile app because customer_name field was missing in the Maintenance Visit Doctype. Fixed this by adding the "customer" field , now visits created from erpnext for the service engineer will show the correct customer name in mobile app
