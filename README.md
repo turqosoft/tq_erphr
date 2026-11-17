@@ -394,3 +394,12 @@ Fixed it by Updating the task filtering logic to hide fully completed tasks from
 
 #### Bug Fixes
 -
+
+### v1.1.26 (2026-11-17)
+
+#### New Features
+- Supervisor view of subordinate performance
+#### Improvements
+- Integrated latest changes of employee expense manager with crm support
+#### Bug Fixes
+-

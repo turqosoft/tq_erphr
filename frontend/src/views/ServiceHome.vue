@@ -48,7 +48,9 @@
 						{{ selectMode ? "Cancel" : "Select tasks" }}
 					</button>
 				</div>
-				<p v-if="!tasks.length && !serviceTasksResource.loading" class="text-xs text-slate-500 text-center py-8">No tasks assigned for today.</p>
+				<p v-if="!tasks.length && !serviceTasksResource.loading" class="text-xs text-slate-500 text-center py-8">
+				{{ allTasks.length ? "All tasks completed." : "No tasks assigned for today." }}
+			</p>
 
 				<div v-for="t in tasks" :key="t.name" class="relative">
 					<ServiceTaskCard :task="t" :class="selectMode ? 'pointer-events-none' : ''" @start="openTask" />
@@ -114,7 +116,10 @@ import ServiceProfileMenu from "@/components/ServiceProfileMenu.vue"
 const route = useRoute()
 const router = useRouter()
 const employee = computed(() => employeeResource.data)
-const tasks = computed(() => serviceTasksResource.data?.tasks || [])
+const allTasks = computed(() => serviceTasksResource.data?.tasks || [])
+const tasks = computed(() =>
+	allTasks.value.filter((t) => t.completion_status !== "Fully Completed")
+)
 const summary = computed(() => serviceTasksResource.data?.summary || { assigned: 0, completed: 0, pending: 0 })
 const pendingSpares = computed(
 	() => tasks.value.filter((t) => t.completion_status !== "Fully Completed" && (t.work_done || "").startsWith("Pending Spare Parts")).length

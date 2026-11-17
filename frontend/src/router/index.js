@@ -33,6 +33,15 @@ const routes = [
 		redirect: "/eem/team",
 	},
 	{
+		path: "/team/sales",
+		name: "TeamSalesPerformance",
+		component: () => import("@/views/TeamSalesPerformance.vue"),
+	},
+	{
+		path: "/team-sales",
+		redirect: "/team/sales",
+	},
+	{
 		path: "/customers",
 		name: "Customers",
 		component: () => import("@/views/Customers.vue"),
@@ -47,13 +56,11 @@ const routes = [
 		name: "Login",
 		component: () => import("@/views/Login.vue"),
 	},
-
 	{ path: "/service", name: "ServiceHome", component: () => import("@/views/ServiceHome.vue") },
 	{ path: "/service/visits", name: "ServiceVisits", component: () => import("@/views/ServiceVisits.vue") },
 	{ path: "/service/my-visits", name: "ServiceMyVisits", component: () => import("@/views/ServiceMyVisits.vue") },
 	{ path: "/service/my-installations", name: "ServiceMyInstallations", component: () => import("@/views/ServiceMyInstallations.vue") },
 	{ path: "/service/team", name: "ServiceTeam", component: () => import("@/views/SupervisorService.vue") },
-
 	{
 		path: "/:catchAll(.*)",
 		redirect: "/",
@@ -116,3 +123,4 @@ router.afterEach(() => {
 })
 
 export default router
+

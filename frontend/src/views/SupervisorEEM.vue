@@ -75,6 +75,23 @@
 			<!-- Main Content Body (With top padding for fixed header) -->
 			<main class="w-full flex-1 flex flex-col pt-16 px-4 sm:px-5 space-y-4">
 				
+				<!-- Supervisor Module Switcher (Field Tracking vs Team Sales) -->
+				<div class="grid grid-cols-2 p-1 bg-slate-200/70 rounded-2xl gap-1">
+					<button
+						type="button"
+						class="py-1.5 text-xs font-bold rounded-xl bg-white text-teal-800 shadow-xs flex items-center justify-center gap-1.5 cursor-default"
+					>
+						<span>🚗 Field Trips</span>
+					</button>
+					<button
+						type="button"
+						@click="router.push('/team/sales')"
+						class="py-1.5 text-xs font-bold rounded-xl text-slate-600 hover:text-slate-900 flex items-center justify-center gap-1.5 cursor-pointer transition hover:bg-white/50"
+					>
+						<span>📊 Team Sales</span>
+					</button>
+				</div>
+
 				<!-- Date Selector Bar -->
 				<div class="bg-white rounded-2xl p-2.5 shadow-sm border border-slate-200/80 flex items-center justify-between gap-2">
 					<div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
@@ -874,6 +891,14 @@
 				</div>
 			</div>
 
+			<!-- Bottom Navigation -->
+			<BottomNavBar
+				active-tab="supervisor_eem"
+				:show-eem="!!employee?.is_sales_person"
+				:is-trip-active="isTripActive"
+				@open-history="openHistory"
+				@open-profile="openProfile"
+			/>
 		</div>
 	</div>
 </template>
@@ -882,10 +907,20 @@
 import { ref, computed, onMounted } from "vue"
 import { useRouter } from "vue-router"
 import { employeeResource } from "@/data/employee"
-import { supervisorEemDashboardResource, supervisorTeamTripDetailResource } from "@/data/eem"
+import { todayEemResource, supervisorEemDashboardResource, supervisorTeamTripDetailResource } from "@/data/eem"
+import BottomNavBar from "@/components/BottomNavBar.vue"
 
 const router = useRouter()
 const employee = computed(() => employeeResource.data)
+const isTripActive = computed(() => !!todayEemResource.data?.trip_active)
+
+function openHistory() {
+	router.push("/eem/history")
+}
+
+function openProfile() {
+	router.push("/?openProfile=1")
+}
 
 // State
 const targetDate = ref(getTodayISO())
@@ -1130,6 +1165,9 @@ function getMapUrl(lat, lng) {
 }
 
 onMounted(() => {
+	if (!todayEemResource.data && !todayEemResource.loading) {
+		todayEemResource.fetch()
+	}
 	fetchDashboardData()
 })
 </script>

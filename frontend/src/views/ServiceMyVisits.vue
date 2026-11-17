@@ -65,7 +65,7 @@
 					<!-- Always visible -->
 					<div class="flex items-start justify-between gap-2">
 						<div class="min-w-0">
-							<p class="text-sm font-bold truncate">{{ v.customer_name }}</p>
+							<p class="text-sm font-bold truncate">{{ v.customer }}</p>
 							<p class="text-[11px] text-slate-500 truncate">{{ v.name }}</p>
 						</div>
 						<div class="flex flex-col items-end gap-1 flex-shrink-0">

@@ -6,11 +6,11 @@
 				type="button"
 				@click="navigate('home')"
 				class="flex-1 flex flex-col items-center justify-center py-1 px-2 rounded-2xl transition-all duration-150 active:scale-95 cursor-pointer"
-				:class="activeTab === 'home' ? 'text-teal-700 font-bold' : 'text-slate-400 hover:text-slate-600 font-medium'"
+				:class="['home', 'team_sales', 'stock'].includes(activeTab) ? 'text-teal-700 font-bold' : 'text-slate-400 hover:text-slate-600 font-medium'"
 			>
 				<div class="relative">
 					<div
-						v-if="activeTab === 'home'"
+						v-if="['home', 'team_sales', 'stock'].includes(activeTab)"
 						class="absolute -inset-1.5 bg-teal-50 rounded-xl -z-10"
 					></div>
 					<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -25,12 +25,12 @@
 				v-if="showEem"
 				type="button"
 				@click="navigate('eem')"
-				class="flex-1 flex flex-col items-center justify-center py-1 px-1 sm:px-2 rounded-2xl transition-all duration-150 active:scale-95 relative"
-				:class="activeTab === 'eem' ? 'text-teal-700 font-bold' : 'text-slate-400 hover:text-slate-600 font-medium'"
+				class="flex-1 flex flex-col items-center justify-center py-1 px-1 sm:px-2 rounded-2xl transition-all duration-150 active:scale-95 relative cursor-pointer"
+				:class="['eem', 'supervisor_eem'].includes(activeTab) ? 'text-teal-700 font-bold' : 'text-slate-400 hover:text-slate-600 font-medium'"
 			>
 				<div class="relative">
 					<div
-						v-if="activeTab === 'eem'"
+						v-if="['eem', 'supervisor_eem'].includes(activeTab)"
 						class="absolute -inset-1.5 bg-teal-50 rounded-xl -z-10"
 					></div>
 					<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -52,7 +52,7 @@
 			<button
 				type="button"
 				@click="navigate('customers')"
-				class="flex-1 flex flex-col items-center justify-center py-1 px-1 sm:px-2 rounded-2xl transition-all duration-150 active:scale-95"
+				class="flex-1 flex flex-col items-center justify-center py-1 px-1 sm:px-2 rounded-2xl transition-all duration-150 active:scale-95 cursor-pointer"
 				:class="activeTab === 'customers' ? 'text-teal-700 font-bold' : 'text-slate-400 hover:text-slate-600 font-medium'"
 			>
 				<div class="relative">
@@ -71,10 +71,14 @@
 			<button
 				type="button"
 				@click="$emit('openHistory')"
-				class="flex-1 flex flex-col items-center justify-center py-1 px-1 sm:px-2 rounded-2xl transition-all duration-150 active:scale-95"
-				:class="activeTab === 'history' ? 'text-teal-700 font-bold' : 'text-slate-400 hover:text-slate-600 font-medium'"
+				class="flex-1 flex flex-col items-center justify-center py-1 px-1 sm:px-2 rounded-2xl transition-all duration-150 active:scale-95 cursor-pointer"
+				:class="['history', 'logs'].includes(activeTab) ? 'text-teal-700 font-bold' : 'text-slate-400 hover:text-slate-600 font-medium'"
 			>
 				<div class="relative">
+					<div
+						v-if="['history', 'logs'].includes(activeTab)"
+						class="absolute -inset-1.5 bg-teal-50 rounded-xl -z-10"
+					></div>
 					<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
 					</svg>
@@ -86,10 +90,14 @@
 			<button
 				type="button"
 				@click="$emit('openProfile')"
-				class="flex-1 flex flex-col items-center justify-center py-1 px-1 sm:px-2 rounded-2xl transition-all duration-150 active:scale-95"
+				class="flex-1 flex flex-col items-center justify-center py-1 px-1 sm:px-2 rounded-2xl transition-all duration-150 active:scale-95 cursor-pointer"
 				:class="activeTab === 'profile' ? 'text-teal-700 font-bold' : 'text-slate-400 hover:text-slate-600 font-medium'"
 			>
 				<div class="relative">
+					<div
+						v-if="activeTab === 'profile'"
+						class="absolute -inset-1.5 bg-teal-50 rounded-xl -z-10"
+					></div>
 					<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
 					</svg>
@@ -101,21 +109,33 @@
 </template>
 
 <script setup>
-import { computed } from "vue"
 import { useRouter } from "vue-router"
-import { Home, ClipboardList, Users, Package, User } from "lucide-vue-next"
-import { employeeResource } from "@/data/employee"
 
-defineProps({ activeTab: { type: String, default: "home" } })
+const props = defineProps({
+	activeTab: {
+		type: String,
+		default: "home",
+	},
+	isTripActive: {
+		type: Boolean,
+		default: false,
+	},
+	showEem: {
+		type: Boolean,
+		default: true,
+	},
+})
+
+const emit = defineEmits(["openHistory", "openProfile"])
 const router = useRouter()
 
-const tabs = computed(() =>
-	[
-		{ key: "home", label: "Home", icon: Home, to: "/service" },
-		{ key: "visits", label: "Tasks", icon: ClipboardList, to: "/service/visits" },
-		employeeResource.data?.is_service_supervisor && { key: "team", label: "Team", icon: Users, to: "/service/team" },
-		{ key: "stock", label: "Spares", icon: Package, to: "/stock" },
-		{ key: "profile", label: "Profile", icon: User, to: { path: "/service", query: { openProfile: 1 } } },
-	].filter(Boolean)
-)
+function navigate(tab) {
+	if (tab === "home") {
+		router.push("/")
+	} else if (tab === "eem") {
+		router.push("/eem")
+	} else if (tab === "customers") {
+		router.push("/customers")
+	}
+}
 </script>

@@ -128,73 +128,42 @@
 											<span>Profile Details</span>
 										</button>
 
-										<!-- Checkin History Option -->
+										<!-- Supervisor Hub: Team Sales & Outstanding (Supervisor Only) -->
 										<button
-											@click="openHistoryModal"
-											class="w-full flex items-center space-x-2.5 px-3 py-2 rounded-2xl text-xs font-medium text-slate-700 hover:bg-teal-50 hover:text-teal-800 transition text-left active:scale-98"
+											v-if="employee?.is_supervisor"
+											@click="goToTeamSales"
+											class="w-full flex items-center justify-between px-3 py-2 rounded-2xl text-xs font-semibold text-teal-800 bg-teal-50/70 hover:bg-teal-100/80 transition text-left active:scale-98"
 										>
-											<svg class="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-											</svg>
-											<span>Check-in Logs</span>
+											<div class="flex items-center space-x-2.5 min-w-0">
+												<svg class="w-4 h-4 text-teal-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+													<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+												</svg>
+												<span class="truncate">Team Sales & Receivables</span>
+											</div>
+											<span class="text-[9px] font-bold bg-teal-600 text-white px-1.5 py-0.2 rounded-full uppercase tracking-wider shrink-0">Team</span>
 										</button>
 
-										<!-- Expense Manager (EEM) Option (Visible only for Sales Persons) -->
-										<button
-											v-if="employee?.is_sales_person"
-											@click="goToEem"
-											class="w-full flex items-center space-x-2.5 px-3 py-2 rounded-2xl text-xs font-medium text-slate-700 hover:bg-teal-50 hover:text-teal-800 transition text-left active:scale-98"
-										>
-											<svg class="w-4 h-4 text-teal-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-											</svg>
-											<span>Expense Manager (EEM)</span>
-										</button>
-
-										<!-- EEM Trip History Option (Visible only for Sales Persons) -->
-										<button
-											v-if="employee?.is_sales_person"
-											@click="goToEemHistory"
-											class="w-full flex items-center space-x-2.5 px-3 py-2 rounded-2xl text-xs font-medium text-slate-700 hover:bg-teal-50 hover:text-teal-800 transition text-left active:scale-98"
-										>
-											<svg class="w-4 h-4 text-teal-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-											</svg>
-											<span>EEM Trip History</span>
-										</button>
-
-										<!-- Supervisor Team EEM Option (Visible only for Supervisors) -->
+										<!-- Supervisor Hub: Field Trips Tracking (Supervisor Only) -->
 										<button
 											v-if="employee?.is_supervisor"
 											@click="goToSupervisorEem"
-											class="w-full flex items-center space-x-2.5 px-3 py-2 rounded-2xl text-xs font-semibold text-teal-800 bg-teal-50/70 hover:bg-teal-100 transition text-left active:scale-98"
-										>
-											<svg class="w-4 h-4 text-teal-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-											</svg>
-											<span>Supervisor Team EEM</span>
-										</button>
-
-										<!-- Customers Directory Option -->
-										<button
-											@click="goToCustomers"
 											class="w-full flex items-center space-x-2.5 px-3 py-2 rounded-2xl text-xs font-medium text-slate-700 hover:bg-teal-50 hover:text-teal-800 transition text-left active:scale-98"
 										>
-											<svg class="w-4 h-4 text-teal-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+											<svg class="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
 											</svg>
-											<span>Customers Directory</span>
+											<span>Supervisor Field Tracking</span>
 										</button>
 
-										<!-- Stock & Inventory Option -->
+										<!-- Change Password Option -->
 										<button
-											@click="goToStock"
+											@click="openChangePasswordModal"
 											class="w-full flex items-center space-x-2.5 px-3 py-2 rounded-2xl text-xs font-medium text-slate-700 hover:bg-teal-50 hover:text-teal-800 transition text-left active:scale-98"
 										>
-											<svg class="w-4 h-4 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+											<svg class="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
 											</svg>
-											<span>Stock & Inventory</span>
+											<span>Change Password</span>
 										</button>
 
 										<!-- Install MobiBiz App Option -->
@@ -210,17 +179,6 @@
 												<span>Install MobiBiz App</span>
 											</div>
 											<span class="text-[9px] font-bold bg-teal-600 text-white px-1.5 py-0.5 rounded-full uppercase tracking-wider">Install</span>
-										</button>
-
-										<!-- Change Password Option -->
-										<button
-											@click="openChangePasswordModal"
-											class="w-full flex items-center space-x-2.5 px-3 py-2 rounded-2xl text-xs font-medium text-slate-700 hover:bg-teal-50 hover:text-teal-800 transition text-left active:scale-98"
-										>
-											<svg class="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-											</svg>
-											<span>Change Password</span>
 										</button>
 
 										<!-- Logout Option -->
@@ -488,6 +446,55 @@
 							<div v-else class="text-center py-2 text-[11px] text-slate-400 italic">
 								No check-in entries logged yet today.
 							</div>
+						</div>
+					</div>
+
+					<!-- ========================================== -->
+					<!-- SUPERVISOR HUB (VISIBLE FOR SUPERVISORS)   -->
+					<!-- ========================================== -->
+					<div v-if="employee?.is_supervisor" class="space-y-2">
+						<div class="flex items-center justify-between px-1">
+							<span class="text-[11px] font-bold text-teal-800 uppercase tracking-wider flex items-center gap-1.5">
+								<span>👔 Supervisor Hub</span>
+								<span class="px-1.5 py-0.2 rounded text-[9px] font-black bg-teal-100 text-teal-800">
+									{{ employee?.subordinates_count || 0 }} Subordinates
+								</span>
+							</span>
+							<span class="text-[10px] text-teal-600 font-medium">Team Analytics</span>
+						</div>
+
+						<div class="grid grid-cols-2 gap-2.5">
+							<!-- Tile 1: Team Sales & Receivables -->
+							<button
+								@click="goToTeamSales"
+								class="bg-gradient-to-br from-teal-700 via-teal-600 to-teal-500 text-white p-3.5 rounded-3xl shadow-md shadow-teal-700/15 hover:shadow-lg transition-all active:scale-[0.98] text-left flex flex-col justify-between space-y-3 cursor-pointer relative overflow-hidden"
+							>
+								<div class="w-8 h-8 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center text-white border border-white/25">
+									<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+									</svg>
+								</div>
+								<div>
+									<h4 class="text-xs font-black text-white leading-tight">Team Sales</h4>
+									<p class="text-[9px] text-teal-100 mt-0.5 leading-tight truncate">Billing & Receivables</p>
+								</div>
+							</button>
+
+							<!-- Tile 2: Field Trips & Site Tracking -->
+							<button
+								@click="goToSupervisorEem"
+								class="bg-white p-3.5 rounded-3xl border border-slate-100 shadow-xs hover:border-teal-200 hover:shadow-sm transition-all active:scale-[0.98] text-left flex flex-col justify-between space-y-3 cursor-pointer"
+							>
+								<div class="w-8 h-8 rounded-xl bg-teal-50 text-teal-700 flex items-center justify-center border border-teal-100">
+									<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+									</svg>
+								</div>
+								<div>
+									<h4 class="text-xs font-bold text-slate-900 leading-tight">Field Tracking</h4>
+									<p class="text-[9px] text-slate-500 mt-0.5 leading-tight truncate">Trips & Expense Claims</p>
+								</div>
+							</button>
 						</div>
 					</div>
 
@@ -1638,6 +1645,11 @@ function goToEemHistory() {
 function goToSupervisorEem() {
 	closeDropdown()
 	router.push("/eem/team")
+}
+
+function goToTeamSales() {
+	closeDropdown()
+	router.push("/team/sales")
 }
 
 function goToEemFromModal() {
