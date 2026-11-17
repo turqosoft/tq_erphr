@@ -57,95 +57,113 @@ def change_user_password(old_password: str, new_password: str) -> dict:
 
 @frappe.whitelist()
 def get_current_employee_info() -> dict:
-    current_user = frappe.session.user
-    if not current_user or current_user == "Guest":
-        return None
- 
-    employee = frappe.db.get_value(
-        "Employee",
-        {"user_id": current_user, "status": "Active"},
-        [
-            "name",
-            "first_name",
-            "last_name",
-            "employee_name",
-            "designation",
-            "department",
-            "company",
-            "reports_to",
-            "user_id",
-            "image",
-            "date_of_joining",
-            "cell_number",
-            "company_email",
-            "personal_email",
-        ],
-        as_dict=True,
-    )
-    if not employee:
-        return None
- 
-    # User is considered a Sales Person ONLY if their Employee ID or Name is linked to an enabled record in the Sales Person DocType
-    sales_person = frappe.db.get_value(
-        "Sales Person",
-        {"employee": employee["name"], "enabled": 1},
-        ["name", "sales_person_name"],
-        as_dict=True,
-    )
-    if not sales_person and employee.get("employee_name"):
-        sales_person = frappe.db.get_value(
-            "Sales Person",
-            {"sales_person_name": employee["employee_name"], "enabled": 1},
-            ["name", "sales_person_name"],
-            as_dict=True,
-        )
- 
-    employee["is_sales_person"] = bool(sales_person)
-    employee["sales_person_name"] = sales_person["name"] if sales_person else None
- 
-    # Fetch Company Name and Logo
-    company_name = employee.get("company") or frappe.defaults.get_global_default("company")
-    company_doc = None
-    if company_name:
-        company_doc = frappe.db.get_value(
-            "Company",
-            company_name,
-            ["name", "company_name", "company_logo"],
-            as_dict=True,
-        )
- 
-    employee["company_name"] = (company_doc.get("company_name") if company_doc else company_name) or "Total Quality"
-    employee["company_logo"] = company_doc.get("company_logo") if company_doc else None
-    if not employee.get("company") and company_name:
-        employee["company"] = company_name
- 
-    website_app_logo = frappe.db.get_single_value("Website Settings", "app_logo") if frappe.db.exists("DocType", "Website Settings") else None
-    employee["app_logo"] = employee["company_logo"] or website_app_logo
- 
-    view_all_pref = frappe.defaults.get_user_default("mobibiz_view_all_customers", current_user)
-    employee["view_all_customers"] = bool(view_all_pref and str(view_all_pref).lower() in ("1", "true", "yes"))
- 
-    # Check Supervisor status & Subordinates count
-    subordinates = get_subordinate_sales_persons(current_user)
-    employee["is_supervisor"] = bool(subordinates)
-    employee["subordinates_count"] = len(subordinates)
- 
-    # CRM Support role
-    from tq_erphr.pwa_crm_api import get_user_service_team
-    svc = get_user_service_team()
-    employee["is_service_engineer"] = svc["is_service_engineer"]
-    employee["is_service_supervisor"] = svc["is_service_supervisor"]
-    employee["service_team"] = svc["team"]
- 
-    modes = []
-    if svc["is_service_engineer"]:
-        modes.append("support")
-    if employee["is_sales_person"]:
-        modes.append("sales")
-    employee["available_modes"] = modes or ["sales"]
-    employee["default_mode"] = employee["available_modes"][0]  # support first if both
- 
-    return employee
+	current_user = frappe.session.user
+	if not current_user or current_user == "Guest":
+		return None
+
+	employee = frappe.db.get_value(
+		"Employee",
+		{"user_id": current_user, "status": "Active"},
+		[
+			"name",
+			"first_name",
+			"last_name",
+			"employee_name",
+			"designation",
+			"department",
+			"company",
+			"reports_to",
+			"user_id",
+			"image",
+			"date_of_joining",
+			"cell_number",
+			"company_email",
+			"personal_email",
+		],
+		as_dict=True,
+	)
+	if not employee:
+		return None
+
+	# User is considered a Sales Person ONLY if their Employee ID or Name is linked to an enabled record in the Sales Person DocType
+	sales_person = frappe.db.get_value(
+		"Sales Person",
+		{"employee": employee["name"], "enabled": 1},
+		["name", "sales_person_name"],
+		as_dict=True,
+	)
+	if not sales_person and employee.get("employee_name"):
+		sales_person = frappe.db.get_value(
+			"Sales Person",
+			{"sales_person_name": employee["employee_name"], "enabled": 1},
+			["name", "sales_person_name"],
+			as_dict=True,
+		)
+
+	employee["is_sales_person"] = bool(sales_person)
+	employee["sales_person_name"] = sales_person["name"] if sales_person else None
+
+	# Fetch Company Name and Logo
+	company_name = employee.get("company") or frappe.defaults.get_global_default("company")
+	company_doc = None
+	if company_name:
+		company_doc = frappe.db.get_value(
+			"Company",
+			company_name,
+			["name", "company_name", "company_logo"],
+			as_dict=True,
+		)
+
+	employee["company_name"] = (company_doc.get("company_name") if company_doc else company_name) or "Total Quality"
+	employee["company_logo"] = company_doc.get("company_logo") if company_doc else None
+	if not employee.get("company") and company_name:
+		employee["company"] = company_name
+
+	website_app_logo = frappe.db.get_single_value("Website Settings", "app_logo") if frappe.db.exists("DocType", "Website Settings") else None
+	employee["app_logo"] = employee["company_logo"] or website_app_logo
+
+	view_all_pref = frappe.defaults.get_user_default("mobibiz_view_all_customers", current_user)
+	employee["view_all_customers"] = bool(view_all_pref and str(view_all_pref).lower() in ("1", "true", "yes"))
+
+	# Check Supervisor status & Subordinates count
+	subordinates = get_subordinate_sales_persons(current_user)
+	employee["is_supervisor"] = bool(subordinates)
+	employee["subordinates_count"] = len(subordinates)
+
+	# Check Service Team (CRM Support) & Available Modes
+	is_service_engineer = False
+	is_service_supervisor = False
+	if frappe.db.exists("DocType", "CRM Service Team"):
+		team = frappe.db.get_value(
+			"CRM Service Team",
+			{"employee": employee["name"], "enabled": 1},
+			["name", "is_group"],
+			as_dict=True,
+		)
+		if team:
+			is_service_engineer = True
+			subs = frappe.get_all(
+				"CRM Service Team",
+				filters={"parent_crm_service_team": team.name, "enabled": 1},
+				limit=1,
+			)
+			is_service_supervisor = bool(team.is_group or subs)
+
+	employee["is_service_engineer"] = is_service_engineer
+	employee["is_service_supervisor"] = is_service_supervisor
+
+	modes = []
+	if employee.get("is_sales_person"):
+		modes.append("sales")
+	if is_service_engineer:
+		modes.append("support")
+	if not modes:
+		modes = ["sales"]
+
+	employee["available_modes"] = modes
+	employee["default_mode"] = modes[0]
+
+	return employee
 
 
 @frappe.whitelist(methods=["POST"])
@@ -1359,7 +1377,7 @@ def get_customer_detail(customer_name: str) -> dict:
 
 	return customer
 
-
+@frappe.whitelist()
 def get_subordinate_sales_persons(current_user: str = None) -> list:
 	"""
 	Returns all Sales Persons reporting to the current user directly or via Sales Person tree / Employee reports_to.
@@ -2073,3 +2091,707 @@ def get_stock_meta_filters() -> dict:
 		"item_groups": item_groups,
 		"stats": stats,
 	}
+
+
+# =====================================================================
+# SUPERVISOR TEAM SALES BILLING & OUTSTANDING MODULE
+# =====================================================================
+
+def _resolve_team_date_range(period="current_month", from_date=None, to_date=None):
+	"""
+	Resolves period into (period, f_date, t_date, prev_f_date, prev_t_date).
+	"""
+	from frappe.utils import today, get_first_day, get_last_day, add_days, add_months, getdate
+	cur_today = today()
+	cur_date = getdate(cur_today)
+
+	if period == "today":
+		f_date = cur_today
+		t_date = cur_today
+		prev_f_date = add_days(cur_today, -1)
+		prev_t_date = add_days(cur_today, -1)
+	elif period == "this_week":
+		days_since_monday = cur_date.weekday()
+		f_date = add_days(cur_today, -days_since_monday)
+		t_date = cur_today
+		prev_f_date = add_days(f_date, -7)
+		prev_t_date = add_days(t_date, -7)
+	elif period in ("current_month", "this_month", "month"):
+		f_date = get_first_day(cur_today)
+		t_date = cur_today
+		prev_month_day = add_months(cur_today, -1)
+		prev_f_date = get_first_day(prev_month_day)
+		prev_t_date = get_last_day(prev_month_day)
+		period = "current_month"
+	elif period in ("this_quarter", "quarter"):
+		cur_m = cur_date.month
+		q_start_m = ((cur_m - 1) // 3) * 3 + 1
+		f_date = f"{cur_date.year}-{q_start_m:02d}-01"
+		t_date = cur_today
+		prev_quarter_day = add_months(f_date, -1)
+		prev_q_date = getdate(prev_quarter_day)
+		prev_q_start_m = ((prev_q_date.month - 1) // 3) * 3 + 1
+		prev_f_date = f"{prev_q_date.year}-{prev_q_start_m:02d}-01"
+		prev_t_date = add_days(f_date, -1)
+	elif period in ("this_year", "year"):
+		f_date = f"{cur_date.year}-01-01"
+		t_date = cur_today
+		prev_f_date = f"{cur_date.year - 1}-01-01"
+		prev_t_date = f"{cur_date.year - 1}-12-31"
+	elif period == "custom" and from_date:
+		f_date = str(from_date)
+		t_date = str(to_date) if to_date else cur_today
+		span_days = max(1, (getdate(t_date) - getdate(f_date)).days)
+		prev_t_date = add_days(f_date, -1)
+		prev_f_date = add_days(prev_t_date, -span_days)
+	else:
+		f_date = get_first_day(cur_today)
+		t_date = cur_today
+		prev_month_day = add_months(cur_today, -1)
+		prev_f_date = get_first_day(prev_month_day)
+		prev_t_date = get_last_day(prev_month_day)
+		period = "current_month"
+
+	return period, str(f_date), str(t_date), str(prev_f_date), str(prev_t_date)
+
+
+def _get_supervisor_team_context(current_user=None):
+	"""
+	Returns (is_supervisor, my_sp, subordinates, team_members, all_team_sp_names)
+	where team_members is a structured list for UI selection.
+	"""
+	if not current_user:
+		current_user = frappe.session.user
+
+	employee = frappe.db.get_value(
+		"Employee",
+		{"user_id": current_user, "status": "Active"},
+		["name", "employee_name", "image", "cell_number"],
+		as_dict=True,
+	)
+	my_sp = None
+	if employee:
+		my_sp = frappe.db.get_value(
+			"Sales Person",
+			{"employee": employee["name"], "enabled": 1},
+			["name", "sales_person_name"],
+			as_dict=True,
+		)
+		if not my_sp and employee.get("employee_name"):
+			my_sp = frappe.db.get_value(
+				"Sales Person",
+				{"sales_person_name": employee["employee_name"], "enabled": 1},
+				["name", "sales_person_name"],
+				as_dict=True,
+			)
+
+	subordinates = get_subordinate_sales_persons(current_user)
+
+	roles = set(frappe.get_roles(current_user))
+	is_admin_or_manager = current_user == "Administrator" or bool(
+		roles.intersection({"System Manager", "Sales Manager", "Sales Master Manager", "HR Manager"})
+	)
+	is_supervisor = bool(subordinates) or is_admin_or_manager or bool(my_sp)
+
+	team_members = []
+	seen_sps = set()
+
+	if my_sp:
+		team_members.append({
+			"sales_person": my_sp.name,
+			"sales_person_name": f"{my_sp.sales_person_name} (Me)",
+			"employee_name": employee["employee_name"] if employee else my_sp.sales_person_name,
+			"image": employee.get("image") if employee else None,
+			"cell_number": employee.get("cell_number") if employee else None,
+			"is_current_user": True,
+		})
+		seen_sps.add(my_sp.name)
+
+	for sub in subordinates:
+		sp_name = sub.get("sales_person")
+		if sp_name and sp_name not in seen_sps:
+			seen_sps.add(sp_name)
+			team_members.append({
+				"sales_person": sp_name,
+				"sales_person_name": sub.get("sales_person_name") or sp_name,
+				"employee_name": sub.get("employee_name") or sp_name,
+				"designation": sub.get("designation") or "Sales Executive",
+				"department": sub.get("department") or "Sales",
+				"image": sub.get("image"),
+				"cell_number": sub.get("cell_number"),
+				"company_email": sub.get("company_email"),
+				"is_current_user": False,
+			})
+
+	all_team_sp_names = list(seen_sps)
+	return is_supervisor, my_sp, subordinates, team_members, all_team_sp_names
+
+
+def _resolve_sp_names_map():
+	"""
+	Returns a mapping of sales_person id -> sales_person_name.
+	"""
+	sps = frappe.get_all("Sales Person", fields=["name", "sales_person_name"])
+	return {s["name"]: (s.get("sales_person_name") or s["name"]) for s in sps}
+
+
+def _get_attributed_invoices(target_sps, from_date=None, to_date=None, customer_group=None, outstanding_only=False, is_admin_all=False):
+	"""
+	Dual-layer resolution:
+	1. Explicit Sales Invoice -> Sales Team child records matching target_sps
+	2. Fallback: Customer -> Sales Team child records matching target_sps
+	Returns list of dictionaries representing attributed invoice slices:
+	[{
+	    invoice_name, customer, customer_name, posting_date, due_date,
+	    grand_total, outstanding_amount, status, docstatus, territory,
+	    sales_person, sales_person_name, allocated_percentage,
+	    allocated_grand_total, allocated_outstanding, allocated_paid
+	}]
+	"""
+	from frappe.utils import flt, getdate, today, date_diff
+
+	sp_names_map = _resolve_sp_names_map()
+
+	# If target_sps provided, get explicit invoice sales team
+	invoice_st_records = []
+	all_invoices_with_st = set()
+	if target_sps:
+		inv_st_rows = frappe.db.sql("""
+			SELECT 
+				st.parent as invoice_name,
+				st.sales_person,
+				st.allocated_percentage
+			FROM `tabSales Team` st
+			WHERE st.parenttype = 'Sales Invoice'
+			  AND st.sales_person IN %(sps)s
+		""", {"sps": tuple(target_sps)}, as_dict=True)
+		invoice_st_records = inv_st_rows
+
+		all_st_invoices = frappe.db.sql("""
+			SELECT DISTINCT parent FROM `tabSales Team` WHERE parenttype = 'Sales Invoice'
+		""", pluck=True)
+		all_invoices_with_st = set(all_st_invoices)
+
+	# Customer-level fallback sales team
+	cust_st_map = {}
+	if target_sps:
+		cust_st_rows = frappe.db.sql("""
+			SELECT 
+				st.parent as customer,
+				st.sales_person,
+				st.allocated_percentage
+			FROM `tabSales Team` st
+			WHERE st.parenttype = 'Customer'
+			  AND st.sales_person IN %(sps)s
+		""", {"sps": tuple(target_sps)}, as_dict=True)
+		for r in cust_st_rows:
+			cust_st_map.setdefault(r["customer"], []).append(r)
+
+	# Invoices directly matching
+	explicit_inv_names = {r["invoice_name"] for r in invoice_st_records}
+	fallback_customers = set(cust_st_map.keys())
+
+	# Conditions for Sales Invoice fetch
+	conditions = ["si.docstatus = 1"]
+	params = {}
+
+	if from_date and to_date:
+		conditions.append("si.posting_date >= %(from_date)s AND si.posting_date <= %(to_date)s")
+		params["from_date"] = from_date
+		params["to_date"] = to_date
+	elif from_date:
+		conditions.append("si.posting_date >= %(from_date)s")
+		params["from_date"] = from_date
+	elif to_date:
+		conditions.append("si.posting_date <= %(to_date)s")
+		params["to_date"] = to_date
+
+	if outstanding_only:
+		conditions.append("si.outstanding_amount > 0")
+
+	if customer_group and customer_group not in ("all", "All", ""):
+		conditions.append("si.customer_group = %(customer_group)s")
+		params["customer_group"] = customer_group
+
+	# Attribution filter
+	if target_sps:
+		sub_conds = []
+		if explicit_inv_names:
+			sub_conds.append("si.name IN %(explicit_inv_names)s")
+			params["explicit_inv_names"] = tuple(explicit_inv_names)
+		if fallback_customers:
+			if all_invoices_with_st:
+				sub_conds.append("(si.customer IN %(fallback_customers)s AND si.name NOT IN %(all_invoices_with_st)s)")
+				params["all_invoices_with_st"] = tuple(all_invoices_with_st)
+			else:
+				sub_conds.append("si.customer IN %(fallback_customers)s")
+			params["fallback_customers"] = tuple(fallback_customers)
+
+		if sub_conds:
+			conditions.append("(" + " OR ".join(sub_conds) + ")")
+		elif is_admin_all:
+			# If admin selected all and no sales team configured yet, allow all submitted invoices
+			pass
+		else:
+			return []
+	elif not is_admin_all:
+		return []
+
+	where_clause = " AND ".join(conditions)
+	raw_invoices = frappe.db.sql(f"""
+		SELECT 
+			si.name, si.customer, si.customer_name, si.posting_date, si.due_date,
+			si.grand_total, si.outstanding_amount, si.status, si.docstatus, si.territory
+		FROM `tabSales Invoice` si
+		WHERE {where_clause}
+		ORDER BY si.posting_date DESC, si.creation DESC
+	""", params, as_dict=True)
+
+	# Pre-index explicit invoice st rows
+	inv_to_st = {}
+	for st in invoice_st_records:
+		inv_to_st.setdefault(st["invoice_name"], []).append(st)
+
+	results = []
+	for inv in raw_invoices:
+		inv_name = inv["name"]
+		gt = flt(inv.get("grand_total") or 0.0)
+		out = flt(inv.get("outstanding_amount") or 0.0)
+
+		# 1. Check explicit invoice sales team
+		if inv_name in inv_to_st:
+			for st in inv_to_st[inv_name]:
+				pct = flt(st.get("allocated_percentage") or 100.0)
+				ratio = (pct / 100.0) if pct > 0 else 1.0
+				sp_id = st["sales_person"]
+				results.append({
+					"invoice_name": inv_name,
+					"customer": inv["customer"],
+					"customer_name": inv["customer_name"] or inv["customer"],
+					"posting_date": str(inv["posting_date"]),
+					"due_date": str(inv.get("due_date") or inv["posting_date"]),
+					"grand_total": gt,
+					"outstanding_amount": out,
+					"status": inv["status"],
+					"docstatus": inv["docstatus"],
+					"territory": inv.get("territory"),
+					"sales_person": sp_id,
+					"sales_person_name": sp_names_map.get(sp_id, sp_id),
+					"allocated_percentage": pct,
+					"allocated_grand_total": round(gt * ratio, 2),
+					"allocated_outstanding": round(out * ratio, 2),
+					"allocated_paid": round(max(0.0, (gt - out) * ratio), 2),
+				})
+		# 2. Check fallback customer sales team
+		elif inv["customer"] in cust_st_map:
+			for st in cust_st_map[inv["customer"]]:
+				pct = flt(st.get("allocated_percentage") or 100.0)
+				ratio = (pct / 100.0) if pct > 0 else 1.0
+				sp_id = st["sales_person"]
+				results.append({
+					"invoice_name": inv_name,
+					"customer": inv["customer"],
+					"customer_name": inv["customer_name"] or inv["customer"],
+					"posting_date": str(inv["posting_date"]),
+					"due_date": str(inv.get("due_date") or inv["posting_date"]),
+					"grand_total": gt,
+					"outstanding_amount": out,
+					"status": inv["status"],
+					"docstatus": inv["docstatus"],
+					"territory": inv.get("territory"),
+					"sales_person": sp_id,
+					"sales_person_name": sp_names_map.get(sp_id, sp_id),
+					"allocated_percentage": pct,
+					"allocated_grand_total": round(gt * ratio, 2),
+					"allocated_outstanding": round(out * ratio, 2),
+					"allocated_paid": round(max(0.0, (gt - out) * ratio), 2),
+				})
+		# 3. Unassigned / Admin Fallback
+		elif is_admin_all:
+			results.append({
+				"invoice_name": inv_name,
+				"customer": inv["customer"],
+				"customer_name": inv["customer_name"] or inv["customer"],
+				"posting_date": str(inv["posting_date"]),
+				"due_date": str(inv.get("due_date") or inv["posting_date"]),
+				"grand_total": gt,
+				"outstanding_amount": out,
+				"status": inv["status"],
+				"docstatus": inv["docstatus"],
+				"territory": inv.get("territory"),
+				"sales_person": "Unassigned",
+				"sales_person_name": "Direct / Company Sales",
+				"allocated_percentage": 100.0,
+				"allocated_grand_total": gt,
+				"allocated_outstanding": out,
+				"allocated_paid": round(max(0.0, gt - out), 2),
+			})
+
+	return results
+
+
+@frappe.whitelist()
+def get_supervisor_team_sales_summary(
+	period: str = "current_month",
+	from_date: str = None,
+	to_date: str = None,
+	sales_person: str = None,
+	customer_group: str = None,
+) -> dict:
+	"""
+	Returns team billing totals, time-series metrics, and subordinate contribution leaderboard.
+	"""
+	current_user = frappe.session.user
+	if not current_user or current_user == "Guest":
+		frappe.throw(_("Not logged in"), frappe.AuthenticationError)
+
+	is_supervisor, my_sp, subordinates, team_members, all_team_sp_names = _get_supervisor_team_context(current_user)
+
+	period, f_date, t_date, prev_f_date, prev_t_date = _resolve_team_date_range(period, from_date, to_date)
+
+	# Determine targeted sales persons
+	roles = set(frappe.get_roles(current_user))
+	is_admin = current_user == "Administrator" or bool(roles.intersection({"System Manager", "Sales Manager", "Sales Master Manager"}))
+
+	target_sps = []
+	if sales_person in ("me", "Me", "current", "Current"):
+		target_sps = [my_sp.name] if my_sp else []
+	elif sales_person and sales_person not in ("all", "All", ""):
+		target_sps = [sales_person]
+	else:
+		target_sps = all_team_sp_names
+
+	# Current Period Invoices
+	is_admin_all = bool(is_admin and (not sales_person or sales_person in ("all", "All")))
+	current_slices = _get_attributed_invoices(
+		target_sps=target_sps,
+		from_date=f_date,
+		to_date=t_date,
+		customer_group=customer_group,
+		outstanding_only=False,
+		is_admin_all=is_admin_all,
+	)
+
+	# Aggregate Summary
+	total_billed = sum(r["allocated_grand_total"] for r in current_slices)
+	total_paid = sum(r["allocated_paid"] for r in current_slices)
+	total_unpaid = sum(r["allocated_outstanding"] for r in current_slices)
+	distinct_inv_names = {r["invoice_name"] for r in current_slices}
+	total_invoices = len(distinct_inv_names)
+
+	paid_percentage = (total_paid / total_billed * 100.0) if total_billed > 0 else 0.0
+
+	# Previous Period Invoices (for growth metric)
+	prev_slices = _get_attributed_invoices(
+		target_sps=target_sps,
+		from_date=prev_f_date,
+		to_date=prev_t_date,
+		customer_group=customer_group,
+		outstanding_only=False,
+		is_admin_all=is_admin_all,
+	)
+	prev_period_billed = sum(r["allocated_grand_total"] for r in prev_slices)
+	growth_percentage = 0.0
+	if prev_period_billed > 0:
+		growth_percentage = ((total_billed - prev_period_billed) / prev_period_billed) * 100.0
+
+	# Leaderboard / Team Member Breakdown
+	member_stats = {}
+	for r in current_slices:
+		sp_key = r["sales_person"]
+		if sp_key not in member_stats:
+			member_stats[sp_key] = {
+				"total_billed": 0.0,
+				"invoice_names": set(),
+				"total_paid": 0.0,
+				"total_unpaid": 0.0,
+			}
+		member_stats[sp_key]["total_billed"] += r["allocated_grand_total"]
+		member_stats[sp_key]["invoice_names"].add(r["invoice_name"])
+		member_stats[sp_key]["total_paid"] += r["allocated_paid"]
+		member_stats[sp_key]["total_unpaid"] += r["allocated_outstanding"]
+
+	enriched_members = []
+	for tm in team_members:
+		sp_id = tm["sales_person"]
+		st = member_stats.get(sp_id, {"total_billed": 0.0, "invoice_names": set(), "total_paid": 0.0, "total_unpaid": 0.0})
+		b_amt = round(st["total_billed"], 2)
+		contrib = round((b_amt / total_billed * 100.0), 1) if total_billed > 0 else 0.0
+		enriched_members.append({
+			**tm,
+			"total_billed": b_amt,
+			"invoice_count": len(st["invoice_names"]),
+			"total_paid": round(st["total_paid"], 2),
+			"total_unpaid": round(st["total_unpaid"], 2),
+			"contribution_percentage": contrib,
+		})
+
+	# Sort enriched members: Current user first, then highest billed
+	enriched_members.sort(key=lambda m: (not m.get("is_current_user", False), -m["total_billed"]))
+
+	# Recent Invoices (latest 15)
+	seen_invoices = set()
+	recent_invoices = []
+	for r in current_slices:
+		if r["invoice_name"] not in seen_invoices:
+			seen_invoices.add(r["invoice_name"])
+			recent_invoices.append({
+				"name": r["invoice_name"],
+				"customer": r["customer"],
+				"customer_name": r["customer_name"],
+				"posting_date": r["posting_date"],
+				"due_date": r["due_date"],
+				"grand_total": r["grand_total"],
+				"outstanding_amount": r["outstanding_amount"],
+				"status": r["status"],
+				"sales_person_name": r["sales_person_name"],
+			})
+		if len(recent_invoices) >= 15:
+			break
+
+	return {
+		"is_supervisor": is_supervisor,
+		"period": period,
+		"from_date": f_date,
+		"to_date": t_date,
+		"selected_sales_person": sales_person or "all",
+		"summary": {
+			"total_billed": round(total_billed, 2),
+			"total_invoices": total_invoices,
+			"total_paid": round(total_paid, 2),
+			"total_unpaid": round(total_unpaid, 2),
+			"paid_percentage": round(paid_percentage, 1),
+			"previous_period_billed": round(prev_period_billed, 2),
+			"growth_percentage": round(growth_percentage, 1),
+		},
+		"team_members": enriched_members,
+		"recent_invoices": recent_invoices,
+	}
+
+
+@frappe.whitelist()
+def get_supervisor_team_outstanding(
+	sales_person: str = "all",
+	status_filter: str = "all",       # "all", "overdue", "current"
+	aging_bucket: str = "all",        # "all", "not_due", "1-30", "31-60", "61-90", "90+"
+	search_term: str = None,
+	customer_group: str = None,
+	sort_by: str = "outstanding_desc", # "outstanding_desc", "overdue_desc", "customer_asc"
+	limit: int = 50,
+	limit_start: int = 0,
+) -> dict:
+	"""
+	Returns customer-level and invoice-level outstanding receivables with aging brackets and contact info.
+	"""
+	from frappe.utils import today, getdate, date_diff, flt
+
+	current_user = frappe.session.user
+	if not current_user or current_user == "Guest":
+		frappe.throw(_("Not logged in"), frappe.AuthenticationError)
+
+	is_supervisor, my_sp, subordinates, team_members, all_team_sp_names = _get_supervisor_team_context(current_user)
+
+	roles = set(frappe.get_roles(current_user))
+	is_admin = current_user == "Administrator" or bool(roles.intersection({"System Manager", "Sales Manager", "Sales Master Manager"}))
+
+	target_sps = []
+	if sales_person in ("me", "Me", "current", "Current"):
+		target_sps = [my_sp.name] if my_sp else []
+	elif sales_person and sales_person not in ("all", "All", ""):
+		target_sps = [sales_person]
+	else:
+		target_sps = all_team_sp_names
+
+	is_admin_all = bool(is_admin and (not sales_person or sales_person in ("all", "All")))
+
+	# Fetch outstanding invoices (unpaid, docstatus=1)
+	unpaid_slices = _get_attributed_invoices(
+		target_sps=target_sps,
+		customer_group=customer_group,
+		outstanding_only=True,
+		is_admin_all=is_admin_all,
+	)
+
+	today_date = getdate(today())
+
+	# Calculate aging for all unpaid invoices
+	aging_totals = {
+		"not_due": 0.0,
+		"1-30": 0.0,
+		"31-60": 0.0,
+		"61-90": 0.0,
+		"90+": 0.0,
+	}
+	total_outstanding = 0.0
+	total_overdue = 0.0
+	total_current = 0.0
+
+	customer_groups = {}
+	for r in unpaid_slices:
+		amt = r["allocated_outstanding"]
+		if amt <= 0:
+			continue
+
+		due = getdate(r.get("due_date") or r["posting_date"])
+		diff = date_diff(today_date, due)
+
+		if diff > 0:
+			is_ovd = True
+			ovd_days = diff
+			total_overdue += amt
+			if diff <= 30:
+				bucket = "1-30"
+			elif diff <= 60:
+				bucket = "31-60"
+			elif diff <= 90:
+				bucket = "61-90"
+			else:
+				bucket = "90+"
+		else:
+			is_ovd = False
+			ovd_days = 0
+			bucket = "not_due"
+			total_current += amt
+
+		total_outstanding += amt
+		aging_totals[bucket] += amt
+
+		cust_id = r["customer"]
+		if cust_id not in customer_groups:
+			customer_groups[cust_id] = {
+				"customer": cust_id,
+				"customer_name": r["customer_name"],
+				"territory": r.get("territory") or "General",
+				"sales_person_name": r["sales_person_name"],
+				"total_outstanding": 0.0,
+				"total_overdue": 0.0,
+				"total_current": 0.0,
+				"max_overdue_days": 0,
+				"oldest_due_date": str(due),
+				"invoices": [],
+				"has_bucket": set(),
+			}
+
+		cg = customer_groups[cust_id]
+		cg["total_outstanding"] += amt
+		if is_ovd:
+			cg["total_overdue"] += amt
+			cg["max_overdue_days"] = max(cg["max_overdue_days"], ovd_days)
+		else:
+			cg["total_current"] += amt
+
+		cg["has_bucket"].add(bucket)
+
+		cg["invoices"].append({
+			"name": r["invoice_name"],
+			"posting_date": r["posting_date"],
+			"due_date": r["due_date"],
+			"grand_total": r["allocated_grand_total"],
+			"outstanding_amount": amt,
+			"is_overdue": is_ovd,
+			"overdue_days": ovd_days,
+			"aging_bucket": bucket,
+		})
+
+	# Pre-fetch contact numbers for customers with outstanding
+	all_cust_ids = list(customer_groups.keys())
+	contact_map = {}
+	if all_cust_ids:
+		cust_info = frappe.get_all(
+			"Customer",
+			filters={"name": ["in", all_cust_ids]},
+			fields=["name", "mobile_no", "customer_primary_contact"],
+		)
+		for c in cust_info:
+			contact_map[c.name] = c.get("mobile_no")
+
+		# If missing mobile_no, check linked primary contact
+		missing_contacts = [c.customer_primary_contact for c in cust_info if not c.get("mobile_no") and c.get("customer_primary_contact")]
+		if missing_contacts:
+			contacts = frappe.get_all(
+				"Contact",
+				filters={"name": ["in", missing_contacts]},
+				fields=["name", "mobile_no", "phone"],
+			)
+			c_dict = {cn.name: (cn.get("mobile_no") or cn.get("phone")) for cn in contacts}
+			for c in cust_info:
+				if not contact_map.get(c.name) and c.get("customer_primary_contact") in c_dict:
+					contact_map[c.name] = c_dict[c.customer_primary_contact]
+
+	# Build customer list and filter
+	customer_list = []
+	for cust_id, cg in customer_groups.items():
+		cg["mobile_no"] = contact_map.get(cust_id) or ""
+		cg["invoices_count"] = len(cg["invoices"])
+		cg["total_outstanding"] = round(cg["total_outstanding"], 2)
+		cg["total_overdue"] = round(cg["total_overdue"], 2)
+		cg["total_current"] = round(cg["total_current"], 2)
+
+		# Filter 1: Status Filter
+		if status_filter in ("overdue", "Overdue") and cg["total_overdue"] <= 0:
+			continue
+		if status_filter in ("current", "Current", "not_due") and cg["total_current"] <= 0:
+			continue
+
+		# Filter 2: Aging Bucket
+		if aging_bucket and aging_bucket not in ("all", "All", ""):
+			if aging_bucket not in cg["has_bucket"]:
+				continue
+
+		# Filter 3: Search Term
+		if search_term and search_term.strip():
+			st = search_term.strip().lower()
+			name_match = (st in cust_id.lower()) or (st in (cg["customer_name"] or "").lower())
+			inv_match = any(st in inv["name"].lower() for inv in cg["invoices"])
+			if not (name_match or inv_match):
+				continue
+
+		# Remove temporary set before serialization
+		cg.pop("has_bucket", None)
+		customer_list.append(cg)
+
+	# Sorting
+	if sort_by == "overdue_desc":
+		customer_list.sort(key=lambda c: (-c["total_overdue"], -c["max_overdue_days"], -c["total_outstanding"]))
+	elif sort_by == "customer_asc":
+		customer_list.sort(key=lambda c: (c["customer_name"] or "").lower())
+	else:
+		customer_list.sort(key=lambda c: (-c["total_outstanding"], -c["total_overdue"]))
+
+	# Pagination
+	limit = max(1, min(int(limit or 50), 200))
+	start = max(0, int(limit_start or 0))
+	paginated_customers = customer_list[start : start + limit]
+
+	return {
+		"is_supervisor": is_supervisor,
+		"selected_sales_person": sales_person or "all",
+		"status_filter": status_filter or "all",
+		"aging_bucket": aging_bucket or "all",
+		"summary": {
+			"total_outstanding": round(total_outstanding, 2),
+			"total_overdue": round(total_overdue, 2),
+			"total_current": round(total_current, 2),
+			"total_customers_count": len(customer_list),
+			"aging": {
+				"not_due": round(aging_totals["not_due"], 2),
+				"days_1_30": round(aging_totals["1-30"], 2),
+				"days_31_60": round(aging_totals["31-60"], 2),
+				"days_61_90": round(aging_totals["61-90"], 2),
+				"days_90_plus": round(aging_totals["90+"], 2),
+			},
+		},
+		"team_members": team_members,
+		"customers": paginated_customers,
+		"total_customers": len(customer_list),
+		"has_more": len(customer_list) > (start + limit),
+	}
+
+
+
+
+
+
+
+
+
