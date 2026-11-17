@@ -361,3 +361,36 @@ mit
 
 #### Bug Fixes
 -
+
+## v1.1.24 (2026-11-12)
+
+#### New Features
+- Draft Creation: Engineer fills in the form and taps Save. A draft Maintenance Visit or Installation Note is created. Combined maintenance visits are saved as a single draft.
+- OTP Generation: After completing the signature, location, serial numbers and checklist, the engineer taps Generate OTP. The existing function inside tq_crm_support generates a 4-digit OTP and saves it against the draft.
+- OTP Verification: A popup allows the engineer to enter the OTP, with a 5-minute countdown. Tapping Confirm & Submit validates the OTP and submits the same draft.
+- Draft Persistence: If the engineer navigates back, the draft remains saved. Reopening the form restores the previously entered data.
+- OTP Resumption: If an OTP is still valid, the app displays Enter OTP. Once expired, the engineer can generate a new OTP against the same draft without creating another visit.
+- OTP Disabled: When the OTP setting is turned off, the engineer can submit the document directly without OTP verification, maintaining the existing workflow.
+
+#### Improvements
+- 
+
+#### Bug Fixes
+- The task list was not updating when switching between Maintenance and Installation.
+Fix: Updated load( ) to send the selected task type and setKind( ) to reload the task list whenever the type changes.
+- Completed visits and installations were still appearing in today's task list.
+Fixed it by Updating the task filtering logic to hide fully completed tasks from today's pending task list.
+
+### v1.1.25 (2026-11-16)
+
+#### New Features
+- 
+
+#### Improvements
+- Added View More Details: Moved task details, items with serial numbers, spare parts, and invoice under this section.
+- Simplified cards in each page, now each page only display's only customer name, ID, status, and date.
+- In My Installations page, Added All, Partial, and Completed tabs with server-side filtering.
+- Added a back arrow in service page, my installation, my visits and team dashboard
+
+#### Bug Fixes
+-

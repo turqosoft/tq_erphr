@@ -103,31 +103,80 @@
 				<label class="text-xs font-semibold text-slate-700">Customer signature</label>
 				<SignaturePad v-model="signature" />
 			</div>
-
-			<button
-				type="button"
-				:disabled="!canSubmit"
-				@click="submit"
-				class="w-full py-3 rounded-2xl text-sm font-bold text-white bg-teal-600 disabled:opacity-50 active:scale-95"
-			>
-				{{ submitting ? "Submitting..." : isCombined ? "Submit Combined Visit" : "Submit Visit" }}
-			</button>
+			
+			<!-- Customer OTP -->
+			<div class="flex gap-2">
+				<button
+					type="button"
+					:disabled="!canSave"	
+					@click="saveDraft"
+					class="flex-1 py-3 rounded-2xl text-sm font-bold border border-teal-600 text-teal-700 disabled:opacity-50 active:scale-95"
+				>
+					{{ saving ? "Saving..." : "Save" }}
+				</button>
+				<button
+					v-if="otpRequired"
+					type="button"
+					:disabled="otpLoading || (remaining <= 0 && !canGenerate)"
+					@click="onOtpButton"
+					class="flex-1 py-3 rounded-2xl text-sm font-bold text-white bg-teal-600 disabled:opacity-50 active:scale-95"
+				>
+					{{ otpLoading ? "Generating..." : remaining > 0 ? "Enter OTP" : "Generate OTP" }}
+				</button>
+				<button
+					v-else
+					type="button"
+					:disabled="!canSubmit"
+					@click="submit"
+					class="flex-1 py-3 rounded-2xl text-sm font-bold text-white bg-teal-600 disabled:opacity-50 active:scale-95"
+				>
+					{{ submitting ? "Submitting..." : isCombined ? "Submit Combined Visit" : "Submit Visit" }}
+				</button>
+			</div>
+			<p v-if="draftSaved" class="text-[11px] text-center text-teal-700">Saved as draft</p>
+			<p v-if="otpRequired && !draftSaved" class="text-[11px] text-center text-slate-400">Save the visit first, then generate the OTP.</p>
 			<p v-if="!coords || !signature" class="text-[11px] text-center text-slate-400">Location and customer signature are required.</p>
 			<p v-if="!serialsOk" class="text-[11px] text-center text-amber-600">Select serial no(s) for every spare part.</p>
+
+			<!-- OTP popup -->
+			<div v-if="showOtp" class="fixed inset-0 z-[60] bg-slate-900/50 flex items-center justify-center p-4">
+				<div class="bg-white w-full max-w-xs rounded-2xl p-4 space-y-3">
+					<div class="flex items-start justify-between">
+						<h3 class="text-sm font-bold">Customer confirmation code</h3>
+						<button type="button" @click="showOtp = false" class="text-slate-400 text-lg leading-none">✕</button>
+					</div>
+					<input v-model="otpCode" inputmode="numeric" maxlength="4" placeholder="Enter 4-digit code" :class="inputCls" />
+					<p v-if="remaining > 0" class="text-[11px] text-slate-500">
+						Code expires in <span class="font-semibold">{{ timeLeft }}</span>
+					</p>
+					<p v-else class="text-[11px] text-red-600 font-semibold">Code expired. Close this and generate a new one.</p>
+					<button
+						type="button"
+						:disabled="!canSubmit"
+						@click="submit"
+						class="w-full py-3 rounded-2xl text-sm font-bold text-white bg-teal-600 disabled:opacity-50 active:scale-95"
+					>
+						{{ submitting ? "Submitting..." : "Confirm & Submit" }}
+					</button>
+				</div>
+			</div>
 		</div>
 	</div>
 </template>
 
 <script setup>
-import { ref, computed, watch } from "vue"
+import { ref, computed, watch, onBeforeUnmount } from "vue"
 import { call } from "frappe-ui"
 import LocationStatus from "@/components/LocationStatus.vue"
 import SignaturePad from "@/components/SignaturePad.vue"
 import SerialPicker from "@/components/SerialPicker.vue"
 import { getCurrentLocation } from "@/utils/location"
 import { toast } from "@/utils/toast"
-import {submitVisitResource, submitCombinedVisitResource, SPARES_API, SPARE_STOCK_API, formatInr, errorText,} from "@/data/crm_support"
-
+import {
+	submitVisitResource, submitCombinedVisitResource, SPARES_API, SPARE_STOCK_API,
+	VISIT_OTP_GENERATE_API, VISIT_OTP_REQUIRED_API, SAVE_VISIT_DRAFT_API, DRAFT_STATUS_API,
+	formatInr, errorText,
+} from "@/data/crm_support"
 const props = defineProps({ modelValue: Boolean, task: Object, tasks: { type: Array, default: () => [] } })
 const emit = defineEmits(["update:modelValue", "done"])
 
@@ -149,15 +198,111 @@ const rows = ref([])
 const signature = ref(null)
 const warehouses = ref([])
 const defaultWarehouse = ref("")
+const otpRequired = ref(false)
+const otpSent = ref(false)
+const otpCode = ref("")
+const otpLoading = ref(false)
+const remaining = ref(0)
+let otpTimer, otpEndsAt = 0
+
+const timeLeft = computed(
+	() => `${Math.floor(remaining.value / 60)}:${String(remaining.value % 60).padStart(2, "0")}`
+)
+const otpReady = computed(
+	() => !otpRequired.value || (otpSent.value && remaining.value > 0 && otpCode.value.trim().length === 4)
+)
+const draftSaved = ref(false)
+const saving = ref(false)
+const showOtp = ref(false)
+
+function stopTimer() {
+	clearInterval(otpTimer)
+	otpTimer = null
+}
+function startTimer(seconds) {
+	stopTimer()
+	otpEndsAt = Date.now() + seconds * 1000
+	remaining.value = seconds
+	otpTimer = setInterval(() => {
+		remaining.value = Math.max(0, Math.ceil((otpEndsAt - Date.now()) / 1000))
+		if (remaining.value === 0) stopTimer()
+	}, 1000)
+}
+function resetOtp() {
+	stopTimer()
+	otpSent.value = false
+	otpCode.value = ""
+	remaining.value = 0
+}
+onBeforeUnmount(stopTimer)
+
+async function saveDraft() {
+	if (!canSave.value) return
+	saving.value = true
+	try {
+		const payload = {
+			resolution_status: resolution.value,
+			work_done: workDone.value,
+			feedback: feedback.value,
+			latitude: coords.value.latitude,
+			longitude: coords.value.longitude,
+			materials: rows.value.map((r) => ({
+				item_code: r.item_code, qty: r.qty, rate: r.rate, uom: r.uom,
+				warehouse: r.warehouse, billing_type: r.billing_type,
+				serial_no: (r.serial_nos || []).join("\n"), batch_no: r.batch_no,
+			})),
+		}
+		const data = isCombined.value
+			? { ...payload, tasks: props.tasks.map((t) => t.name) }
+			: { ...payload, task: props.task.name }
+		await call(SAVE_VISIT_DRAFT_API, { data })
+		draftSaved.value = true
+		toast.success("Visit saved as draft", "Draft Saved")
+	} catch (err) {
+		toast.error(errorText(err), "Could not save draft")
+	} finally {
+		saving.value = false
+	}
+}
+
+function onOtpButton() {
+	if (remaining.value > 0) showOtp.value = true
+	else generateOtp()
+}
+
+async function generateOtp() {
+	if (!canGenerate.value) return
+	otpLoading.value = true
+	try {
+		const args = isCombined.value
+			? { tasks: props.tasks.map((t) => t.name) }
+			: { task: props.task.name }
+		const res = await call(VISIT_OTP_GENERATE_API, args)
+		if (!res.confirmation_required) {
+			otpRequired.value = false
+			return
+		}
+		otpCode.value = ""
+		otpSent.value = true
+		startTimer(res.expires_in || 300)
+		showOtp.value = true
+		if (res.dev_code) console.log("Visit OTP (dev):", res.dev_code)
+	} catch (err) {
+		toast.error(errorText(err), "Could not generate OTP")
+	} finally {
+		otpLoading.value = false
+	}
+}
 
 const total = computed(() => rows.value.reduce((s, r) => s + (Number(r.qty) || 0) * (Number(r.rate) || 0), 0))
 const serialsOk = computed(() =>
 	rows.value.every((r) => !r.has_serial_no || (r.serial_nos || []).length === Number(r.qty))
 )
 
-const canSubmit = computed(
-	() => !!coords.value && !!signature.value && serialsOk.value && !submitting.value
-)
+const baseOk = computed(() => !!coords.value && !!signature.value && serialsOk.value)
+const canSave = computed(() => !!coords.value && serialsOk.value && !saving.value)
+const canGenerate = computed(() => draftSaved.value && baseOk.value && !otpLoading.value)
+const canSubmit = computed(() => baseOk.value && otpReady.value && !submitting.value)
 
 async function capture() {
 	locating.value = true
@@ -237,6 +382,7 @@ async function refreshStock(r) {
 }
 
 function close() {
+	resetOtp()
 	emit("update:modelValue", false)
 }
 
@@ -255,6 +401,7 @@ async function submit() {
 				warehouse: r.warehouse, billing_type: r.billing_type,
 				serial_no: (r.serial_nos || []).join("\n"), batch_no: r.batch_no,
 			})),
+			...(otpRequired.value ? { otp: otpCode.value.trim() } : {}),
 		}
 		if (isCombined.value) {
 			await submitCombinedVisitResource.submit({
@@ -286,8 +433,33 @@ watch(
 		results.value = []
 		rows.value = []
 		signature.value = null
+		draftSaved.value = false
+		showOtp.value = false
+		resetOtp()
+		otpRequired.value = false
 		loadSpares("") // fills warehouses + default warehouse
 		capture()
+		try {
+			otpRequired.value = !!(await call(VISIT_OTP_REQUIRED_API)).required
+		} catch {}
+		try {
+			const args = isCombined.value
+				? { tasks: props.tasks.map((t) => t.name) }
+				: { task: props.task.name }
+			const st = await call(DRAFT_STATUS_API, { ...args, kind: "visit" })
+			if (st.draft) {
+				draftSaved.value = true
+				const f = st.form || {}
+				if (f.resolution_status) resolution.value = f.resolution_status
+				workDone.value = f.work_done || ""
+				feedback.value = f.feedback || ""
+				rows.value = f.materials || []
+				if (st.pending) {
+					otpSent.value = true
+					startTimer(st.remaining)
+				}
+			}
+		} catch {}
 	}
 )
 </script>

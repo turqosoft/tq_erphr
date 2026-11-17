@@ -41,6 +41,13 @@ export const SPARES_API = `${API}.search_spare_items`
 export const SPARE_STOCK_API = `${API}.get_spare_stock`
 export const SERIALS_API = `${API}.get_available_serial_nos`
 export const ENGINEER_TASKS_API = `${API}.get_engineer_tasks`
+export const VISIT_OTP_GENERATE_API = `${API}.generate_visit_otp`
+export const VISIT_OTP_REQUIRED_API = `${API}.is_visit_otp_required`
+export const INSTALLATION_OTP_GENERATE_API = `${API}.generate_installation_otp`
+export const INSTALLATION_OTP_REQUIRED_API = `${API}.is_installation_otp_required`
+export const SAVE_VISIT_DRAFT_API = `${API}.save_visit_draft`
+export const SAVE_INSTALLATION_DRAFT_API = `${API}.save_installation_draft`
+export const DRAFT_STATUS_API = `${API}.get_draft_status`
 
 export function mapsUrl(address) {
 	return address ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}` : null

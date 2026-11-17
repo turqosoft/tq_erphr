@@ -1,4 +1,7 @@
 import base64
+import hashlib 
+import hmac
+import time
 
 import frappe
 from frappe import _
@@ -21,6 +24,231 @@ TASK_FIELDS = {
 	],
 }
 
+# ------------------------------ OTP (generation lives in tq_crm_support) ------------------------------ #
+OTP_VALIDITY_SECONDS = 300  # 5 minutes
+VISIT = "CRM Maintenance Visit"
+VISIT_PURPOSE = "CRM Maintenance Visit Purpose"
+NOTE = "Installation Note"
+
+def _otp_lock_key(scope):																		#Creates a unique cache key for an OTP request
+	return f"visit_otp_sent:{frappe.session.user}:{scope}"
+
+def _otp_scope(task_names):																		#Generates a consistent identifier for one task or a combined group of tasks
+	names = sorted(set(task_names))
+	if len(names) == 1:
+		return names[0]
+	return hashlib.sha1("|".join(names).encode()).hexdigest()[:20]
+
+def _check_resend_lock(scope):																					 #Gets the timestamp when the OTP was last sent.
+	sent_at = frappe.cache.get_value(_otp_lock_key(scope))
+	if sent_at:
+		wait = OTP_VALIDITY_SECONDS - int(time.time() - float(sent_at))
+		if wait > 0:
+			frappe.throw(_("OTP already sent. Try again in {0}:{1}").format(wait // 60, str(wait % 60).zfill(2)))
+
+def _start_otp_window(scope):					                                                                  #Starts the five-minute OTP resend restriction.
+	frappe.cache.set_value(_otp_lock_key(scope), time.time(), expires_in_sec=OTP_VALIDITY_SECONDS)
+
+def _verify_draft_code(doctype, name, scope, code):																  #Verifies the OTP entered by the customer.
+	if not frappe.cache.get_value(_otp_lock_key(scope)):
+		frappe.throw(_("The code has expired. Please generate a new one."))
+	saved = frappe.db.get_value(doctype, name, "customer_confirmation_code")
+	if not saved or not hmac.compare_digest(str(saved), str(code or "").strip()):
+		frappe.throw(_("Invalid confirmation code"))
+	return str(saved)
+
+def _otp_response(res):																							#Prepares the API response after generating an OTP
+	code = (res or {}).get("code")
+	return {
+		"confirmation_required": True,
+		"expires_in": OTP_VALIDITY_SECONDS,
+		# "dev_code": code if frappe.conf.developer_mode else None,  # never the code itself otherwise
+	}
+
+def _find_draft_visit(names):																		#Finds an existing Draft CRM Maintenance Visit for the selected task or tasks
+	wanted = set(names)
+	parents = frappe.get_all(
+		VISIT_PURPOSE,
+		filters={"parenttype": VISIT, "prevdoc_docname": ["in", list(names)]},
+		pluck="parent",
+	)
+	for parent in dict.fromkeys(parents):
+		d = frappe.db.get_value(VISIT, parent, ["docstatus", "owner"], as_dict=True)
+		if not d or d.docstatus != 0 or d.owner != frappe.session.user:
+			continue
+		rows = set(frappe.get_all(VISIT_PURPOSE, filters={"parent": parent, "parenttype": VISIT}, pluck="prevdoc_docname"))
+		if rows == wanted:
+			return parent
+	return None
+
+def _find_draft_note(task_name):															#Finds an existing Draft Installation Note belonging to the current user and linked to the given Installation Task
+	return frappe.db.get_value(
+		NOTE, {"installation_task": task_name, "docstatus": 0, "owner": frappe.session.user}, "name"
+	)
+
+def _new_draft_visit(task, data):															#Creates a new Draft CRM Maintenance Visit for a single Maintenance Schedule Task.
+	from tq_crm_support.api.maintenance_schedule_api import make_maintenance_visit_from_task
+	mv = _as_admin(make_maintenance_visit_from_task, task.name)
+	series = _default_naming_series(mv.doctype)
+	if series:
+		mv.naming_series = series
+	if mv.customer:
+		mv.customer_name = frappe.db.get_value("Customer", mv.customer, "customer_name")
+	mv.company = (
+		mv.company
+		or frappe.db.get_value("CRM Maintenance Schedule", task.maintenance_schedule, "company")
+		or frappe.defaults.get_global_default("company")
+	)
+	resolution = data.get("resolution_status") or "Fully Resolved"
+	mv.completion_status = (
+		"Fully Completed"
+		if resolution == "Fully Resolved"
+		else "Partially Completed"
+	)
+	mv.mntc_date = nowdate()
+	mv.mntc_time = nowtime()
+	mv.insert(ignore_permissions=True)
+	return mv.name
+
+def _new_draft_combined(names):																		#Creates a Draft CRM Maintenance Visit for multiple tasks.
+	from tq_crm_support.api.combined_maintenance_visit_api import create_combined_maintenance_visit
+	res = _as_admin(create_combined_maintenance_visit, names)
+	frappe.db.set_value(VISIT, res["name"], "owner", frappe.session.user)
+	return res["name"]
+
+def _otp_remaining(scope):
+	sent_at = frappe.cache.get_value(_otp_lock_key(scope))
+	if not sent_at:
+		return 0
+	return max(OTP_VALIDITY_SECONDS - int(time.time() - float(sent_at)), 0)
+
+
+def _draft_materials(doc):
+	out = []
+	for m in doc.get("consumed_materials") or []:
+		info = frappe.db.get_value(
+			"Item", m.item_code, ["item_name", "has_serial_no", "has_batch_no"], as_dict=True
+		) or {}
+		out.append({
+			"item_code": m.item_code,
+			"item_name": info.get("item_name") or m.item_code,
+			"uom": m.uom,
+			"qty": flt(m.qty),
+			"rate": flt(m.rate),
+			"warehouse": m.warehouse,
+			"stock_qty": None,
+			"billing_type": m.billing_type or "Free",
+			"serial_no": m.serial_no or "",
+			"serial_nos": _split_serials(m.serial_no),
+			"batch_no": m.batch_no or "",
+			"has_serial_no": bool(info.get("has_serial_no")),
+			"has_batch_no": bool(info.get("has_batch_no")),
+		})
+	return out
+
+
+def _fill_visit(mv, data, otp_code=None, combined=False):							#Copies the information submitted by the frontend into a CRM Maintenance Visit document.
+	resolution = data.get("resolution_status") or "Fully Resolved"
+	fully = resolution == "Fully Resolved"
+	note = (data.get("work_done") or "").strip()
+	work_done = f"{resolution}: {note}" if note else resolution
+	status = "Fully Completed" if fully else "Partially Completed"
+	lat, lon = _coords(data)
+
+	mv.mntc_date = nowdate()
+	mv.mntc_time = nowtime()
+	mv.completion_status = status
+	mv.customer_feedback = data.get("feedback")
+	_set_if_field(mv, "checkin_lat", lat)
+	_set_if_field(mv, "checkin_long", lon)
+	_set_if_field(mv, "resolution_status", resolution)
+	_set_if_field(mv, "customer_confirmation_code", otp_code)
+	if combined:
+		for p in mv.purposes:
+			p.work_done = work_done
+			p.task_completion_status = status
+	elif mv.purposes:
+		mv.purposes[0].work_done = work_done
+
+	mv.set("consumed_materials", [])          # Save can run many times: no duplicate rows
+	_append_consumed_materials(mv, data.get("materials"))
+	return work_done, status
+
+
+def _fill_note(note, task, data, otp_code=None, strict=True):								#Copies installation form data into an Installation Note.
+	fully = (data.get("completion_status") or "Fully Completed") == "Fully Completed"
+	qty = flt(data.get("installed_qty")) or flt(task.installed_qty) or 1
+	lat, lon = _coords(data)
+
+	lines = [f"{'[x]' if c.get('checked') else '[ ]'} {c.get('label')}" for c in (data.get("checklist") or [])]
+	if data.get("handover_notes"):
+		lines += ["", data["handover_notes"]]
+
+	note.inst_date = nowdate()
+	note.inst_time = nowtime()
+	note.completion_status = "Fully Completed" if fully else "Partially Completed"
+	note.remarks = "\n".join(lines)
+	if not note.territory:
+		note.territory = (
+			task.territory
+			or frappe.db.get_value("Customer", task.customer, "territory")
+			or frappe.db.get_single_value("Selling Settings", "territory")
+			or "All Territories"
+		)
+	_set_if_field(note, "checkin_lat", lat)
+	_set_if_field(note, "checkin_long", lon)
+	_set_if_field(note, "customer_confirmation_code", otp_code)
+
+	if note.items:
+		note.items[0].qty = qty
+		if frappe.db.get_value("Item", task.item_code, "has_serial_no"):
+			serials = _split_serials(data.get("serial_no"))
+			if len(serials) == int(qty):
+				note.items[0].serial_no = "\n".join(serials)
+			elif strict:
+				frappe.throw(_("Enter {0} serial no(s) for the installed unit").format(int(qty)))
+		else:
+			note.items[0].serial_no = None
+
+	note.set("consumed_materials", [])
+	_append_consumed_materials(note, data.get("materials"))
+	return qty, fully
+
+#_visit_form() and _note_form() allow engineers to resume previously saved drafts.
+def _visit_form(doc):												
+	resolution = doc.get("resolution_status") or "Fully Resolved"
+	work = (doc.purposes[0].work_done if doc.purposes else "") or ""
+	if work.startswith(f"{resolution}: "):
+		work = work[len(resolution) + 2:]
+	elif work == resolution:
+		work = ""
+	return {
+		"resolution_status": resolution,
+		"work_done": work,
+		"feedback": doc.get("customer_feedback") or "",
+		"materials": _draft_materials(doc),
+	}
+
+
+def _note_form(note):												
+	checked, rest = [], []
+	lines = (note.remarks or "").split("\n")
+	for i, line in enumerate(lines):
+		if line.startswith("[x] ") or line.startswith("[ ] "):
+			if line.startswith("[x] "):
+				checked.append(line[4:])
+		else:
+			rest = lines[i:]
+			break
+	first = note.items[0] if note.items else None
+	return {
+		"completion_status": note.completion_status if note.completion_status in ("Fully Completed", "Partially Completed") else "Fully Completed",
+		"installed_qty": flt(first.qty) if first else 1,
+		"serial_no": ", ".join(_split_serials(first.serial_no)) if first else "",
+		"checked": checked,
+		"handover_notes": "\n".join(rest).strip(),
+		"materials": _draft_materials(note),
+	}
 
 # ------------------------------ helpers ------------------------------ #
 def _current_employee():
@@ -451,7 +679,8 @@ def _search_tasks(rows, text):
 
 @frappe.whitelist()
 def get_service_visits(status: str = "pending", days: int = 30, limit: int = 10,
-                       search: str = None, from_date: str = None, to_date: str = None) -> dict:
+                       search: str = None, from_date: str = None, to_date: str = None,
+                       kind: str = None) -> dict:
 	"""status: pending | upcoming | overdue | completed | spares"""
 	me = _require_team()
 	today = getdate(nowdate())
@@ -466,6 +695,10 @@ def get_service_visits(status: str = "pending", days: int = 30, limit: int = 10,
 
 	rows = []
 	for doctype, fields in TASK_FIELDS.items():
+		if kind == "installation" and doctype != IST:
+			continue
+		if kind == "maintenance" and doctype != MST:
+			continue
 		filters = {"docstatus": 1, "service_engineer": me.name}
 		if date_filter:
 			filters["scheduled_date"] = date_filter
@@ -679,52 +912,30 @@ def get_spare_stock(item_code: str, warehouse: str = None) -> dict:
 
 @frappe.whitelist(methods=["POST"])
 def submit_maintenance_visit(data) -> dict:
-	from tq_crm_support.api.maintenance_schedule_api import make_maintenance_visit_from_task
-
 	data = _parse(data)
 	task = _get_my_task(MST, data.get("task"))
+	draft = _find_draft_visit([task.name])
+	otp_code = None
+	if _otp_required():
+		if not draft:
+			frappe.throw(_("Please save the visit and generate the OTP first."))
+		otp_code = _verify_draft_code(VISIT, draft, task.name, data.get("otp"))
 
-	resolution = data.get("resolution_status") or "Fully Resolved"
-	fully = resolution == "Fully Resolved"
-	note = (data.get("work_done") or "").strip()
-	work_done = f"{resolution}: {note}" if note else resolution
-	lat, lon = _coords(data)
-
-	mv = _as_admin(make_maintenance_visit_from_task, task.name)
-	series = _default_naming_series(mv.doctype)
-	if series:
-		mv.naming_series = series      
-	if mv.customer:                               
-		mv.customer_name = frappe.db.get_value("Customer", mv.customer, "customer_name")  
-	mv.company = (
-		mv.company
-		or frappe.db.get_value("CRM Maintenance Schedule", task.maintenance_schedule, "company")
-		or frappe.defaults.get_global_default("company")
-	)
-	mv.mntc_date = nowdate()
-	mv.mntc_time = nowtime()
-	mv.completion_status = "Fully Completed" if fully else "Partially Completed"
-	mv.customer_feedback = data.get("feedback")
-	_set_if_field(mv, "checkin_lat", lat)
-	_set_if_field(mv, "checkin_long", lon)
-	_set_if_field(mv, "resolution_status", resolution)
-	if mv.purposes:
-		mv.purposes[0].work_done = work_done
-
-	_append_consumed_materials(mv, data.get("materials"))
-
-	mv.insert(ignore_permissions=True)
+	mv = frappe.get_doc(VISIT, draft or _new_draft_visit(task, data))
+	work_done, status = _fill_visit(mv, data, otp_code)
+	mv.save(ignore_permissions=True)
 	signature_url = _save_signature(mv.doctype, mv.name, data.get("signature"))
 	mv.submit()  # existing hooks: stock checks, task status, optional invoice
+
+	if otp_code:
+		frappe.cache.delete_value(_otp_lock_key(task.name))
 
 	task.db_set("work_done", work_done, update_modified=False)
 	return {"name": mv.name, "signature": signature_url, "completion_status": mv.completion_status}
 
-# -------------------------------------------------------- Combined_Maintenance_Visit
+
 @frappe.whitelist(methods=["POST"])
 def submit_combined_maintenance_visit(data) -> dict:
-	from tq_crm_support.api.combined_maintenance_visit_api import create_combined_maintenance_visit
-
 	data = _parse(data)
 	names = list(dict.fromkeys(data.get("tasks") or []))
 	if len(names) < 2:
@@ -732,40 +943,28 @@ def submit_combined_maintenance_visit(data) -> dict:
 	for n in names:
 		_get_my_task(MST, n)
 
-	user = frappe.session.user
-	res = _as_admin(create_combined_maintenance_visit, names)
-	frappe.db.set_value("CRM Maintenance Visit", res["name"], "owner", user)
-	mv = frappe.get_doc("CRM Maintenance Visit", res["name"])
+	otp_scope = _otp_scope(names)
+	draft = _find_draft_visit(names)
+	otp_code = None
+	if _otp_required():
+		if not draft:
+			frappe.throw(_("Please save the visit and generate the OTP first."))
+		otp_code = _verify_draft_code(VISIT, draft, otp_scope, data.get("otp"))
 
-	resolution = data.get("resolution_status") or "Fully Resolved"
-	fully = resolution == "Fully Resolved"
-	note = (data.get("work_done") or "").strip()
-	work_done = f"{resolution}: {note}" if note else resolution
-	status = "Fully Completed" if fully else "Partially Completed"
-	lat, lon = _coords(data)
-
-	mv.mntc_date = nowdate()
-	mv.mntc_time = nowtime()
-	mv.completion_status = status
-	mv.customer_feedback = data.get("feedback")
-	_set_if_field(mv, "checkin_lat", lat)
-	_set_if_field(mv, "checkin_long", lon)
-	_set_if_field(mv, "resolution_status", resolution)
-	for p in mv.purposes:
-		p.work_done = work_done
-		p.task_completion_status = status
-
-	_append_consumed_materials(mv, data.get("materials"))
+	mv = frappe.get_doc(VISIT, draft or _new_draft_combined(names))
+	work_done, status = _fill_visit(mv, data, otp_code, combined=True)
 	mv.save(ignore_permissions=True)
 	signature_url = _save_signature(mv.doctype, mv.name, data.get("signature"))
 	mv.submit()
+
+	if otp_code:
+		frappe.cache.delete_value(_otp_lock_key(otp_scope))
 
 	for n in names:
 		frappe.db.set_value(MST, n, "work_done", work_done, update_modified=False)
 	return {"name": mv.name, "signature": signature_url,
 	        "completion_status": status, "task_count": len(names)}
 
-# -------------------------------------------------------- installation note
 
 @frappe.whitelist(methods=["POST"])
 def submit_installation_note(data) -> dict:
@@ -773,45 +972,24 @@ def submit_installation_note(data) -> dict:
 
 	data = _parse(data)
 	task = _get_my_task(IST, data.get("task"))
-	fully = (data.get("completion_status") or "Fully Completed") == "Fully Completed"
+	draft = _find_draft_note(task.name)
+	otp_code = None
+	if _installation_otp_required():
+		if not draft:
+			frappe.throw(_("Please save the installation and generate the OTP first."))
+		otp_code = _verify_draft_code(NOTE, draft, task.name, data.get("otp"))
+
 	qty = flt(data.get("installed_qty")) or flt(task.installed_qty) or 1
 	task.db_set("installed_qty", qty, update_modified=False)
-	lat, lon = _coords(data)
 
-	lines = [f"{'[x]' if c.get('checked') else '[ ]'} {c.get('label')}" for c in (data.get("checklist") or [])]
-	if data.get("handover_notes"):
-		lines += ["", data["handover_notes"]]
-
-	note = frappe.get_doc("Installation Note", make_installation_note_from_task(task.name)["name"])
-	note.inst_date = nowdate()
-	note.inst_time = nowtime()
-	note.completion_status = "Fully Completed" if fully else "Partially Completed"
-	note.remarks = "\n".join(lines)
-	if not note.territory:
-		note.territory = (
-			task.territory
-			or frappe.db.get_value("Customer", task.customer, "territory")
-			or frappe.db.get_single_value("Selling Settings", "territory")
-			or "All Territories"
-		)
-	_set_if_field(note, "checkin_lat", lat)
-	_set_if_field(note, "checkin_long", lon)
-	
-	if note.items:
-		note.items[0].qty = qty
-		has_serial = frappe.db.get_value("Item", task.item_code, "has_serial_no")
-		if has_serial:
-			serials = _split_serials(data.get("serial_no"))
-			if len(serials) != int(qty):
-				frappe.throw(_("Enter {0} serial no(s) for the installed unit").format(int(qty)))
-			note.items[0].serial_no = "\n".join(serials)
-		else:
-			note.items[0].serial_no = None
-
-	_append_consumed_materials(note, data.get("materials"))
+	note = frappe.get_doc(NOTE, draft or make_installation_note_from_task(task.name)["name"])
+	qty, fully = _fill_note(note, task, data, otp_code)
 	note.save(ignore_permissions=True)
 	signature_url = _save_signature("Installation Note", note.name, data.get("signature"))
 	note.submit()  # existing hook updates task + Installation Detail
+
+	if otp_code:
+		frappe.cache.delete_value(_otp_lock_key(task.name))
 
 	updates = {"installed_qty": qty}
 	if not task.start_date:
@@ -822,9 +1000,15 @@ def submit_installation_note(data) -> dict:
 	return {"name": note.name, "signature": signature_url}
 
 @frappe.whitelist()
-def get_my_installations(limit=10, search=None, from_date=None, to_date=None):
+def get_my_installations(
+    limit=10, search=None, from_date=None, to_date=None, status=None
+):
     limit = cint(limit) or 10
     filters = {"docstatus": 1, "owner": frappe.session.user}
+    if status == "completed":
+        filters["completion_status"] = "Fully Completed"
+    elif status == "partial":
+        filters["completion_status"] = ["!=", "Fully Completed"]
     if from_date and to_date:
         filters["inst_date"] = ["between", [from_date, to_date]]
     elif from_date:
@@ -837,7 +1021,11 @@ def get_my_installations(limit=10, search=None, from_date=None, to_date=None):
         like = f"%{search.strip()}%"
         parents = frappe.get_all(
             "Installation Note Item",
-            or_filters=[["serial_no", "like", like], ["item_code", "like", like], ["description", "like", like]],
+            or_filters=[
+                ["serial_no", "like", like],
+                ["item_code", "like", like],
+                ["description", "like", like],
+            ],
             pluck="parent",
         )
         or_filters = [
@@ -851,11 +1039,21 @@ def get_my_installations(limit=10, search=None, from_date=None, to_date=None):
         "Installation Note",
         filters=filters,
         or_filters=or_filters,
-        fields=["name", "customer_name", "inst_date", "completion_status", "installation_task"],
+        fields=[
+            "name",
+            "customer_name",
+            "inst_date",
+            "completion_status",
+            "installation_task",
+        ],
         order_by="inst_date desc, creation desc",
         limit=limit,
     )
-    total = len(frappe.get_all("Installation Note", filters=filters, or_filters=or_filters, pluck="name"))
+    total = len(
+        frappe.get_all(
+            "Installation Note", filters=filters, or_filters=or_filters, pluck="name"
+        )
+    )
     if not notes:
         return {"installations": [], "total": 0}
  
@@ -885,10 +1083,39 @@ def get_my_installations(limit=10, search=None, from_date=None, to_date=None):
     for m in materials:
         mats_by.setdefault(m.parent, []).append(m)
  
+    # invoice: Installation Note -> Installation Task -> Installation -> Sales Invoice
+    task_names = [n.installation_task for n in notes if n.installation_task]
+    inst_by_task = (
+        {
+            t.name: t.installation
+            for t in frappe.get_all(
+                "Installation Task",
+                filters={"name": ["in", task_names]},
+                fields=["name", "installation"],
+            )
+        }
+        if task_names
+        else {}
+    )
+    inst_names = [i for i in set(inst_by_task.values()) if i]
+    inv_by_inst = (
+        {
+            i.name: i.sales_invoice
+            for i in frappe.get_all(
+                "Installation",
+                filters={"name": ["in", inst_names]},
+                fields=["name", "sales_invoice"],
+            )
+        }
+        if inst_names
+        else {}
+    )
+ 
     for n in notes:
         n["items"] = items_by.get(n.name, [])
         n["installed_qty"] = sum(flt(i.qty) for i in n["items"])
         n["materials"] = mats_by.get(n.name, [])
+        n["sales_invoice"] = inv_by_inst.get(inst_by_task.get(n.installation_task))
  
     return {"installations": notes, "total": total}
 # ------------------------------------------------------------- supervisor
@@ -1003,3 +1230,121 @@ def reassign_task(doctype: str, task: str, new_engineer: str) -> dict:
 	doc.service_engineer = new_engineer
 	doc.save(ignore_permissions=True)
 	return {"name": doc.name, "service_engineer": new_engineer}
+
+@frappe.whitelist(methods=["POST"])
+def save_visit_draft(data) -> dict:																#Saves a Maintenance Visit as Draft without submitting it.
+	data = _parse(data)
+	names = list(dict.fromkeys(data.get("tasks") or ([data.get("task")] if data.get("task") else [])))
+	if not names:
+		frappe.throw(_("Task is required"))
+	docs = [_get_my_task(MST, n) for n in names]
+
+	draft = _find_draft_visit(names) or (
+		_new_draft_visit(docs[0], data) if len(names) == 1 else _new_draft_combined(names)
+	)
+	mv = frappe.get_doc(VISIT, draft)
+	_fill_visit(mv, data, combined=len(names) > 1)
+	mv.save(ignore_permissions=True)
+	return {"name": mv.name}
+
+
+@frappe.whitelist(methods=["POST"])
+def save_installation_draft(data) -> dict:													#Saves an Installation Note as Draft
+	from tq_crm_support.api.installation_task_api import make_installation_note_from_task
+
+	data = _parse(data)
+	task = _get_my_task(IST, data.get("task"))
+	qty = flt(data.get("installed_qty")) or flt(task.installed_qty) or 1
+	task.db_set("installed_qty", qty, update_modified=False)
+
+	draft = _find_draft_note(task.name) or make_installation_note_from_task(task.name)["name"]
+	note = frappe.get_doc(NOTE, draft)
+	_fill_note(note, task, data, strict=False)
+	note.save(ignore_permissions=True)
+	return {"name": note.name}
+
+
+@frappe.whitelist()
+def get_draft_status(task=None, tasks=None, kind="visit") -> dict:						#Checks whether a Draft Visit or Installation Note exists and returns the saved form data.
+	names = frappe.parse_json(tasks) if isinstance(tasks, str) else (tasks or [])
+	names = list(dict.fromkeys(names or ([task] if task else [])))
+	if not names:
+		return {"draft": None, "pending": False, "remaining": 0, "form": None}
+
+	installation = kind == "installation"
+	for n in names:
+		_get_my_task(IST if installation else MST, n)
+
+	draft = _find_draft_note(names[0]) if installation else _find_draft_visit(names)
+	form = None
+	if draft:
+		doc = frappe.get_doc(NOTE if installation else VISIT, draft)
+		form = _note_form(doc) if installation else _visit_form(doc)
+
+	remaining = _otp_remaining(_otp_scope(names))
+	return {"draft": draft, "pending": remaining > 0, "remaining": remaining, "form": form}
+	
+def _otp_required():														#Checks whether customer confirmation OTP is enabled for Maintenance Visits.
+	return cint(frappe.db.get_single_value(
+		"CRM Support Settings", "customer_confirmation_for_visit"
+	))
+
+@frappe.whitelist()
+def is_visit_otp_required() -> dict:
+	_require_team()
+	return {"required": bool(_otp_required())}
+
+@frappe.whitelist(methods=["POST"])
+def generate_visit_otp(task=None, tasks=None) -> dict:											#Generates the customer confirmation OTP for an individual or combined Maintenance Visit.
+	from tq_crm_support.api.maintenance_schedule_api import generate_customer_confirmation_code
+
+	names = frappe.parse_json(tasks) if isinstance(tasks, str) else (tasks or [])
+	names = list(dict.fromkeys(names or ([task] if task else [])))
+	if not names:
+		frappe.throw(_("Task is required"))
+	for n in names:
+		_get_my_task(MST, n)
+
+	if not _otp_required():
+		return {"confirmation_required": False}
+
+	draft = _find_draft_visit(names)
+	if not draft:
+		frappe.throw(_("Please save the visit first, then generate the OTP."))
+
+	scope = _otp_scope(names)
+	_check_resend_lock(scope)
+	res = generate_customer_confirmation_code(draft)   # tq_crm_support writes the code on the draft
+	_start_otp_window(scope)
+	return _otp_response(res)
+
+
+@frappe.whitelist(methods=["POST"])
+def generate_installation_otp(task=None) -> dict:										#Generates the customer confirmation OTP for an Installation Note.	
+	from tq_crm_support.api.installation_note_api import generate_installation_confirmation_code # adjust path
+
+	if not task:
+		frappe.throw(_("Task is required"))
+	_get_my_task(IST, task)
+
+	if not _installation_otp_required():
+		return {"confirmation_required": False}
+
+	draft = _find_draft_note(task)
+	if not draft:
+		frappe.throw(_("Please save the installation first, then generate the OTP."))
+
+	_check_resend_lock(task)
+	res = generate_installation_confirmation_code(draft)
+	_start_otp_window(task)
+	return _otp_response(res)
+
+def _installation_otp_required():						#Checks whether Installation Note OTP verification is enabled.
+	return cint(frappe.db.get_single_value(
+		"CRM Support Settings", "customer_confirmation_for_installation"
+	))
+
+@frappe.whitelist()
+def is_installation_otp_required() -> dict:
+	_require_team()
+	return {"required": bool(_installation_otp_required())}
