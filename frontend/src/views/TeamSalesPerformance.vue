@@ -361,7 +361,7 @@
 
 							<div v-if="salesData?.recent_invoices && salesData.recent_invoices.length > 0" class="space-y-2">
 								<div
-									v-for="inv in salesData.recent_invoices"
+									v-for="inv in visibleInvoices"
 									:key="inv.name"
 									class="p-3 rounded-2xl bg-slate-50 border border-slate-100 space-y-1.5"
 								>
@@ -392,6 +392,30 @@
 											Due: {{ inv.due_date }}
 										</span>
 									</div>
+								</div>
+
+								<!-- View More Invoices Pagination Button -->
+								<div v-if="salesData.recent_invoices.length > invoicesDisplayLimit" class="pt-2">
+									<button
+										type="button"
+										@click="invoicesDisplayLimit += 10"
+										class="w-full py-2.5 px-4 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition flex items-center justify-center gap-1.5 active:scale-98 cursor-pointer"
+									>
+										<span>View More Invoices (Showing {{ visibleInvoices.length }} of {{ salesData.recent_invoices.length }})</span>
+										<svg class="w-3.5 h-3.5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+										</svg>
+									</button>
+								</div>
+								<div v-else-if="salesData.recent_invoices.length > 10" class="flex items-center justify-between pt-1 px-1 text-[11px] text-slate-400">
+									<span>Showing all {{ salesData.recent_invoices.length }} invoices</span>
+									<button
+										type="button"
+										@click="invoicesDisplayLimit = 10"
+										class="font-bold text-teal-700 hover:text-teal-800 transition cursor-pointer"
+									>
+										Show Less
+									</button>
 								</div>
 							</div>
 
@@ -501,7 +525,7 @@
 						<!-- Customer Receivables List -->
 						<div class="space-y-3">
 							<div
-								v-for="cust in customerList"
+								v-for="cust in visibleCustomers"
 								:key="cust.customer"
 								class="bg-white rounded-3xl p-4 shadow-xs border border-slate-200/80 space-y-3 transition hover:border-teal-200"
 							>
@@ -601,6 +625,30 @@
 								</div>
 							</div>
 
+							<!-- View More Customers Pagination Button -->
+							<div v-if="customerList.length > customersDisplayLimit" class="pt-1">
+								<button
+									type="button"
+									@click="customersDisplayLimit += 10"
+									class="w-full py-2.5 px-4 rounded-2xl bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-xs border border-slate-200 active:scale-98 cursor-pointer"
+								>
+									<span>View More Customers (Showing {{ visibleCustomers.length }} of {{ customerList.length }})</span>
+									<svg class="w-3.5 h-3.5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+									</svg>
+								</button>
+							</div>
+							<div v-else-if="customerList.length > 10" class="flex items-center justify-between pt-1 px-2 text-[11px] text-slate-400">
+								<span>Showing all {{ customerList.length }} customer accounts</span>
+								<button
+									type="button"
+									@click="customersDisplayLimit = 10"
+									class="font-bold text-teal-700 hover:text-teal-800 transition cursor-pointer"
+								>
+									Show Less
+								</button>
+							</div>
+
 							<!-- Empty State -->
 							<div
 								v-if="!isLoading && customerList.length === 0"
@@ -665,6 +713,9 @@ const customFromDate = ref("")
 const customToDate = ref("")
 const isLoading = ref(false)
 
+const invoicesDisplayLimit = ref(10)
+const customersDisplayLimit = ref(10)
+
 const salesData = ref(null)
 const outstandingData = ref(null)
 const expandedCustomers = ref({})
@@ -715,6 +766,15 @@ const salesSummary = computed(() => salesData.value?.summary || {})
 const outstandingSummary = computed(() => outstandingData.value?.summary || {})
 const customerList = computed(() => outstandingData.value?.customers || [])
 
+const visibleInvoices = computed(() => {
+	const all = salesData.value?.recent_invoices || []
+	return all.slice(0, invoicesDisplayLimit.value)
+})
+
+const visibleCustomers = computed(() => {
+	return customerList.value.slice(0, customersDisplayLimit.value)
+})
+
 const agingBuckets = computed(() => {
 	const ag = outstandingSummary.value?.aging || {}
 	return [
@@ -734,16 +794,20 @@ function goBack() {
 
 function selectSalesPerson(sp) {
 	selectedSalesPerson.value = sp
+	invoicesDisplayLimit.value = 10
+	customersDisplayLimit.value = 10
 	refreshActiveView()
 }
 
 function selectPeriod(p) {
 	selectedPeriod.value = p
+	invoicesDisplayLimit.value = 10
 	fetchSalesData()
 }
 
 function selectAgingBucket(b) {
 	selectedAgingBucket.value = b
+	customersDisplayLimit.value = 10
 	fetchOutstandingData()
 }
 
@@ -751,6 +815,7 @@ let searchTimer = null
 function debouncedOutstandingSearch() {
 	clearTimeout(searchTimer)
 	searchTimer = setTimeout(() => {
+		customersDisplayLimit.value = 10
 		fetchOutstandingData()
 	}, 350)
 }
@@ -794,6 +859,7 @@ function getWhatsAppLink(cust) {
 
 async function fetchSalesData() {
 	isLoading.value = true
+	invoicesDisplayLimit.value = 10
 	try {
 		const res = await call("tq_erphr.pwa_api.get_supervisor_team_sales_summary", {
 			period: selectedPeriod.value,
@@ -813,6 +879,7 @@ async function fetchSalesData() {
 
 async function fetchOutstandingData() {
 	isLoading.value = true
+	customersDisplayLimit.value = 10
 	try {
 		const res = await call("tq_erphr.pwa_api.get_supervisor_team_outstanding", {
 			sales_person: selectedSalesPerson.value,
@@ -831,6 +898,8 @@ async function fetchOutstandingData() {
 }
 
 function refreshActiveView() {
+	invoicesDisplayLimit.value = 10
+	customersDisplayLimit.value = 10
 	if (activeTab.value === "billing") {
 		fetchSalesData()
 	} else {
