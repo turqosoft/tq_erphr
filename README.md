@@ -410,5 +410,9 @@ Fixed it by Updating the task filtering logic to hide fully completed tasks from
 - 
 #### Improvements
 - Pagenation in team sales view listing
+- The pwa_crm API now reads the "customer_name" field from Maintenance Schedule Task and Installation Task to show the customer name on task cards, in the details view and in search. If the field is empty, it falls back to the Customer lookup.
+- Removed the pwa_crm API's own OTP code check.
+- Added _check_otp_window. It keeps the 5-minute expiry check, which the server-side validators don’t do.
+- Updated the three submit functions (maintenance visit, combined maintenance visit and installation note) to call the new validate functions in tq_crm_support.
 #### Bug Fixes
 - 

@@ -1,6 +1,5 @@
 import base64
 import hashlib
-import hmac
 import time
 
 import frappe
@@ -15,6 +14,7 @@ TASK_FIELDS = {
     MST: [
         "name",
         "customer",
+        "customer_name",
         "item_code",
         "serial_no",
         "scheduled_date",
@@ -34,6 +34,7 @@ TASK_FIELDS = {
     IST: [
         "name",
         "customer",
+        "customer_name",
         "item_code",
         "serial_no",
         "scheduled_date",
@@ -88,17 +89,9 @@ def _start_otp_window(scope):  # Starts the five-minute OTP resend restriction.
         _otp_lock_key(scope), time.time(), expires_in_sec=OTP_VALIDITY_SECONDS
     )
 
-
-def _verify_draft_code(
-    doctype, name, scope, code
-):  # Verifies the OTP entered by the customer.
+def _check_otp_window(scope):  #5-minute OTP window.
     if not frappe.cache.get_value(_otp_lock_key(scope)):
         frappe.throw(_("The code has expired. Please generate a new one."))
-    saved = frappe.db.get_value(doctype, name, "customer_confirmation_code")
-    if not saved or not hmac.compare_digest(str(saved), str(code or "").strip()):
-        frappe.throw(_("Invalid confirmation code"))
-    return str(saved)
-
 
 def _otp_response(res):  # Prepares the API response after generating an OTP
     code = (res or {}).get("code")
@@ -156,7 +149,9 @@ def _new_draft_visit(
     if series:
         mv.naming_series = series
     if mv.customer:
-        mv.customer_name = frappe.db.get_value("Customer", mv.customer, "customer_name")
+        mv.customer_name = task.get("customer_name") or frappe.db.get_value(
+            "Customer", mv.customer, "customer_name"
+        )
     mv.company = (
         mv.company
         or frappe.db.get_value(
@@ -510,7 +505,7 @@ def _coords(data):
     try:
         lat, lon = float(data.get("latitude")), float(data.get("longitude"))
         return (lat, lon) if (lat or lon) else (None, None)
-    except (TypeError, ValueError):
+    except TypeError, ValueError:
         return None, None
 
 
@@ -669,7 +664,7 @@ def _decorate(rows: list) -> list:
 
     for r in rows:
         c = customers.get(r.customer) or {}
-        r["customer_name"] = c.get("customer_name") or r.customer
+        r["customer_name"] = (r.get("customer_name") or c.get("customer_name") or r.customer)
         raw = (
             r.customer_current_address
             or r.customer_billing_address
@@ -818,6 +813,7 @@ def _search_tasks(rows, text):
         r
         for r in rows
         if r.customer in cust_ids
+        or t in (r.get("customer_name") or "").lower()
         or r.item_code in item_ids
         or t in (r.name or "").lower()
         or t in (r.get("serial_no") or "").lower()
@@ -908,13 +904,13 @@ def get_my_maintenance_visits(
     me = _require_team()
     VISIT = "CRM Maintenance Visit"
     PURPOSE = "CRM Maintenance Visit Purpose"
- 
+
     my_tasks = frappe.get_all(
         MST, filters={"docstatus": 1, "service_engineer": me.name}, pluck="name"
     )
     if not my_tasks:
         return {"visits": []}
- 
+
     visit_names = set(
         frappe.get_all(
             PURPOSE,
@@ -934,7 +930,7 @@ def get_my_maintenance_visits(
     )
     if not visit_names:
         return {"visits": []}
- 
+
     filters = {"name": ["in", list(visit_names)], "docstatus": ["<", 2]}
     if status == "partial":
         filters["completion_status"] = "Partially Completed"
@@ -948,7 +944,7 @@ def get_my_maintenance_visits(
         filters["mntc_date"] = [">=", from_date]
     elif to_date:
         filters["mntc_date"] = ["<=", to_date]
- 
+
     or_filters = None
     if search and search.strip():
         like = f"%{search.strip()}%"
@@ -968,10 +964,10 @@ def get_my_maintenance_visits(
         )
         or_filters = [
             ["name", "like", like],
-            ["customer_name","customer" "like", like],
+            ["customer_name","like", like],
             ["name", "in", matched or ["__none__"]],
         ]
- 
+
     visits = frappe.get_all(
         VISIT,
         filters=filters,
@@ -996,7 +992,7 @@ def get_my_maintenance_visits(
     )
     if not visits:
         return {"visits": [], "total": 0}
- 
+
     names = [v.name for v in visits]
     purpose_fields = ["parent", "prevdoc_docname", "item_name", "serial_no"]
     if frappe.get_meta(PURPOSE).has_field("task_completion_status"):
@@ -1031,13 +1027,13 @@ def get_my_maintenance_visits(
         if schedules
         else {}
     )
- 
+
     tasks_by, mats_by = {}, {}
     for p in purposes:
         tasks_by.setdefault(p.parent, []).append(p)
     for m in materials:
         mats_by.setdefault(m.parent, []).append(m)
- 
+
     for v in visits:
         v["tasks"] = [
             {
@@ -1137,22 +1133,30 @@ def get_spare_stock(item_code: str, warehouse: str = None) -> dict:
 
 @frappe.whitelist(methods=["POST"])
 def submit_maintenance_visit(data) -> dict:
+    from tq_crm_support.api.maintenance_visit_api import (
+        validate_maintenance_visit_confirmation,
+    )
+
     data = _parse(data)
     task = _get_my_task(MST, data.get("task"))
     draft = _find_draft_visit([task.name])
-    otp_code = None
-    if _otp_required():
+    otp_on = _otp_required()
+    if otp_on:
         if not draft:
             frappe.throw(_("Please save the visit and generate the OTP first."))
-        otp_code = _verify_draft_code(VISIT, draft, task.name, data.get("otp"))
+        _check_otp_window(task.name)
 
     mv = frappe.get_doc(VISIT, draft or _new_draft_visit(task, data))
-    work_done, status = _fill_visit(mv, data, otp_code)
+    if otp_on:
+        mv.confirmation_code = data.get("otp")
+        validate_maintenance_visit_confirmation(mv)
+
+    work_done, status = _fill_visit(mv, data)
     mv.save(ignore_permissions=True)
     signature_url = _save_signature(mv.doctype, mv.name, data.get("signature"))
     mv.submit()  # existing hooks: stock checks, task status, optional invoice
 
-    if otp_code:
+    if otp_on:
         frappe.cache.delete_value(_otp_lock_key(task.name))
 
     task.db_set("work_done", work_done, update_modified=False)
@@ -1165,6 +1169,10 @@ def submit_maintenance_visit(data) -> dict:
 
 @frappe.whitelist(methods=["POST"])
 def submit_combined_maintenance_visit(data) -> dict:
+    from tq_crm_support.api.maintenance_visit_api import (
+        validate_maintenance_visit_confirmation,
+    )
+
     data = _parse(data)
     names = list(dict.fromkeys(data.get("tasks") or []))
     if len(names) < 2:
@@ -1174,19 +1182,23 @@ def submit_combined_maintenance_visit(data) -> dict:
 
     otp_scope = _otp_scope(names)
     draft = _find_draft_visit(names)
-    otp_code = None
-    if _otp_required():
+    otp_on = _otp_required()
+    if otp_on:
         if not draft:
             frappe.throw(_("Please save the visit and generate the OTP first."))
-        otp_code = _verify_draft_code(VISIT, draft, otp_scope, data.get("otp"))
+        _check_otp_window(otp_scope)
 
     mv = frappe.get_doc(VISIT, draft or _new_draft_combined(names))
-    work_done, status = _fill_visit(mv, data, otp_code, combined=True)
+    if otp_on:
+        mv.confirmation_code = data.get("otp")
+        validate_maintenance_visit_confirmation(mv)
+
+    work_done, status = _fill_visit(mv, data, combined=True)
     mv.save(ignore_permissions=True)
     signature_url = _save_signature(mv.doctype, mv.name, data.get("signature"))
     mv.submit()
 
-    if otp_code:
+    if otp_on:
         frappe.cache.delete_value(_otp_lock_key(otp_scope))
 
     for n in names:
@@ -1204,15 +1216,18 @@ def submit_installation_note(data) -> dict:
     from tq_crm_support.api.installation_task_api import (
         make_installation_note_from_task,
     )
+    from tq_crm_support.api.installation_note_api import (
+        validate_installation_confirmation,
+    )
 
     data = _parse(data)
     task = _get_my_task(IST, data.get("task"))
     draft = _find_draft_note(task.name)
-    otp_code = None
-    if _installation_otp_required():
+    otp_on = _installation_otp_required()
+    if otp_on:
         if not draft:
             frappe.throw(_("Please save the installation and generate the OTP first."))
-        otp_code = _verify_draft_code(NOTE, draft, task.name, data.get("otp"))
+        _check_otp_window(task.name)
 
     qty = flt(data.get("installed_qty")) or flt(task.installed_qty) or 1
     task.db_set("installed_qty", qty, update_modified=False)
@@ -1220,14 +1235,18 @@ def submit_installation_note(data) -> dict:
     note = frappe.get_doc(
         NOTE, draft or make_installation_note_from_task(task.name)["name"]
     )
-    qty, fully = _fill_note(note, task, data, otp_code)
+    if otp_on:
+        note.confirmation_code = data.get("otp")
+        validate_installation_confirmation(note)
+
+    qty, fully = _fill_note(note, task, data)
     note.save(ignore_permissions=True)
     signature_url = _save_signature(
         "Installation Note", note.name, data.get("signature")
     )
     note.submit()  # existing hook updates task + Installation Detail
 
-    if otp_code:
+    if otp_on:
         frappe.cache.delete_value(_otp_lock_key(task.name))
 
     updates = {"installed_qty": qty}
