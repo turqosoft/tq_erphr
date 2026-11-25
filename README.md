@@ -416,3 +416,13 @@ Fixed it by Updating the task filtering logic to hide fully completed tasks from
 - Updated the three submit functions (maintenance visit, combined maintenance visit and installation note) to call the new validate functions in tq_crm_support.
 #### Bug Fixes
 - 
+
+### v1.1.28 (2026-11-25)
+
+#### New Features
+- 
+#### Improvements
+- Net total, tax and grand total in pwa performance dashboard
+- Improved pagenation
+#### Bug Fixes
+- 

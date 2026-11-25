@@ -218,8 +218,16 @@ def get_employee_checkin_status() -> dict:
 	}
 
 
-@frappe.whitelist()
-def add_employee_checkin(log_type: str = "IN", latitude=None, longitude=None, device_id: str = None, remarks: str = None) -> dict:
+@frappe.whitelist(methods=["POST"])
+def add_employee_checkin(
+	log_type: str = "IN",
+	latitude=None,
+	longitude=None,
+	device_id: str = None,
+	remarks: str = None,
+	selfie_base64: str = None,
+	selfie_file_url: str = None,
+) -> dict:
 	current_user = frappe.session.user
 	if not current_user or current_user == "Guest":
 		frappe.throw(_("Not logged in"), frappe.AuthenticationError)
@@ -248,6 +256,20 @@ def add_employee_checkin(log_type: str = "IN", latitude=None, longitude=None, de
 	if not lat or not lon or (lat == 0.0 and lon == 0.0):
 		frappe.throw(_("GPS Location is mandatory for attendance check-in / check-out. Please enable location on your device."))
 
+	from tq_erphr.mobile_api import _get_selfie_image, verify_face_for_employee
+
+	selfie_image, _resolved_file_url, _image_bytes = _get_selfie_image(
+		file_url=selfie_file_url,
+		image_base64=selfie_base64,
+	)
+	face_result = verify_face_for_employee(employee, selfie_image)
+	if not face_result.get("matched"):
+		frappe.throw(
+			_("Face verification failed: {0}").format(
+				face_result.get("message") or face_result.get("status")
+			)
+		)
+
 	# If no device_id was passed, infer from HTTP request user agent
 	if not device_id:
 		user_agent = frappe.request.headers.get("User-Agent", "Unknown Device") if hasattr(frappe, "request") and frappe.request else "Mobile PWA"
@@ -268,6 +290,28 @@ def add_employee_checkin(log_type: str = "IN", latitude=None, longitude=None, de
 		doc.remarks = str(remarks)[:250]
 
 	doc.insert(ignore_permissions=True)
+
+	import cv2
+	from frappe.utils.file_manager import save_file
+
+	success, encoded_selfie = cv2.imencode(
+		".jpg",
+		selfie_image,
+		[cv2.IMWRITE_JPEG_QUALITY, 90],
+	)
+	if not success:
+		frappe.throw(_("Could not prepare the selfie attachment"))
+
+	selfie_file = save_file(
+		fname=f"checkin-selfie-{doc.name}.jpg",
+		content=encoded_selfie.tobytes(),
+		dt="Employee Checkin",
+		dn=doc.name,
+		is_private=1,
+		df="face_selfie",
+	)
+	doc.face_selfie = selfie_file.file_url
+	doc.db_set("face_selfie", selfie_file.file_url)
 	return doc.as_dict()
 
 
@@ -2322,7 +2366,8 @@ def _get_attributed_invoices(target_sps, from_date=None, to_date=None, customer_
 	raw_invoices = frappe.db.sql(f"""
 		SELECT 
 			si.name, si.customer, si.customer_name, si.posting_date, si.due_date,
-			si.grand_total, si.outstanding_amount, si.status, si.docstatus, si.territory
+			si.total, si.total_taxes_and_charges, si.grand_total, si.rounded_total,
+			si.outstanding_amount, si.status, si.docstatus, si.territory
 		FROM `tabSales Invoice` si
 		WHERE {where_clause}
 		ORDER BY si.posting_date DESC, si.creation DESC
@@ -2336,7 +2381,10 @@ def _get_attributed_invoices(target_sps, from_date=None, to_date=None, customer_
 	results = []
 	for inv in raw_invoices:
 		inv_name = inv["name"]
-		gt = flt(inv.get("grand_total") or 0.0)
+		total_amt = flt(inv.get("total") or 0.0)
+		tax_amt = flt(inv.get("total_taxes_and_charges") or 0.0)
+		rounded_tot = flt(inv["rounded_total"]) if (inv.get("rounded_total") is not None and flt(inv.get("rounded_total")) != 0.0) else None
+		gt = rounded_tot if rounded_tot is not None else flt(inv.get("grand_total") or 0.0)
 		out = flt(inv.get("outstanding_amount") or 0.0)
 
 		# 1. Check explicit invoice sales team
@@ -2351,7 +2399,10 @@ def _get_attributed_invoices(target_sps, from_date=None, to_date=None, customer_
 					"customer_name": inv["customer_name"] or inv["customer"],
 					"posting_date": str(inv["posting_date"]),
 					"due_date": str(inv.get("due_date") or inv["posting_date"]),
+					"total": total_amt,
+					"total_taxes_and_charges": tax_amt,
 					"grand_total": gt,
+					"rounded_total": rounded_tot,
 					"outstanding_amount": out,
 					"status": inv["status"],
 					"docstatus": inv["docstatus"],
@@ -2359,6 +2410,8 @@ def _get_attributed_invoices(target_sps, from_date=None, to_date=None, customer_
 					"sales_person": sp_id,
 					"sales_person_name": sp_names_map.get(sp_id, sp_id),
 					"allocated_percentage": pct,
+					"allocated_total": round(total_amt * ratio, 2),
+					"allocated_tax": round(tax_amt * ratio, 2),
 					"allocated_grand_total": round(gt * ratio, 2),
 					"allocated_outstanding": round(out * ratio, 2),
 					"allocated_paid": round(max(0.0, (gt - out) * ratio), 2),
@@ -2375,7 +2428,10 @@ def _get_attributed_invoices(target_sps, from_date=None, to_date=None, customer_
 					"customer_name": inv["customer_name"] or inv["customer"],
 					"posting_date": str(inv["posting_date"]),
 					"due_date": str(inv.get("due_date") or inv["posting_date"]),
+					"total": total_amt,
+					"total_taxes_and_charges": tax_amt,
 					"grand_total": gt,
+					"rounded_total": rounded_tot,
 					"outstanding_amount": out,
 					"status": inv["status"],
 					"docstatus": inv["docstatus"],
@@ -2383,6 +2439,8 @@ def _get_attributed_invoices(target_sps, from_date=None, to_date=None, customer_
 					"sales_person": sp_id,
 					"sales_person_name": sp_names_map.get(sp_id, sp_id),
 					"allocated_percentage": pct,
+					"allocated_total": round(total_amt * ratio, 2),
+					"allocated_tax": round(tax_amt * ratio, 2),
 					"allocated_grand_total": round(gt * ratio, 2),
 					"allocated_outstanding": round(out * ratio, 2),
 					"allocated_paid": round(max(0.0, (gt - out) * ratio), 2),
@@ -2395,7 +2453,10 @@ def _get_attributed_invoices(target_sps, from_date=None, to_date=None, customer_
 				"customer_name": inv["customer_name"] or inv["customer"],
 				"posting_date": str(inv["posting_date"]),
 				"due_date": str(inv.get("due_date") or inv["posting_date"]),
+				"total": total_amt,
+				"total_taxes_and_charges": tax_amt,
 				"grand_total": gt,
+				"rounded_total": rounded_tot,
 				"outstanding_amount": out,
 				"status": inv["status"],
 				"docstatus": inv["docstatus"],
@@ -2403,6 +2464,8 @@ def _get_attributed_invoices(target_sps, from_date=None, to_date=None, customer_
 				"sales_person": "Unassigned",
 				"sales_person_name": "Direct / Company Sales",
 				"allocated_percentage": 100.0,
+				"allocated_total": total_amt,
+				"allocated_tax": tax_amt,
 				"allocated_grand_total": gt,
 				"allocated_outstanding": out,
 				"allocated_paid": round(max(0.0, gt - out), 2),
@@ -2454,7 +2517,10 @@ def get_supervisor_team_sales_summary(
 	)
 
 	# Aggregate Summary
-	total_billed = sum(r["allocated_grand_total"] for r in current_slices)
+	total_amount = sum(r["allocated_total"] for r in current_slices)
+	total_tax = sum(r["allocated_tax"] for r in current_slices)
+	total_grand_total = sum(r["allocated_grand_total"] for r in current_slices)
+	total_billed = total_grand_total
 	total_paid = sum(r["allocated_paid"] for r in current_slices)
 	total_unpaid = sum(r["allocated_outstanding"] for r in current_slices)
 	distinct_inv_names = {r["invoice_name"] for r in current_slices}
@@ -2482,11 +2548,15 @@ def get_supervisor_team_sales_summary(
 		sp_key = r["sales_person"]
 		if sp_key not in member_stats:
 			member_stats[sp_key] = {
+				"total_amount": 0.0,
+				"total_tax": 0.0,
 				"total_billed": 0.0,
 				"invoice_names": set(),
 				"total_paid": 0.0,
 				"total_unpaid": 0.0,
 			}
+		member_stats[sp_key]["total_amount"] += r["allocated_total"]
+		member_stats[sp_key]["total_tax"] += r["allocated_tax"]
 		member_stats[sp_key]["total_billed"] += r["allocated_grand_total"]
 		member_stats[sp_key]["invoice_names"].add(r["invoice_name"])
 		member_stats[sp_key]["total_paid"] += r["allocated_paid"]
@@ -2495,11 +2565,13 @@ def get_supervisor_team_sales_summary(
 	enriched_members = []
 	for tm in team_members:
 		sp_id = tm["sales_person"]
-		st = member_stats.get(sp_id, {"total_billed": 0.0, "invoice_names": set(), "total_paid": 0.0, "total_unpaid": 0.0})
+		st = member_stats.get(sp_id, {"total_amount": 0.0, "total_tax": 0.0, "total_billed": 0.0, "invoice_names": set(), "total_paid": 0.0, "total_unpaid": 0.0})
 		b_amt = round(st["total_billed"], 2)
 		contrib = round((b_amt / total_billed * 100.0), 1) if total_billed > 0 else 0.0
 		enriched_members.append({
 			**tm,
+			"total_amount": round(st.get("total_amount", 0.0), 2),
+			"total_tax": round(st.get("total_tax", 0.0), 2),
 			"total_billed": b_amt,
 			"invoice_count": len(st["invoice_names"]),
 			"total_paid": round(st["total_paid"], 2),
@@ -2510,7 +2582,7 @@ def get_supervisor_team_sales_summary(
 	# Sort enriched members: Current user first, then highest billed
 	enriched_members.sort(key=lambda m: (not m.get("is_current_user", False), -m["total_billed"]))
 
-	# Recent Invoices (up to 100 for pagination)
+	# Recent Invoices (up to 500 for client-side pagination)
 	seen_invoices = set()
 	recent_invoices = []
 	for r in current_slices:
@@ -2522,12 +2594,14 @@ def get_supervisor_team_sales_summary(
 				"customer_name": r["customer_name"],
 				"posting_date": r["posting_date"],
 				"due_date": r["due_date"],
+				"total": r.get("total", 0.0),
+				"total_taxes_and_charges": r.get("total_taxes_and_charges", 0.0),
 				"grand_total": r["grand_total"],
 				"outstanding_amount": r["outstanding_amount"],
 				"status": r["status"],
 				"sales_person_name": r["sales_person_name"],
 			})
-		if len(recent_invoices) >= 100:
+		if len(recent_invoices) >= 500:
 			break
 
 	return {
@@ -2537,6 +2611,9 @@ def get_supervisor_team_sales_summary(
 		"to_date": t_date,
 		"selected_sales_person": sales_person or "all",
 		"summary": {
+			"total_amount": round(total_amount, 2),
+			"total_tax": round(total_tax, 2),
+			"total_grand_total": round(total_grand_total, 2),
 			"total_billed": round(total_billed, 2),
 			"total_invoices": total_invoices,
 			"total_paid": round(total_paid, 2),
@@ -2740,7 +2817,7 @@ def get_supervisor_team_outstanding(
 		customer_list.sort(key=lambda c: (-c["total_outstanding"], -c["total_overdue"]))
 
 	# Pagination
-	limit = max(1, min(int(limit or 50), 200))
+	limit = max(1, min(int(limit or 50), 500))
 	start = max(0, int(limit_start or 0))
 	paginated_customers = customer_list[start : start + limit]
 

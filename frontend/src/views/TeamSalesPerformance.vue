@@ -265,28 +265,50 @@
 									</div>
 								</div>
 
-								<!-- 3-Column Metrics Ribbon -->
+								<!-- 3-Column KPI Ribbon: Total, Tax, Grand Total -->
 								<div class="grid grid-cols-3 gap-2 pt-3 border-t border-white/20 text-center">
-									<!-- Invoices Count -->
+									<!-- Total (Net Amount) -->
 									<div class="bg-white/10 backdrop-blur-xs rounded-2xl py-2 px-1 border border-white/10">
-										<span class="text-[9px] font-medium text-teal-100 uppercase tracking-wider block">Invoices</span>
-										<span class="text-xs font-black text-white font-mono mt-0.5 block truncate">
+										<span class="text-[9px] font-bold text-teal-100 uppercase tracking-wider block">Total</span>
+										<span class="text-xs font-black text-white font-mono mt-0.5 block truncate" :title="`₹${formatCurrency(salesSummary?.total_amount || 0)}`">
+											₹{{ formatCurrency(salesSummary?.total_amount || 0) }}
+										</span>
+									</div>
+
+									<!-- Tax Amount -->
+									<div class="bg-white/10 backdrop-blur-xs rounded-2xl py-2 px-1 border border-white/10">
+										<span class="text-[9px] font-bold text-teal-100 uppercase tracking-wider block">Tax</span>
+										<span class="text-xs font-black text-white font-mono mt-0.5 block truncate" :title="`₹${formatCurrency(salesSummary?.total_tax || 0)}`">
+											₹{{ formatCurrency(salesSummary?.total_tax || 0) }}
+										</span>
+									</div>
+
+									<!-- Grand Total -->
+									<div class="bg-white/15 backdrop-blur-xs rounded-2xl py-2 px-1 border border-white/20 shadow-xs">
+										<span class="text-[9px] font-bold text-teal-100 uppercase tracking-wider block">Grand Total</span>
+										<span class="text-xs font-black text-teal-100 font-mono mt-0.5 block truncate" :title="`₹${formatCurrency(salesSummary?.total_grand_total || salesSummary?.total_billed || 0)}`">
+											₹{{ formatCurrency(salesSummary?.total_grand_total || salesSummary?.total_billed || 0) }}
+										</span>
+									</div>
+								</div>
+
+								<!-- Operational Summary: Invoices, Collected, Pending -->
+								<div class="grid grid-cols-3 gap-2 pt-2 border-t border-white/10 text-center">
+									<div class="bg-black/10 rounded-xl py-1 px-1">
+										<span class="text-[9px] font-medium text-teal-200/80 block">Invoices</span>
+										<span class="text-xs font-bold text-white font-mono mt-0.5 block">
 											{{ salesSummary?.total_invoices || 0 }}
 										</span>
 									</div>
-
-									<!-- Paid Amount -->
-									<div class="bg-white/10 backdrop-blur-xs rounded-2xl py-2 px-1 border border-white/10">
-										<span class="text-[9px] font-medium text-teal-100 uppercase tracking-wider block">Collected</span>
-										<span class="text-xs font-black text-emerald-200 font-mono mt-0.5 block truncate">
+									<div class="bg-black/10 rounded-xl py-1 px-1">
+										<span class="text-[9px] font-medium text-emerald-200/80 block">Collected</span>
+										<span class="text-xs font-bold text-emerald-300 font-mono mt-0.5 block truncate" :title="`₹${formatCurrency(salesSummary?.total_paid || 0)}`">
 											₹{{ formatCurrency(salesSummary?.total_paid || 0) }}
 										</span>
 									</div>
-
-									<!-- Unpaid Amount -->
-									<div class="bg-white/10 backdrop-blur-xs rounded-2xl py-2 px-1 border border-white/10">
-										<span class="text-[9px] font-medium text-teal-100 uppercase tracking-wider block">Pending</span>
-										<span class="text-xs font-black text-amber-200 font-mono mt-0.5 block truncate">
+									<div class="bg-black/10 rounded-xl py-1 px-1">
+										<span class="text-[9px] font-medium text-amber-200/80 block">Pending</span>
+										<span class="text-xs font-bold text-amber-300 font-mono mt-0.5 block truncate" :title="`₹${formatCurrency(salesSummary?.total_unpaid || 0)}`">
 											₹{{ formatCurrency(salesSummary?.total_unpaid || 0) }}
 										</span>
 									</div>
@@ -351,15 +373,94 @@
 						</div>
 
 						<!-- Recent Sales Invoices List -->
-						<div class="bg-white rounded-3xl p-4 shadow-xs border border-slate-200/80 space-y-3">
-							<div class="flex items-center justify-between pb-1 border-b border-slate-100">
-								<span class="text-xs font-bold text-slate-800">
-									Recent Invoices ({{ salesData?.recent_invoices?.length || 0 }})
-								</span>
-								<span class="text-[10px] text-slate-400">Submitted</span>
+						<div ref="invoicesSectionRef" class="bg-white rounded-3xl p-4 shadow-xs border border-slate-200/80 space-y-3 scroll-mt-20">
+							<div class="space-y-2.5 pb-2 border-b border-slate-100">
+								<!-- Header Row -->
+								<div class="flex items-center justify-between gap-2">
+									<div class="flex items-center gap-1.5">
+										<span class="text-xs font-bold text-slate-800">
+											Recent Invoices
+										</span>
+										<span class="text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-slate-100 text-slate-600 font-mono">
+											{{ totalInvoicesCount }}<template v-if="rawInvoicesCount !== totalInvoicesCount"> / {{ rawInvoicesCount }}</template>
+										</span>
+									</div>
+									<div class="flex items-center gap-2">
+										<label class="flex items-center gap-1 text-[10px] text-slate-500">
+											<span>Show:</span>
+											<select
+												v-model.number="invoicesPageSize"
+												@change="onInvoicesPageSizeChange"
+												class="px-1.5 py-0.5 text-[10px] font-bold rounded-lg bg-slate-100 border border-slate-200 text-slate-700 focus:outline-none cursor-pointer"
+											>
+												<option v-for="sz in pageSizeOptions" :key="sz" :value="sz">{{ sz }}</option>
+											</select>
+										</label>
+										<span class="text-[10px] text-slate-400">Submitted</span>
+									</div>
+								</div>
+
+								<!-- Customer Filter Row -->
+								<div class="flex items-center gap-2">
+									<!-- Customer Select Dropdown -->
+									<div class="relative flex-1">
+										<select
+											v-model="invoiceCustomerFilter"
+											@change="invoicesPage = 1"
+											class="w-full py-1.5 pl-2.5 pr-7 text-xs rounded-xl bg-slate-50 border border-slate-200 text-slate-800 font-medium truncate focus:outline-none focus:ring-1 focus:ring-teal-500 cursor-pointer"
+										>
+											<option value="all">🏢 All Customers ({{ rawInvoicesCount }})</option>
+											<option v-for="c in invoiceCustomerOptions" :key="c.customer" :value="c.customer">
+												{{ c.customer_name }} ({{ c.count }})
+											</option>
+										</select>
+									</div>
+
+									<!-- Search Input (Customer Name or Invoice #) -->
+									<div class="relative w-36 sm:w-44 shrink-0">
+										<input
+											type="text"
+											v-model="invoiceSearchQuery"
+											@input="invoicesPage = 1"
+											placeholder="Search..."
+											class="w-full pl-7 pr-6 py-1.5 text-xs rounded-xl bg-slate-50 border border-slate-200 text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-teal-500"
+										/>
+										<svg class="w-3.5 h-3.5 text-slate-400 absolute left-2 top-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+										</svg>
+										<button
+											v-if="invoiceSearchQuery"
+											type="button"
+											@click="invoiceSearchQuery = ''; invoicesPage = 1"
+											class="absolute right-2 top-1.5 text-slate-400 hover:text-slate-600 text-xs font-bold"
+										>
+											&times;
+										</button>
+									</div>
+								</div>
+
+								<!-- Active Filter Tags (when filtered) -->
+								<div v-if="invoiceCustomerFilter !== 'all' || invoiceSearchQuery" class="flex items-center gap-1.5 text-[10px] flex-wrap pt-0.5">
+									<span class="text-slate-400">Filtering:</span>
+									<span v-if="invoiceCustomerFilter !== 'all'" class="px-2 py-0.5 rounded-full bg-teal-50 border border-teal-200 text-teal-800 font-semibold flex items-center gap-1">
+										{{ selectedCustomerLabel }}
+										<button @click="invoiceCustomerFilter = 'all'; invoicesPage = 1" class="text-teal-600 hover:text-teal-900 font-black ml-0.5">&times;</button>
+									</span>
+									<span v-if="invoiceSearchQuery" class="px-2 py-0.5 rounded-full bg-slate-100 border border-slate-200 text-slate-700 font-semibold flex items-center gap-1">
+										"{{ invoiceSearchQuery }}"
+										<button @click="invoiceSearchQuery = ''; invoicesPage = 1" class="text-slate-500 hover:text-slate-800 font-black ml-0.5">&times;</button>
+									</span>
+									<button
+										type="button"
+										@click="clearInvoiceCustomerFilter"
+										class="text-[10px] text-teal-700 font-semibold underline hover:text-teal-900 ml-auto"
+									>
+										Clear Filter
+									</button>
+								</div>
 							</div>
 
-							<div v-if="salesData?.recent_invoices && salesData.recent_invoices.length > 0" class="space-y-2">
+							<div v-if="totalInvoicesCount > 0" class="space-y-2">
 								<div
 									v-for="inv in visibleInvoices"
 									:key="inv.name"
@@ -388,39 +489,68 @@
 											<span class="text-slate-400">Rep:</span>
 											<span class="font-semibold text-teal-800">{{ inv.sales_person_name }}</span>
 										</span>
-										<span v-if="inv.due_date" class="text-slate-400">
-											Due: {{ inv.due_date }}
-										</span>
+										<div class="flex items-center gap-2 font-mono text-[10px] text-slate-500">
+											<span v-if="inv.total !== undefined">Total: ₹{{ formatCurrency(inv.total) }}</span>
+											<span v-if="inv.total_taxes_and_charges !== undefined && inv.total_taxes_and_charges > 0">Tax: ₹{{ formatCurrency(inv.total_taxes_and_charges) }}</span>
+											<span v-if="inv.due_date" class="text-slate-400 font-sans">
+												Due: {{ inv.due_date }}
+											</span>
+										</div>
 									</div>
 								</div>
 
-								<!-- View More Invoices Pagination Button -->
-								<div v-if="salesData.recent_invoices.length > invoicesDisplayLimit" class="pt-2">
+								<!-- Prev / Next Pagination Bar -->
+								<div v-if="totalInvoicesPages > 1 || totalInvoicesCount > 10" class="flex items-center justify-between gap-2 pt-2 border-t border-slate-100">
 									<button
 										type="button"
-										@click="invoicesDisplayLimit += 10"
-										class="w-full py-2.5 px-4 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition flex items-center justify-center gap-1.5 active:scale-98 cursor-pointer"
+										:disabled="invoicesPage <= 1"
+										@click="changeInvoicesPage(invoicesPage - 1)"
+										class="px-3 py-1.5 rounded-xl text-[11px] font-bold flex items-center gap-1 transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed bg-slate-100 hover:bg-slate-200 text-slate-700 active:scale-95"
 									>
-										<span>View More Invoices (Showing {{ visibleInvoices.length }} of {{ salesData.recent_invoices.length }})</span>
-										<svg class="w-3.5 h-3.5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+										<svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
 										</svg>
+										<span>Prev</span>
 									</button>
-								</div>
-								<div v-else-if="salesData.recent_invoices.length > 10" class="flex items-center justify-between pt-1 px-1 text-[11px] text-slate-400">
-									<span>Showing all {{ salesData.recent_invoices.length }} invoices</span>
+
+									<div class="text-center">
+										<span class="text-[11px] font-bold text-slate-700 block">
+											Page {{ invoicesPage }} of {{ totalInvoicesPages }}
+										</span>
+										<span class="text-[10px] text-slate-400">
+											{{ invoicesRangeStart }}–{{ invoicesRangeEnd }} of {{ totalInvoicesCount }}
+										</span>
+									</div>
+
 									<button
 										type="button"
-										@click="invoicesDisplayLimit = 10"
-										class="font-bold text-teal-700 hover:text-teal-800 transition cursor-pointer"
+										:disabled="invoicesPage >= totalInvoicesPages"
+										@click="changeInvoicesPage(invoicesPage + 1)"
+										class="px-3 py-1.5 rounded-xl text-[11px] font-bold flex items-center gap-1 transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed bg-teal-600 hover:bg-teal-700 text-white active:scale-95"
 									>
-										Show Less
+										<span>Next</span>
+										<svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+										</svg>
 									</button>
 								</div>
 							</div>
 
-							<div v-else class="text-center py-6 text-xs text-slate-400 italic">
-								No billed invoices found for the selected period and rep.
+							<div v-else class="text-center py-6 text-xs text-slate-400 italic space-y-2">
+								<p v-if="invoiceCustomerFilter !== 'all' || invoiceSearchQuery">
+									No invoices found matching the customer or search filter.
+								</p>
+								<p v-else>
+									No billed invoices found for the selected period and rep.
+								</p>
+								<button
+									v-if="invoiceCustomerFilter !== 'all' || invoiceSearchQuery"
+									type="button"
+									@click="clearInvoiceCustomerFilter"
+									class="inline-block px-3 py-1 rounded-xl text-xs font-bold bg-teal-50 text-teal-700 border border-teal-200 hover:bg-teal-100 transition active:scale-95 cursor-pointer"
+								>
+									Clear Customer Filter
+								</button>
 							</div>
 						</div>
 
@@ -523,7 +653,24 @@
 						</div>
 
 						<!-- Customer Receivables List -->
-						<div class="space-y-3">
+						<div ref="customersSectionRef" class="space-y-3 scroll-mt-20">
+							<!-- Receivables Header & Page Size -->
+							<div v-if="totalCustomersCount > 0" class="flex items-center justify-between px-1">
+								<span class="text-xs font-bold text-slate-700">
+									Customer Receivables ({{ totalCustomersCount }})
+								</span>
+								<label class="flex items-center gap-1.5 text-[11px] text-slate-500">
+									<span>Show:</span>
+									<select
+										v-model.number="customersPageSize"
+										@change="onCustomersPageSizeChange"
+										class="px-2 py-1 text-[11px] font-bold rounded-xl bg-white border border-slate-200 text-slate-700 focus:outline-none cursor-pointer shadow-xs"
+									>
+										<option v-for="sz in pageSizeOptions" :key="sz" :value="sz">{{ sz }}</option>
+									</select>
+								</label>
+							</div>
+
 							<div
 								v-for="cust in visibleCustomers"
 								:key="cust.customer"
@@ -625,27 +772,39 @@
 								</div>
 							</div>
 
-							<!-- View More Customers Pagination Button -->
-							<div v-if="customerList.length > customersDisplayLimit" class="pt-1">
+							<!-- Prev / Next Pagination Bar for Customers -->
+							<div v-if="totalCustomersPages > 1 || totalCustomersCount > 10" class="bg-white rounded-2xl p-3 shadow-xs border border-slate-200/80 flex items-center justify-between gap-2">
 								<button
 									type="button"
-									@click="customersDisplayLimit += 10"
-									class="w-full py-2.5 px-4 rounded-2xl bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-xs border border-slate-200 active:scale-98 cursor-pointer"
+									:disabled="customersPage <= 1"
+									@click="changeCustomersPage(customersPage - 1)"
+									class="px-3 py-1.5 rounded-xl text-[11px] font-bold flex items-center gap-1 transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed bg-slate-100 hover:bg-slate-200 text-slate-700 active:scale-95"
 								>
-									<span>View More Customers (Showing {{ visibleCustomers.length }} of {{ customerList.length }})</span>
-									<svg class="w-3.5 h-3.5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+									<svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
 									</svg>
+									<span>Prev</span>
 								</button>
-							</div>
-							<div v-else-if="customerList.length > 10" class="flex items-center justify-between pt-1 px-2 text-[11px] text-slate-400">
-								<span>Showing all {{ customerList.length }} customer accounts</span>
+
+								<div class="text-center">
+									<span class="text-[11px] font-bold text-slate-700 block">
+										Page {{ customersPage }} of {{ totalCustomersPages }}
+									</span>
+									<span class="text-[10px] text-slate-400">
+										{{ customersRangeStart }}–{{ customersRangeEnd }} of {{ totalCustomersCount }}
+									</span>
+								</div>
+
 								<button
 									type="button"
-									@click="customersDisplayLimit = 10"
-									class="font-bold text-teal-700 hover:text-teal-800 transition cursor-pointer"
+									:disabled="customersPage >= totalCustomersPages"
+									@click="changeCustomersPage(customersPage + 1)"
+									class="px-3 py-1.5 rounded-xl text-[11px] font-bold flex items-center gap-1 transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed bg-teal-600 hover:bg-teal-700 text-white active:scale-95"
 								>
-									Show Less
+									<span>Next</span>
+									<svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+									</svg>
 								</button>
 							</div>
 
@@ -682,7 +841,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from "vue"
+import { ref, computed, watch, onMounted } from "vue"
 import { useRouter } from "vue-router"
 import { call } from "frappe-ui"
 import { employeeResource } from "@/data/employee"
@@ -713,8 +872,16 @@ const customFromDate = ref("")
 const customToDate = ref("")
 const isLoading = ref(false)
 
-const invoicesDisplayLimit = ref(10)
-const customersDisplayLimit = ref(10)
+const pageSizeOptions = [10, 20, 50, 100]
+const invoicesPage = ref(1)
+const invoicesPageSize = ref(10)
+const invoiceCustomerFilter = ref("all")
+const invoiceSearchQuery = ref("")
+const customersPage = ref(1)
+const customersPageSize = ref(10)
+
+const invoicesSectionRef = ref(null)
+const customersSectionRef = ref(null)
 
 const salesData = ref(null)
 const outstandingData = ref(null)
@@ -766,13 +933,87 @@ const salesSummary = computed(() => salesData.value?.summary || {})
 const outstandingSummary = computed(() => outstandingData.value?.summary || {})
 const customerList = computed(() => outstandingData.value?.customers || [])
 
-const visibleInvoices = computed(() => {
-	const all = salesData.value?.recent_invoices || []
-	return all.slice(0, invoicesDisplayLimit.value)
+const rawInvoices = computed(() => salesData.value?.recent_invoices || [])
+const rawInvoicesCount = computed(() => rawInvoices.value.length)
+
+const invoiceCustomerOptions = computed(() => {
+	const map = {}
+	for (const inv of rawInvoices.value) {
+		const key = inv.customer || inv.customer_name
+		if (!key) continue
+		if (!map[key]) {
+			map[key] = {
+				customer: key,
+				customer_name: inv.customer_name || key,
+				count: 0,
+			}
+		}
+		map[key].count++
+	}
+	return Object.values(map).sort((a, b) => a.customer_name.localeCompare(b.customer_name))
 })
 
+const selectedCustomerLabel = computed(() => {
+	if (invoiceCustomerFilter.value === "all") return "All Customers"
+	const opt = invoiceCustomerOptions.value.find((c) => c.customer === invoiceCustomerFilter.value)
+	return opt ? opt.customer_name : invoiceCustomerFilter.value
+})
+
+const filteredInvoices = computed(() => {
+	let list = rawInvoices.value
+
+	if (invoiceCustomerFilter.value && invoiceCustomerFilter.value !== "all") {
+		list = list.filter((inv) => inv.customer === invoiceCustomerFilter.value || inv.customer_name === invoiceCustomerFilter.value)
+	}
+
+	if (invoiceSearchQuery.value && invoiceSearchQuery.value.trim()) {
+		const q = invoiceSearchQuery.value.trim().toLowerCase()
+		list = list.filter(
+			(inv) =>
+				(inv.customer_name && inv.customer_name.toLowerCase().includes(q)) ||
+				(inv.customer && inv.customer.toLowerCase().includes(q)) ||
+				(inv.name && inv.name.toLowerCase().includes(q)) ||
+				(inv.sales_person_name && inv.sales_person_name.toLowerCase().includes(q))
+		)
+	}
+
+	return list
+})
+
+const totalInvoicesCount = computed(() => filteredInvoices.value.length)
+const totalInvoicesPages = computed(() => Math.max(1, Math.ceil(totalInvoicesCount.value / invoicesPageSize.value)))
+const invoicesRangeStart = computed(() => (totalInvoicesCount.value === 0 ? 0 : (invoicesPage.value - 1) * invoicesPageSize.value + 1))
+const invoicesRangeEnd = computed(() => Math.min(invoicesPage.value * invoicesPageSize.value, totalInvoicesCount.value))
+
+const visibleInvoices = computed(() => {
+	const start = (invoicesPage.value - 1) * invoicesPageSize.value
+	return filteredInvoices.value.slice(start, start + invoicesPageSize.value)
+})
+
+function clearInvoiceCustomerFilter() {
+	invoiceCustomerFilter.value = "all"
+	invoiceSearchQuery.value = ""
+	invoicesPage.value = 1
+}
+
+watch(invoiceCustomerOptions, (newOptions) => {
+	if (invoiceCustomerFilter.value !== "all") {
+		const exists = newOptions.some((o) => o.customer === invoiceCustomerFilter.value)
+		if (!exists) {
+			invoiceCustomerFilter.value = "all"
+			invoicesPage.value = 1
+		}
+	}
+})
+
+const totalCustomersCount = computed(() => customerList.value.length)
+const totalCustomersPages = computed(() => Math.max(1, Math.ceil(totalCustomersCount.value / customersPageSize.value)))
+const customersRangeStart = computed(() => (totalCustomersCount.value === 0 ? 0 : (customersPage.value - 1) * customersPageSize.value + 1))
+const customersRangeEnd = computed(() => Math.min(customersPage.value * customersPageSize.value, totalCustomersCount.value))
+
 const visibleCustomers = computed(() => {
-	return customerList.value.slice(0, customersDisplayLimit.value)
+	const start = (customersPage.value - 1) * customersPageSize.value
+	return customerList.value.slice(start, start + customersPageSize.value)
 })
 
 const agingBuckets = computed(() => {
@@ -792,22 +1033,48 @@ function goBack() {
 	router.push("/")
 }
 
+function scrollToSection(sectionRef) {
+	if (sectionRef.value) {
+		sectionRef.value.scrollIntoView({ behavior: "smooth", block: "start" })
+	}
+}
+
+function changeInvoicesPage(page) {
+	if (page < 1 || page > totalInvoicesPages.value) return
+	invoicesPage.value = page
+	scrollToSection(invoicesSectionRef)
+}
+
+function onInvoicesPageSizeChange() {
+	invoicesPage.value = 1
+}
+
+function changeCustomersPage(page) {
+	if (page < 1 || page > totalCustomersPages.value) return
+	customersPage.value = page
+	scrollToSection(customersSectionRef)
+}
+
+function onCustomersPageSizeChange() {
+	customersPage.value = 1
+}
+
 function selectSalesPerson(sp) {
 	selectedSalesPerson.value = sp
-	invoicesDisplayLimit.value = 10
-	customersDisplayLimit.value = 10
+	invoicesPage.value = 1
+	customersPage.value = 1
 	refreshActiveView()
 }
 
 function selectPeriod(p) {
 	selectedPeriod.value = p
-	invoicesDisplayLimit.value = 10
+	invoicesPage.value = 1
 	fetchSalesData()
 }
 
 function selectAgingBucket(b) {
 	selectedAgingBucket.value = b
-	customersDisplayLimit.value = 10
+	customersPage.value = 1
 	fetchOutstandingData()
 }
 
@@ -815,7 +1082,7 @@ let searchTimer = null
 function debouncedOutstandingSearch() {
 	clearTimeout(searchTimer)
 	searchTimer = setTimeout(() => {
-		customersDisplayLimit.value = 10
+		customersPage.value = 1
 		fetchOutstandingData()
 	}, 350)
 }
@@ -859,7 +1126,7 @@ function getWhatsAppLink(cust) {
 
 async function fetchSalesData() {
 	isLoading.value = true
-	invoicesDisplayLimit.value = 10
+	invoicesPage.value = 1
 	try {
 		const res = await call("tq_erphr.pwa_api.get_supervisor_team_sales_summary", {
 			period: selectedPeriod.value,
@@ -879,13 +1146,14 @@ async function fetchSalesData() {
 
 async function fetchOutstandingData() {
 	isLoading.value = true
-	customersDisplayLimit.value = 10
+	customersPage.value = 1
 	try {
 		const res = await call("tq_erphr.pwa_api.get_supervisor_team_outstanding", {
 			sales_person: selectedSalesPerson.value,
 			aging_bucket: selectedAgingBucket.value,
 			search_term: searchQuery.value || null,
 			sort_by: sortBy.value,
+			limit: 500,
 		})
 		if (res) {
 			outstandingData.value = res.message || res
@@ -898,8 +1166,8 @@ async function fetchOutstandingData() {
 }
 
 function refreshActiveView() {
-	invoicesDisplayLimit.value = 10
-	customersDisplayLimit.value = 10
+	invoicesPage.value = 1
+	customersPage.value = 1
 	if (activeTab.value === "billing") {
 		fetchSalesData()
 	} else {
