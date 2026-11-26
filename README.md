@@ -426,3 +426,13 @@ Fixed it by Updating the task filtering logic to hide fully completed tasks from
 - Improved pagenation
 #### Bug Fixes
 - 
+
+### v1.1.29 (2026-11-26)
+
+#### New Features
+- 
+#### Improvements
+- Corrected Net total in performance dashboard
+
+#### Bug Fixes
+- 

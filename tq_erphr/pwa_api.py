@@ -2366,7 +2366,7 @@ def _get_attributed_invoices(target_sps, from_date=None, to_date=None, customer_
 	raw_invoices = frappe.db.sql(f"""
 		SELECT 
 			si.name, si.customer, si.customer_name, si.posting_date, si.due_date,
-			si.total, si.total_taxes_and_charges, si.grand_total, si.rounded_total,
+			si.total, si.net_total, si.total_taxes_and_charges, si.grand_total, si.rounded_total,
 			si.outstanding_amount, si.status, si.docstatus, si.territory
 		FROM `tabSales Invoice` si
 		WHERE {where_clause}
@@ -2381,7 +2381,9 @@ def _get_attributed_invoices(target_sps, from_date=None, to_date=None, customer_
 	results = []
 	for inv in raw_invoices:
 		inv_name = inv["name"]
-		total_amt = flt(inv.get("total") or 0.0)
+		# If Net Total is available in an invoice use it, else use Total
+		net_tot = flt(inv["net_total"]) if (inv.get("net_total") is not None and flt(inv.get("net_total")) != 0.0) else None
+		total_amt = net_tot if net_tot is not None else flt(inv.get("total") or 0.0)
 		tax_amt = flt(inv.get("total_taxes_and_charges") or 0.0)
 		rounded_tot = flt(inv["rounded_total"]) if (inv.get("rounded_total") is not None and flt(inv.get("rounded_total")) != 0.0) else None
 		gt = rounded_tot if rounded_tot is not None else flt(inv.get("grand_total") or 0.0)
@@ -2400,6 +2402,7 @@ def _get_attributed_invoices(target_sps, from_date=None, to_date=None, customer_
 					"posting_date": str(inv["posting_date"]),
 					"due_date": str(inv.get("due_date") or inv["posting_date"]),
 					"total": total_amt,
+					"net_total": flt(inv.get("net_total") or 0.0),
 					"total_taxes_and_charges": tax_amt,
 					"grand_total": gt,
 					"rounded_total": rounded_tot,
@@ -2429,6 +2432,7 @@ def _get_attributed_invoices(target_sps, from_date=None, to_date=None, customer_
 					"posting_date": str(inv["posting_date"]),
 					"due_date": str(inv.get("due_date") or inv["posting_date"]),
 					"total": total_amt,
+					"net_total": flt(inv.get("net_total") or 0.0),
 					"total_taxes_and_charges": tax_amt,
 					"grand_total": gt,
 					"rounded_total": rounded_tot,
@@ -2454,6 +2458,7 @@ def _get_attributed_invoices(target_sps, from_date=None, to_date=None, customer_
 				"posting_date": str(inv["posting_date"]),
 				"due_date": str(inv.get("due_date") or inv["posting_date"]),
 				"total": total_amt,
+				"net_total": flt(inv.get("net_total") or 0.0),
 				"total_taxes_and_charges": tax_amt,
 				"grand_total": gt,
 				"rounded_total": rounded_tot,
@@ -2595,6 +2600,7 @@ def get_supervisor_team_sales_summary(
 				"posting_date": r["posting_date"],
 				"due_date": r["due_date"],
 				"total": r.get("total", 0.0),
+				"net_total": r.get("net_total", 0.0),
 				"total_taxes_and_charges": r.get("total_taxes_and_charges", 0.0),
 				"grand_total": r["grand_total"],
 				"outstanding_amount": r["outstanding_amount"],

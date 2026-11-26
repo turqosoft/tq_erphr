@@ -199,8 +199,8 @@
 						<div class="bg-white rounded-2xl p-2.5 shadow-xs border border-slate-200/80 space-y-2">
 							<div class="flex items-center justify-between px-1">
 								<span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Date Period</span>
-								<span class="text-[10px] font-semibold text-slate-600">
-									{{ salesData?.from_date }} ➔ {{ salesData?.to_date }}
+								<span class="text-[10px] font-semibold text-slate-600 font-mono">
+									{{ formatDate(salesData?.from_date) }} ➔ {{ formatDate(salesData?.to_date) }}
 								</span>
 							</div>
 
@@ -241,74 +241,90 @@
 						</div>
 
 						<!-- Billing Main KPI Card -->
-						<div class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-teal-700 via-teal-600 to-teal-500 text-white p-5 shadow-lg shadow-teal-700/20">
+						<div class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-teal-700 via-teal-600 to-teal-500 text-white p-4 sm:p-5 shadow-lg shadow-teal-700/20">
 							<div class="absolute -right-10 -bottom-10 w-44 h-44 bg-white/10 rounded-full blur-2xl pointer-events-none"></div>
 
-							<div class="relative z-10 space-y-3.5">
-								<div class="flex items-start justify-between">
-									<div>
-										<span class="text-[10px] uppercase font-bold text-teal-100 tracking-wider block">
-											Total Billed ({{ activePeriodLabel }})
-										</span>
-										<div class="text-3xl font-black tracking-tight text-white font-mono mt-1">
-											₹{{ formatCurrency(salesSummary?.total_billed || 0) }}
-										</div>
-									</div>
+							<div class="relative z-10 space-y-3">
+								<!-- Card Header: Title & Growth Pill (Bigger redundant total removed) -->
+								<div class="flex items-center justify-between pb-0.5">
+									<span class="text-[11px] uppercase font-bold text-teal-100 tracking-wider">
+										Team Billing • {{ activePeriodLabel }}
+									</span>
 
 									<!-- Growth Pill -->
 									<div
 										v-if="salesSummary?.growth_percentage !== undefined && salesSummary?.previous_period_billed > 0"
-										class="px-2.5 py-1 rounded-xl text-xs font-black flex items-center gap-1 shadow-xs"
+										class="px-2 py-0.5 rounded-xl text-[11px] font-black flex items-center gap-1 shadow-xs"
 										:class="salesSummary.growth_percentage >= 0 ? 'bg-emerald-400 text-emerald-950' : 'bg-rose-400 text-rose-950'"
 									>
 										<span>{{ salesSummary.growth_percentage >= 0 ? '▲ +' : '▼ ' }}{{ Math.abs(salesSummary.growth_percentage) }}%</span>
 									</div>
 								</div>
 
-								<!-- 3-Column KPI Ribbon: Total, Tax, Grand Total -->
-								<div class="grid grid-cols-3 gap-2 pt-3 border-t border-white/20 text-center">
-									<!-- Total (Net Amount) -->
-									<div class="bg-white/10 backdrop-blur-xs rounded-2xl py-2 px-1 border border-white/10">
-										<span class="text-[9px] font-bold text-teal-100 uppercase tracking-wider block">Total</span>
-										<span class="text-xs font-black text-white font-mono mt-0.5 block truncate" :title="`₹${formatCurrency(salesSummary?.total_amount || 0)}`">
+								<!-- 3-Column KPI Ribbon: Net Total, Tax, Grand Total -->
+								<div class="grid grid-cols-3 gap-1.5 sm:gap-2 pt-1 border-t border-white/20 text-center">
+									<!-- Net Total -->
+									<div class="bg-white/10 backdrop-blur-xs rounded-2xl py-2 px-1 border border-white/10 flex flex-col justify-center min-w-0">
+										<span class="text-[9px] font-bold text-teal-100 uppercase tracking-wider block">Net Total</span>
+										<span
+											class="font-black text-white tracking-tight mt-0.5 block break-words"
+											:class="getKpiFontSize(salesSummary?.total_amount)"
+											:title="`₹${formatCurrency(salesSummary?.total_amount || 0)}`"
+										>
 											₹{{ formatCurrency(salesSummary?.total_amount || 0) }}
 										</span>
 									</div>
 
 									<!-- Tax Amount -->
-									<div class="bg-white/10 backdrop-blur-xs rounded-2xl py-2 px-1 border border-white/10">
+									<div class="bg-white/10 backdrop-blur-xs rounded-2xl py-2 px-1 border border-white/10 flex flex-col justify-center min-w-0">
 										<span class="text-[9px] font-bold text-teal-100 uppercase tracking-wider block">Tax</span>
-										<span class="text-xs font-black text-white font-mono mt-0.5 block truncate" :title="`₹${formatCurrency(salesSummary?.total_tax || 0)}`">
+										<span
+											class="font-black text-white tracking-tight mt-0.5 block break-words"
+											:class="getKpiFontSize(salesSummary?.total_tax)"
+											:title="`₹${formatCurrency(salesSummary?.total_tax || 0)}`"
+										>
 											₹{{ formatCurrency(salesSummary?.total_tax || 0) }}
 										</span>
 									</div>
 
 									<!-- Grand Total -->
-									<div class="bg-white/15 backdrop-blur-xs rounded-2xl py-2 px-1 border border-white/20 shadow-xs">
+									<div class="bg-white/15 backdrop-blur-xs rounded-2xl py-2 px-1 border border-white/20 shadow-xs flex flex-col justify-center min-w-0">
 										<span class="text-[9px] font-bold text-teal-100 uppercase tracking-wider block">Grand Total</span>
-										<span class="text-xs font-black text-teal-100 font-mono mt-0.5 block truncate" :title="`₹${formatCurrency(salesSummary?.total_grand_total || salesSummary?.total_billed || 0)}`">
+										<span
+											class="font-black text-teal-100 tracking-tight mt-0.5 block break-words"
+											:class="getKpiFontSize(salesSummary?.total_grand_total || salesSummary?.total_billed)"
+											:title="`₹${formatCurrency(salesSummary?.total_grand_total || salesSummary?.total_billed || 0)}`"
+										>
 											₹{{ formatCurrency(salesSummary?.total_grand_total || salesSummary?.total_billed || 0) }}
 										</span>
 									</div>
 								</div>
 
 								<!-- Operational Summary: Invoices, Collected, Pending -->
-								<div class="grid grid-cols-3 gap-2 pt-2 border-t border-white/10 text-center">
-									<div class="bg-black/10 rounded-xl py-1 px-1">
+								<div class="grid grid-cols-3 gap-1.5 sm:gap-2 pt-2 border-t border-white/10 text-center">
+									<div class="bg-black/10 rounded-xl py-1 px-1 flex flex-col justify-center min-w-0">
 										<span class="text-[9px] font-medium text-teal-200/80 block">Invoices</span>
 										<span class="text-xs font-bold text-white font-mono mt-0.5 block">
 											{{ salesSummary?.total_invoices || 0 }}
 										</span>
 									</div>
-									<div class="bg-black/10 rounded-xl py-1 px-1">
+									<div class="bg-black/10 rounded-xl py-1 px-1 flex flex-col justify-center min-w-0">
 										<span class="text-[9px] font-medium text-emerald-200/80 block">Collected</span>
-										<span class="text-xs font-bold text-emerald-300 font-mono mt-0.5 block truncate" :title="`₹${formatCurrency(salesSummary?.total_paid || 0)}`">
+										<span
+											class="font-bold text-emerald-300 tracking-tight mt-0.5 block break-words"
+											:class="getKpiFontSize(salesSummary?.total_paid)"
+											:title="`₹${formatCurrency(salesSummary?.total_paid || 0)}`"
+										>
 											₹{{ formatCurrency(salesSummary?.total_paid || 0) }}
 										</span>
 									</div>
-									<div class="bg-black/10 rounded-xl py-1 px-1">
+									<div class="bg-black/10 rounded-xl py-1 px-1 flex flex-col justify-center min-w-0">
 										<span class="text-[9px] font-medium text-amber-200/80 block">Pending</span>
-										<span class="text-xs font-bold text-amber-300 font-mono mt-0.5 block truncate" :title="`₹${formatCurrency(salesSummary?.total_unpaid || 0)}`">
+										<span
+											class="font-bold text-amber-300 tracking-tight mt-0.5 block break-words"
+											:class="getKpiFontSize(salesSummary?.total_unpaid)"
+											:title="`₹${formatCurrency(salesSummary?.total_unpaid || 0)}`"
+										>
 											₹{{ formatCurrency(salesSummary?.total_unpaid || 0) }}
 										</span>
 									</div>
@@ -469,7 +485,7 @@
 									<div class="flex items-start justify-between gap-2">
 										<div class="min-w-0">
 											<h4 class="text-xs font-bold text-slate-900 truncate">{{ inv.customer_name }}</h4>
-											<p class="text-[10px] text-slate-500 font-mono mt-0.5">{{ inv.name }} • {{ inv.posting_date }}</p>
+											<p class="text-[10px] text-slate-500 font-mono mt-0.5">{{ inv.name }} • {{ formatDate(inv.posting_date) }}</p>
 										</div>
 										<div class="text-right shrink-0">
 											<span class="text-xs font-black text-slate-900 font-mono block">
@@ -490,10 +506,10 @@
 											<span class="font-semibold text-teal-800">{{ inv.sales_person_name }}</span>
 										</span>
 										<div class="flex items-center gap-2 font-mono text-[10px] text-slate-500">
-											<span v-if="inv.total !== undefined">Total: ₹{{ formatCurrency(inv.total) }}</span>
+											<span v-if="inv.total !== undefined">Net: ₹{{ formatCurrency(inv.total) }}</span>
 											<span v-if="inv.total_taxes_and_charges !== undefined && inv.total_taxes_and_charges > 0">Tax: ₹{{ formatCurrency(inv.total_taxes_and_charges) }}</span>
 											<span v-if="inv.due_date" class="text-slate-400 font-sans">
-												Due: {{ inv.due_date }}
+												Due: {{ formatDate(inv.due_date) }}
 											</span>
 										</div>
 									</div>
@@ -754,7 +770,7 @@
 									>
 										<div>
 											<span class="font-bold text-slate-800 font-mono">{{ inv.name }}</span>
-											<span class="text-[10px] text-slate-400 ml-1.5">Due: {{ inv.due_date }}</span>
+											<span class="text-[10px] text-slate-400 ml-1.5">Due: {{ formatDate(inv.due_date) }}</span>
 										</div>
 										<div class="text-right">
 											<span class="font-black text-slate-900 font-mono">₹{{ formatCurrency(inv.outstanding_amount) }}</span>
@@ -1098,9 +1114,33 @@ function getInitials(name) {
 	return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
 }
 
+function formatDate(dateStr) {
+	if (!dateStr) return "-"
+	const s = String(dateStr).trim()
+	const datePart = s.split(" ")[0]
+	const parts = datePart.split("-")
+	if (parts.length === 3 && parts[0].length === 4) {
+		const [year, month, day] = parts
+		return `${day.padStart(2, "0")}-${month.padStart(2, "0")}-${year}`
+	}
+	const d = new Date(dateStr)
+	if (isNaN(d.getTime())) return dateStr
+	const day = String(d.getDate()).padStart(2, "0")
+	const month = String(d.getMonth() + 1).padStart(2, "0")
+	const year = d.getFullYear()
+	return `${day}-${month}-${year}`
+}
+
 function formatCurrency(val) {
 	if (val === null || val === undefined) return "0"
 	return Number(val).toLocaleString("en-IN", { maximumFractionDigits: 2 })
+}
+
+function getKpiFontSize(val) {
+	const s = formatCurrency(val)
+	if (s.length >= 15) return "text-[9.5px] sm:text-[10.5px] leading-tight"
+	if (s.length >= 12) return "text-[10.5px] sm:text-[11.5px] leading-tight"
+	return "text-xs leading-tight"
 }
 
 function formatCompact(val) {
