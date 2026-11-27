@@ -1,0 +1,97 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "format:FVL-{YYYY}-{MM}-{DD}-{#####}",
+ "creation": "2026-11-20 11:42:34.248000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "employee",
+  "scanner_user",
+  "matched",
+  "verification_time",
+  "column_break_result",
+  "similarity",
+  "threshold",
+  "status",
+  "section_break_details",
+  "failure_reason"
+ ],
+ "fields": [
+  {
+   "fieldname": "employee",
+   "fieldtype": "Link",
+   "label": "Employee",
+   "options": "Employee"
+  },
+  {
+   "fieldname": "scanner_user",
+   "fieldtype": "Link",
+   "label": "Scanner User",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "matched",
+   "fieldtype": "Check",
+   "label": "Matched"
+  },
+  {
+   "fieldname": "verification_time",
+   "fieldtype": "Datetime",
+   "label": "Verification Time"
+  },
+  {
+   "fieldname": "column_break_result",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "similarity",
+   "fieldtype": "Float",
+   "label": "Similarity"
+  },
+  {
+   "fieldname": "threshold",
+   "fieldtype": "Float",
+   "label": "Threshold"
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Matched\nNo Match\nNo Profile\nFace Not Detected\nMultiple Faces\nAmbiguous Match\nError"
+  },
+  {
+   "fieldname": "section_break_details",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "failure_reason",
+   "fieldtype": "Small Text",
+   "label": "Failure Reason"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "module": "Tq Erphr",
+ "name": "Face Verification Log",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 0,
+   "export": 1,
+   "print": 0,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 0,
+   "write": 0
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "track_changes": 0
+}

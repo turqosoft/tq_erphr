@@ -151,11 +151,11 @@
         "fieldname": "executive_expense_manager",
         "fieldtype": "Link",
         "options": "Executive Expense Manager",
-        "label": "Executive Expense Manager",        
+        "label": "Executive Expense Manager",
         "insert_after": "sanctioned_amount",
         "read_only": 1
     },
-     {
+    {
         "doctype": "Custom Field",
         "dt": "Designation",
         "module": "Tq Erphr",
@@ -268,5 +268,82 @@
         "options": "Expense Claim Type",
         "label": "Travel Expense Type",
         "insert_after": "other_rate_per_km"
+    },
+    {
+        "doctype": "Custom Field",
+        "dt": "Employee Group",
+        "module": "Tq Erphr",
+        "name": "Geofencing Section in Employee Group",
+        "fieldname": "geofencing_section",
+        "fieldtype": "Section Break",
+        "label": "Geofencing",
+        "insert_after": "employee_list"
+    },
+    {
+        "doctype": "Custom Field",
+        "dt": "Employee Group",
+        "module": "Tq Erphr",
+        "name": "Enable Geofencing in Employee Group",
+        "fieldname": "enable_geofencing",
+        "fieldtype": "Check",
+        "label": "Enable Geofencing",
+        "default": "0",
+        "insert_after": "geofencing_section"
+    },
+    {
+        "doctype": "Custom Field",
+        "dt": "Employee Group",
+        "module": "Tq Erphr",
+        "name": "Geofencing Latitude in Employee Group",
+        "fieldname": "geofencing_latitude",
+        "fieldtype": "Float",
+        "label": "Latitude",
+        "precision": "7",
+        "depends_on": "eval:doc.enable_geofencing",
+        "insert_after": "enable_geofencing"
+    },
+    {
+        "doctype": "Custom Field",
+        "dt": "Employee Group",
+        "module": "Tq Erphr",
+        "name": "Geofencing Column Break in Employee Group",
+        "fieldname": "geofencing_column_break",
+        "fieldtype": "Column Break",
+        "insert_after": "geofencing_latitude"
+    },
+    {
+        "doctype": "Custom Field",
+        "dt": "Employee Group",
+        "module": "Tq Erphr",
+        "name": "Geofencing Longitude in Employee Group",
+        "fieldname": "geofencing_longitude",
+        "fieldtype": "Float",
+        "label": "Longitude",
+        "precision": "7",
+        "depends_on": "eval:doc.enable_geofencing",
+        "insert_after": "geofencing_column_break"
+    },
+    {
+        "doctype": "Custom Field",
+        "dt": "Employee Group",
+        "module": "Tq Erphr",
+        "name": "Geofencing Radius in Employee Group",
+        "fieldname": "geofencing_radius",
+        "fieldtype": "Int",
+        "label": "Radius (meters)",
+        "description": "Allowed distance from the geofencing location in meters",
+        "depends_on": "eval:doc.enable_geofencing",
+        "insert_after": "geofencing_longitude"
+    },
+    {
+        "doctype": "Custom Field",
+        "dt": "Employee Checkin",
+        "module": "Tq Erphr",
+        "name": "Face Verification Selfie in Employee Checkin",
+        "fieldname": "face_selfie",
+        "fieldtype": "Attach",
+        "label": "Face Verification Selfie",
+        "read_only": 1,
+        "insert_after": "device_id"
     }
 ]

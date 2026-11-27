@@ -34,7 +34,8 @@ website_route_rules = [
 # doctype_js = {"doctype" : "public/js/doctype.js"}
 
 doctype_js = {
-    "Employee Checkin": "public/js/employee_checkin.js"
+    "Employee Checkin": "public/js/employee_checkin.js",
+    "Employee": "public/js/employee_face_profile.js",
 }
 
 # doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
@@ -266,3 +267,15 @@ doc_events = {
 # 	"Logging DocType Name": 30  # days to retain logs
 # }
 
+fixtures = [
+	{
+		"dt": "Custom Field",
+		"filters": [
+			["module", "=", "Tq Erphr"],
+		],
+	},
+	{
+		"dt": "Role",
+		"filters": [["name", "=", "Face Checkin User"]],
+	},
+]

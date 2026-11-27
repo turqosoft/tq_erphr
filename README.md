@@ -446,3 +446,15 @@ Fixed it by Updating the task filtering logic to hide fully completed tasks from
 
 #### Bug Fixes
 - Fixed issue with PWA app not able to checkin/checkout
+
+### v1.1.31 (2026-11-27)
+
+#### New Features
+- Employee Group Geofence API: Retrieves geofence settings configured for employee groups.
+- Face Verification API: Verifies submitted selfies against enrolled employee face profiles.
+- Check-in/Check-out API: Supports employee attendance check-in and check-out with private selfie attachments.
+- Face Scanner API: Identifies employees through face recognition and determines whether the action is IN or OUT based on their latest check-in record.
+#### Improvements
+- 
+#### Bug Fixes
+- 

@@ -1,0 +1,138 @@
+{
+    "actions": [],
+    "allow_rename": 0,
+    "autoname": "field:employee",
+    "creation": "2026-11-20 11:42:34.248000",
+    "doctype": "DocType",
+    "engine": "InnoDB",
+    "field_order": [
+        "employee",
+        "employee_name",
+        "is_active",
+        "column_break_identity",
+        "enrollment_status",
+        "threshold",
+        "section_break_embedding",
+        "embedding",
+        "embedding_provider",
+        "embedding_version",
+        "column_break_embedding",
+        "enrollment_photo",
+        "failure_count",
+        "last_verified"
+    ],
+    "fields": [
+        {
+            "fieldname": "employee",
+            "fieldtype": "Link",
+            "label": "Employee",
+            "options": "Employee",
+            "in_list_view": 1,
+            "reqd": 1,
+            "unique": 1
+        },
+        {
+            "fieldname": "employee_name",
+            "fieldtype": "Data",
+            "fetch_from": "employee.employee_name",
+            "label": "Employee Name",
+            "in_list_view": 1,
+            "read_only": 1
+        },
+        {
+            "default": "1",
+            "fieldname": "is_active",
+            "fieldtype": "Check",
+            "label": "Is Active"
+        },
+        {
+            "fieldname": "column_break_identity",
+            "fieldtype": "Column Break"
+        },
+        {
+            "default": "Pending",
+            "fieldname": "enrollment_status",
+            "fieldtype": "Select",
+            "label": "Enrollment Status",
+            "in_list_view": 1,
+            "options": "Pending\nEnrolled\nDisabled"
+        },
+        {
+            "default": "0.4",
+            "fieldname": "threshold",
+            "fieldtype": "Float",
+            "label": "Similarity Threshold",
+            "description": "Minimum cosine similarity required for a successful match"
+        },
+        {
+            "fieldname": "section_break_embedding",
+            "fieldtype": "Section Break",
+            "label": "Face Data"
+        },
+        {
+            "fieldname": "embedding",
+            "fieldtype": "Text",
+            "label": "Face Embedding",
+            "read_only": 1
+        },
+        {
+            "fieldname": "embedding_provider",
+            "fieldtype": "Data",
+            "label": "Embedding Provider",
+            "read_only": 1
+        },
+        {
+            "fieldname": "embedding_version",
+            "fieldtype": "Data",
+            "label": "Embedding Version",
+            "read_only": 1
+        },
+        {
+            "fieldname": "column_break_embedding",
+            "fieldtype": "Column Break"
+        },
+        {
+            "fieldname": "enrollment_photo",
+            "fieldtype": "Attach",
+            "label": "Enrollment Photo"
+        },
+        {
+            "default": "0",
+            "fieldname": "failure_count",
+            "fieldtype": "Int",
+            "in_list_view": 1,
+            "label": "Failure Count",
+            "read_only": 1
+        },
+        {
+            "fieldname": "last_verified",
+            "fieldtype": "Datetime",
+            "label": "Last Verified",
+            "read_only": 1,
+            "in_list_view": 1
+        }
+    ],
+    "index_web_pages_for_search": 0,
+    "links": [],
+    "module": "Tq Erphr",
+    "name": "Employee Face Profile",
+    "naming_rule": "By fieldname",
+    "owner": "Administrator",
+    "permissions": [
+        {
+            "create": 1,
+            "delete": 1,
+            "email": 0,
+            "export": 0,
+            "print": 0,
+            "read": 1,
+            "report": 0,
+            "role": "System Manager",
+            "share": 0,
+            "write": 1
+        }
+    ],
+    "sort_field": "modified",
+    "sort_order": "DESC",
+    "track_changes": 1
+}
