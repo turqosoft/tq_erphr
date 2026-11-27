@@ -436,3 +436,13 @@ Fixed it by Updating the task filtering logic to hide fully completed tasks from
 
 #### Bug Fixes
 - 
+
+### v1.1.30 (2026-11-27)
+
+#### New Features
+- 
+#### Improvements
+- 
+
+#### Bug Fixes
+- Fixed issue with PWA app not able to checkin/checkout

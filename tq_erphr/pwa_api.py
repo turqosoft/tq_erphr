@@ -219,15 +219,7 @@ def get_employee_checkin_status() -> dict:
 
 
 @frappe.whitelist(methods=["POST"])
-def add_employee_checkin(
-	log_type: str = "IN",
-	latitude=None,
-	longitude=None,
-	device_id: str = None,
-	remarks: str = None,
-	selfie_base64: str = None,
-	selfie_file_url: str = None,
-) -> dict:
+def add_employee_checkin(log_type: str = "IN", latitude=None, longitude=None, device_id: str = None, remarks: str = None) -> dict:
 	current_user = frappe.session.user
 	if not current_user or current_user == "Guest":
 		frappe.throw(_("Not logged in"), frappe.AuthenticationError)
@@ -256,20 +248,6 @@ def add_employee_checkin(
 	if not lat or not lon or (lat == 0.0 and lon == 0.0):
 		frappe.throw(_("GPS Location is mandatory for attendance check-in / check-out. Please enable location on your device."))
 
-	from tq_erphr.mobile_api import _get_selfie_image, verify_face_for_employee
-
-	selfie_image, _resolved_file_url, _image_bytes = _get_selfie_image(
-		file_url=selfie_file_url,
-		image_base64=selfie_base64,
-	)
-	face_result = verify_face_for_employee(employee, selfie_image)
-	if not face_result.get("matched"):
-		frappe.throw(
-			_("Face verification failed: {0}").format(
-				face_result.get("message") or face_result.get("status")
-			)
-		)
-
 	# If no device_id was passed, infer from HTTP request user agent
 	if not device_id:
 		user_agent = frappe.request.headers.get("User-Agent", "Unknown Device") if hasattr(frappe, "request") and frappe.request else "Mobile PWA"
@@ -290,29 +268,103 @@ def add_employee_checkin(
 		doc.remarks = str(remarks)[:250]
 
 	doc.insert(ignore_permissions=True)
-
-	import cv2
-	from frappe.utils.file_manager import save_file
-
-	success, encoded_selfie = cv2.imencode(
-		".jpg",
-		selfie_image,
-		[cv2.IMWRITE_JPEG_QUALITY, 90],
-	)
-	if not success:
-		frappe.throw(_("Could not prepare the selfie attachment"))
-
-	selfie_file = save_file(
-		fname=f"checkin-selfie-{doc.name}.jpg",
-		content=encoded_selfie.tobytes(),
-		dt="Employee Checkin",
-		dn=doc.name,
-		is_private=1,
-		df="face_selfie",
-	)
-	doc.face_selfie = selfie_file.file_url
-	doc.db_set("face_selfie", selfie_file.file_url)
 	return doc.as_dict()
+
+# @frappe.whitelist(methods=["POST"])
+# def add_employee_checkin(
+# 	log_type: str = "IN",
+# 	latitude=None,
+# 	longitude=None,
+# 	device_id: str = None,
+# 	remarks: str = None,
+# 	selfie_base64: str = None,
+# 	selfie_file_url: str = None,
+# ) -> dict:
+# 	current_user = frappe.session.user
+# 	if not current_user or current_user == "Guest":
+# 		frappe.throw(_("Not logged in"), frappe.AuthenticationError)
+
+# 	employee = frappe.db.get_value("Employee", {"user_id": current_user, "status": "Active"}, "name")
+# 	if not employee:
+# 		frappe.throw(_("No active employee found for current user"))
+
+# 	if log_type not in ("IN", "OUT"):
+# 		log_type = "IN"
+
+# 	lat = 0.0
+# 	lon = 0.0
+# 	try:
+# 		if latitude is not None and str(latitude).strip() != "":
+# 			lat = float(latitude)
+# 	except (ValueError, TypeError):
+# 		lat = 0.0
+
+# 	try:
+# 		if longitude is not None and str(longitude).strip() != "":
+# 			lon = float(longitude)
+# 	except (ValueError, TypeError):
+# 		lon = 0.0
+
+# 	if not lat or not lon or (lat == 0.0 and lon == 0.0):
+# 		frappe.throw(_("GPS Location is mandatory for attendance check-in / check-out. Please enable location on your device."))
+
+# 	from tq_erphr.mobile_api import _get_selfie_image, verify_face_for_employee
+
+# 	selfie_image, _resolved_file_url, _image_bytes = _get_selfie_image(
+# 		file_url=selfie_file_url,
+# 		image_base64=selfie_base64,
+# 	)
+# 	face_result = verify_face_for_employee(employee, selfie_image)
+# 	if not face_result.get("matched"):
+# 		frappe.throw(
+# 			_("Face verification failed: {0}").format(
+# 				face_result.get("message") or face_result.get("status")
+# 			)
+# 		)
+
+# 	# If no device_id was passed, infer from HTTP request user agent
+# 	if not device_id:
+# 		user_agent = frappe.request.headers.get("User-Agent", "Unknown Device") if hasattr(frappe, "request") and frappe.request else "Mobile PWA"
+# 		device_id = user_agent[:140]
+
+# 	checkin_data = {
+# 		"doctype": "Employee Checkin",
+# 		"employee": employee,
+# 		"log_type": log_type,
+# 		"time": frappe.utils.now_datetime(),
+# 		"device_id": (device_id or "Mobile PWA")[:140],
+# 		"latitude": lat,
+# 		"longitude": lon,
+# 	}
+
+# 	doc = frappe.get_doc(checkin_data)
+# 	if remarks and hasattr(doc, "remarks"):
+# 		doc.remarks = str(remarks)[:250]
+
+# 	doc.insert(ignore_permissions=True)
+
+# 	import cv2
+# 	from frappe.utils.file_manager import save_file
+
+# 	success, encoded_selfie = cv2.imencode(
+# 		".jpg",
+# 		selfie_image,
+# 		[cv2.IMWRITE_JPEG_QUALITY, 90],
+# 	)
+# 	if not success:
+# 		frappe.throw(_("Could not prepare the selfie attachment"))
+
+# 	selfie_file = save_file(
+# 		fname=f"checkin-selfie-{doc.name}.jpg",
+# 		content=encoded_selfie.tobytes(),
+# 		dt="Employee Checkin",
+# 		dn=doc.name,
+# 		is_private=1,
+# 		df="face_selfie",
+# 	)
+# 	doc.face_selfie = selfie_file.file_url
+# 	doc.db_set("face_selfie", selfie_file.file_url)
+# 	return doc.as_dict()
 
 
 @frappe.whitelist()
