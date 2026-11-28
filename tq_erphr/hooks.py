@@ -35,7 +35,8 @@ website_route_rules = [
 
 doctype_js = {
     "Employee Checkin": "public/js/employee_checkin.js",
-    "Employee": "public/js/employee_face_profile.js",
+    "Employee": "public/js/face_enrollment.js",
+    "Employee Face Profile": "public/js/face_enrollment.js",
 }
 
 # doctype_list_js = {"doctype" : "public/js/doctype_list.js"}

@@ -168,15 +168,79 @@ def _create_face_verification_log(
 	).insert(ignore_permissions=True)
 
 
+def _ensure_face_not_enrolled_for_another_employee(employee, embedding):
+	profiles = frappe.get_all(
+		"Employee Face Profile",
+		filters={
+			"employee": ["!=", employee],
+			"enrollment_status": "Enrolled",
+			"embedding": ["is", "set"],
+		},
+		fields=[
+			"name",
+			"employee",
+			"employee_name",
+			"embedding",
+			"embedding_provider",
+			"embedding_version",
+			"threshold",
+		],
+	)
+
+	for existing_profile in profiles:
+		if (
+			existing_profile.embedding_provider != "InsightFace"
+			or existing_profile.embedding_version != "buffalo_l"
+		):
+			continue
+
+		try:
+			existing_embedding = parse_embedding(existing_profile.embedding)
+			similarity = cosine_similarity(embedding, existing_embedding)
+		except FaceRecognitionError as exc:
+			frappe.log_error(
+				title="Face Enrollment Duplicate Check Failed",
+				message=f"Could not compare Employee Face Profile {existing_profile.name}: {exc}",
+			)
+			frappe.throw(
+				_("Could not check the face against existing profiles. Please contact an administrator.")
+			)
+
+		threshold = flt(existing_profile.threshold) or 0.4
+		if similarity >= threshold:
+			employee_name = (
+				existing_profile.employee_name
+				or frappe.db.get_value("Employee", existing_profile.employee, "employee_name")
+				or existing_profile.employee
+			)
+			frappe.throw(
+				_("This face is already enrolled for employee {0}.").format(employee_name),
+				title=_("Face Already Enrolled"),
+			)
+
+
 @frappe.whitelist()
 def enroll_employee_face(image_base64=None, file_url=None, employee=None):
 	employee = _get_enrollment_employee(employee)
-	image, resolved_file_url, _image_bytes = _get_selfie_image(file_url, image_base64)
+	image, _resolved_file_url, _image_bytes = _get_selfie_image(file_url, image_base64)
 
 	try:
 		embedding = extract_embedding(image)
 	except FaceRecognitionError as exc:
 		frappe.throw(str(exc))
+
+	_ensure_face_not_enrolled_for_another_employee(employee, embedding)
+
+	import cv2
+	from frappe.utils.file_manager import save_file
+
+	success, encoded_photo = cv2.imencode(
+		".jpg",
+		image,
+		[cv2.IMWRITE_JPEG_QUALITY, 90],
+	)
+	if not success:
+		frappe.throw(_("Could not prepare the enrollment photo"))
 
 	profile_name = frappe.db.exists("Employee Face Profile", {"employee": employee})
 	if profile_name:
@@ -192,19 +256,28 @@ def enroll_employee_face(image_base64=None, file_url=None, employee=None):
 	profile.enrollment_status = "Enrolled"
 	profile.is_active = 1
 	profile.failure_count = 0
-	if resolved_file_url:
-		profile.enrollment_photo = resolved_file_url
 
 	if profile.is_new():
 		profile.insert(ignore_permissions=True)
 	else:
 		profile.save(ignore_permissions=True)
 
+	photo_file = save_file(
+		f"employee-face-enrollment-{employee}.jpg",
+		encoded_photo.tobytes(),
+		"Employee Face Profile",
+		profile.name,
+		is_private=1,
+		df="enrollment_photo",
+	)
+	profile.db_set("enrollment_photo", photo_file.file_url)
+
 	return {
 		"enrolled": True,
 		"employee": employee,
 		"embedding_provider": "InsightFace",
 		"embedding_version": "buffalo_l",
+		"enrollment_photo_saved": True,
 		"message": "Employee face profile enrolled successfully",
 	}
 
@@ -279,9 +352,26 @@ def verify_face_for_employee(employee, image):
 
 @frappe.whitelist()
 def verify_employee_face(image_base64=None, file_url=None):
+	if not _face_recognition_checkin_enabled():
+		return {
+			"matched": False,
+			"status": "Disabled",
+			"message": _(
+				"Face recognition for check-in is not enabled in HR Settings."
+			),
+		}
+
 	employee = _get_logged_in_employee()
 	image, _resolved_file_url, _image_bytes = _get_selfie_image(file_url, image_base64)
 	return verify_face_for_employee(employee, image)
+
+
+def _face_recognition_checkin_enabled():
+	return cint(
+		frappe.db.get_single_value(
+			"HR Settings", "tq_enable_face_recognition_for_checkin"
+		)
+	)
 
 
 @frappe.whitelist(methods=["POST"])
@@ -323,17 +413,19 @@ def add_employee_checkin(
 			_("GPS Location is mandatory for attendance check-in / check-out. Please enable location on your device.")
 		)
 
-	image, _resolved_file_url, _image_bytes = _get_selfie_image(
-		file_url=selfie_file_url,
-		image_base64=selfie_base64,
-	)
-	face_result = verify_face_for_employee(employee, image)
-	if not face_result.get("matched"):
-		frappe.throw(
-			_("Face verification failed: {0}").format(
-				face_result.get("message") or face_result.get("status")
-			)
+	image = None
+	if _face_recognition_checkin_enabled():
+		image, _resolved_file_url, _image_bytes = _get_selfie_image(
+			file_url=selfie_file_url,
+			image_base64=selfie_base64,
 		)
+		face_result = verify_face_for_employee(employee, image)
+		if not face_result.get("matched"):
+			frappe.throw(
+				_("Face verification failed: {0}").format(
+					face_result.get("message") or face_result.get("status")
+				)
+			)
 
 	if not device_id:
 		user_agent = (
@@ -358,27 +450,28 @@ def add_employee_checkin(
 		checkin.remarks = str(remarks)[:250]
 	checkin.insert(ignore_permissions=True)
 
-	import cv2
-	from frappe.utils.file_manager import save_file
+	if image is not None:
+		import cv2
+		from frappe.utils.file_manager import save_file
 
-	success, encoded_selfie = cv2.imencode(
-		".jpg",
-		image,
-		[cv2.IMWRITE_JPEG_QUALITY, 90],
-	)
-	if not success:
-		frappe.throw(_("Could not prepare the selfie attachment"))
+		success, encoded_selfie = cv2.imencode(
+			".jpg",
+			image,
+			[cv2.IMWRITE_JPEG_QUALITY, 90],
+		)
+		if not success:
+			frappe.throw(_("Could not prepare the selfie attachment"))
 
-	selfie_file = save_file(
-		fname=f"checkin-selfie-{checkin.name}.jpg",
-		content=encoded_selfie.tobytes(),
-		dt="Employee Checkin",
-		dn=checkin.name,
-		is_private=1,
-		df="face_selfie",
-	)
-	checkin.db_set("face_selfie", selfie_file.file_url)
-	checkin.face_selfie = selfie_file.file_url
+		selfie_file = save_file(
+			fname=f"checkin-selfie-{checkin.name}.jpg",
+			content=encoded_selfie.tobytes(),
+			dt="Employee Checkin",
+			dn=checkin.name,
+			is_private=1,
+			df="face_selfie",
+		)
+		checkin.db_set("face_selfie", selfie_file.file_url)
+		checkin.face_selfie = selfie_file.file_url
 
 	return checkin.as_dict()
 
@@ -475,6 +568,8 @@ def scan_face_and_checkin(
 ):
 	"""Identify an employee from their face and create their next IN/OUT check-in."""
 	_require_face_checkin_role()
+	if not _face_recognition_checkin_enabled():
+		frappe.throw(_("Face recognition check-in is disabled in HR Settings"))
 
 	try:
 		latitude = float(latitude)

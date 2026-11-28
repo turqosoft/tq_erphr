@@ -458,3 +458,12 @@ Fixed it by Updating the task filtering logic to hide fully completed tasks from
 - 
 #### Bug Fixes
 - 
+
+### v1.1.32 (2026-11-28)
+
+#### New Features
+- Face profile registration from Web
+#### Improvements
+- 
+#### Bug Fixes
+- 

@@ -345,5 +345,17 @@
         "label": "Face Verification Selfie",
         "read_only": 1,
         "insert_after": "device_id"
+    },
+    {
+        "doctype": "Custom Field",
+        "dt": "HR Settings",
+        "module": "Tq Erphr",
+        "name": "TQ Enable Face Recognition for Check-In",
+        "fieldname": "tq_enable_face_recognition_for_checkin",
+        "fieldtype": "Check",
+        "label": "Enable Face Recognition for Check-In",
+        "description": "Require face verification for mobile employee check-in.",
+        "default": "0",
+        "insert_after": "allow_geolocation_tracking"
     }
 ]
